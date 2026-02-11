@@ -164,5 +164,5 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on contributing to this 
 
 ## Extending
 
-- Emitters: `packages/tools/figma-connecter/src/emitters/EXTENDING.md`
-- Parsers: `packages/tools/figma-connecter/src/parsers/EXTENDING.md`
+- Emitters: `src/emitters/README.md`
+- Parsers: `src/parsers/README.md`
