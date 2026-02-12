@@ -18,6 +18,8 @@
  * @fileoverview Tests for plugins module.
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 import type { Emitter, EmitterContext } from '../src/emitters/types';
 import type { Parser, ParseContext } from '../src/parsers/types';
 import { EmitterTarget, ParserTarget } from '../src/core/types';

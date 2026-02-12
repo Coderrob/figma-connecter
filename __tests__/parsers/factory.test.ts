@@ -18,6 +18,8 @@
  * @fileoverview Tests for parser factory module.
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 import {
   createDefaultParser,
   createParser,
@@ -26,7 +28,6 @@ import {
   getParserMetadata,
   hasParserPlugin,
   listParserTargets,
-  registerParserPlugin,
 } from '../../src/parsers/factory';
 import { ParserTarget, type Parser, type ParseContext } from '../../src/parsers/types';
 import type { WebComponentParseResult } from '../../src/core/types';

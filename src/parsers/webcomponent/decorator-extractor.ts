@@ -16,9 +16,8 @@
 
 import ts from 'typescript';
 
-import type { PropertyDescriptor } from '../../core/types';
-import type { EventDescriptor, PropertyDescriptor } from '../../core/types';
-import { FigmaPropertyType, PropertyVisibility, type ExtractionResult } from '../../core/types';
+import type { PropertyDescriptor, ExtractionResult } from '../../core/types';
+import { FigmaPropertyType, PropertyVisibility } from '../../core/types';
 import { toKebabCase } from '../../utils/strings';
 import { getDecoratorOptions, getJSDocSummary, getLiteralValue } from '../../utils/ts';
 

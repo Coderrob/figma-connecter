@@ -18,6 +18,8 @@
  * @fileoverview Tests for emitter utilities.
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 import {
   buildEventsSection,
   buildPropsSection,

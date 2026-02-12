@@ -16,9 +16,7 @@
 
 import ts from 'typescript';
 
-import type { EventDescriptor } from '../../core/types';
-import type { EventDescriptor } from '../../core/types';
-import { type ExtractionResult } from '../../core/types';
+import type { EventDescriptor , type EventDescriptor, type ExtractionResult } from '../../core/types';
 import { mergeByKey } from '../../utils/merge-by-key';
 import { toPascalCase } from '../../utils/strings';
 import { getJSDocTagText } from '../../utils/ts';
