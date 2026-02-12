@@ -47,11 +47,16 @@ export {
 } from './report';
 export type { AggregateResult, Diagnostics, Result } from './result';
 export {
+  addErrors,
+  addWarnings,
   aggregateResults,
   applyAggregateDiagnostics,
   applyDiagnostics,
   chain,
   createResult,
+  hasDiagnostics,
+  hasErrors,
+  hasWarnings,
   map as mapResult,
   mergeDiagnostics,
   mergeErrors,

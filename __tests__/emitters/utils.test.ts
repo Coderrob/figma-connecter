@@ -28,7 +28,7 @@ import {
   indent,
   indentBlock,
   isValidIdentifier,
-  toDisplayName,
+  toTitleCase,
   wrapGeneratedSection,
 } from '../../src/emitters/utils';
 import { createMockComponentModel } from '../helpers/fixtures';
@@ -82,25 +82,25 @@ describe('wrapGeneratedSection', () => {
   });
 });
 
-describe('toDisplayName', () => {
+describe('toTitleCase', () => {
   it('should convert kebab-case to title case', () => {
-    expect(toDisplayName('my-component-name')).toBe('My Component Name');
+    expect(toTitleCase('my-component-name')).toBe('My Component Name');
   });
 
   it('should handle single word components', () => {
-    expect(toDisplayName('button')).toBe('Button');
+    expect(toTitleCase('button')).toBe('Button');
   });
 
   it('should handle multiple separators', () => {
-    expect(toDisplayName('data--value')).toBe('Data Value');
+    expect(toTitleCase('data--value')).toBe('Data Value');
   });
 
   it('should handle leading separator', () => {
-    expect(toDisplayName('-my-component')).toBe('My Component');
+    expect(toTitleCase('-my-component')).toBe('My Component');
   });
 
   it('should handle trailing separator', () => {
-    expect(toDisplayName('my-component-')).toBe('My Component');
+    expect(toTitleCase('my-component-')).toBe('My Component');
   });
 });
 
@@ -183,5 +183,133 @@ describe('buildEventsSection', () => {
     const result = buildEventsSection(events, 2);
 
     expect(result[0]).toContain('    events: {');
+  });
+});
+
+describe('file payload builders', () => {
+  it('should create a file payload with default action', () => {
+    const { createFilePayload } = require('../../src/emitters/utils');
+    const payload = createFilePayload('/path/to/file.ts');
+
+    expect(payload.filePath).toBe('/path/to/file.ts');
+    expect(payload.action).toBe('created');
+    expect(payload.contentLines).toEqual([]);
+    expect(payload.sections).toEqual([]);
+    expect(payload.warnings).toEqual([]);
+  });
+
+  it('should create a file payload with custom action', () => {
+    const { createFilePayload } = require('../../src/emitters/utils');
+    const payload = createFilePayload('/path/to/file.ts', 'updated');
+
+    expect(payload.action).toBe('updated');
+  });
+
+  it('should build file payload from draft', () => {
+    const { createFilePayload, buildFilePayload } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    const result = buildFilePayload(draft);
+
+    expect(result.filePath).toBe('/path/to/file.ts');
+    expect(result.action).toBe('created');
+    expect(result.content).toBe('');
+    expect(result.sections).toBeUndefined();
+  });
+
+  it('should apply builders in order', () => {
+    const { createFilePayload, buildFilePayload } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const builder1 = (d: any) => ({ ...d, contentLines: [...d.contentLines, 'line1'] });
+    const builder2 = (d: any) => ({ ...d, contentLines: [...d.contentLines, 'line2'] });
+    
+    const result = buildFilePayload(draft, builder1, builder2);
+
+    expect(result.content).toBe('line1\nline2');
+  });
+
+  it('should include sections when present', () => {
+    const { createFilePayload, buildFilePayload } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const builder = (d: any) => ({ 
+      ...d, 
+      sections: [{ name: 'props', content: 'props: {}', markers: {} }] 
+    });
+    
+    const result = buildFilePayload(draft, builder);
+
+    expect(result.sections).toBeDefined();
+    expect(result.sections?.length).toBe(1);
+  });
+
+  it('should add imports with withImports builder', () => {
+    const { createFilePayload, buildFilePayload, withImports } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(draft, withImports(['import { A } from "a";']));
+
+    expect(result.content).toContain('import { A } from "a";');
+  });
+
+  it('should add sections with withSections builder', () => {
+    const { createFilePayload, buildFilePayload, withSections } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(
+      draft, 
+      withSections({ 
+        lines: ['props: {}'], 
+        sections: [{ name: 'props', content: 'props: {}' }] 
+      })
+    );
+
+    expect(result.content).toContain('props: {}');
+    expect(result.sections?.length).toBe(1);
+  });
+
+  it('should add props with withProps builder', () => {
+    const { createFilePayload, buildFilePayload, withProps } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(
+      draft, 
+      withProps({ content: 'disabled: boolean' })
+    );
+
+    expect(result.content).toContain('disabled: boolean');
+  });
+
+  it('should add example with withExample builder', () => {
+    const { createFilePayload, buildFilePayload, withExample } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(
+      draft, 
+      withExample({ content: '<Button disabled={true} />' })
+    );
+
+    expect(result.content).toContain('<Button disabled={true} />');
+  });
+
+  it('should add warnings with withWarnings builder', () => {
+    const { createFilePayload, buildFilePayload, withWarnings } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(
+      draft, 
+      withWarnings(['warning1', 'warning2'])
+    );
+
+    expect(result.warnings).toEqual(['warning1', 'warning2']);
+  });
+
+  it('should handle withWarnings with default empty array', () => {
+    const { createFilePayload, buildFilePayload, withWarnings } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(draft, withWarnings());
+
+    expect(result.warnings).toEqual([]);
   });
 });
