@@ -73,7 +73,7 @@ describe('resolveInheritanceChain', () => {
 
     expect(resolution.chain.some((node) => ts.isClassExpression(node))).toBe(true);
 
-    const { properties } = extractPropertyDecorators(resolution.chain, { checker });
+    const { items: properties } = extractPropertyDecorators(resolution.chain, { checker });
     const names = properties.map((prop) => prop.name);
 
     expect(names).toContain('disabled');
@@ -105,7 +105,7 @@ describe('resolveInheritanceChain', () => {
 
     const classDecl = findClassDeclaration(sourceFile, 'Button');
     const resolution = resolveInheritanceChain(classDecl, { checker });
-    const { properties } = extractPropertyDecorators(resolution.chain, { checker });
+    const { items: properties } = extractPropertyDecorators(resolution.chain, { checker });
     const names = properties.map((prop) => prop.name);
 
     expect(names).toContain('ariaLabel');

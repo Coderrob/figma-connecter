@@ -72,6 +72,7 @@ export type {
   EmitTarget,
   EmitterOptions,
   EventDescriptor,
+  ExtractionResult,
   FigmaPropertyType,
   GeneratedSectionMarkers,
   GeneratedSectionName,

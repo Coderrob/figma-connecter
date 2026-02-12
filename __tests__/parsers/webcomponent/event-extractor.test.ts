@@ -52,12 +52,12 @@ describe('extractEvents', () => {
 
     const result = extractEvents(classDecl, { astData });
 
-    const eventNames = result.events.map((event) => event.name);
+    const eventNames = result.items.map((event) => event.name);
     expect(eventNames).toContain('change');
     expect(eventNames).toContain('toggle');
 
-    const changeEvent = result.events.find((event) => event.name === 'change');
-    const toggleEvent = result.events.find((event) => event.name === 'toggle');
+    const changeEvent = result.items.find((event) => event.name === 'change');
+    const toggleEvent = result.items.find((event) => event.name === 'toggle');
 
     expect(changeEvent?.reactHandler).toBe('onChange');
     expect(toggleEvent?.reactHandler).toBe('onToggle');
@@ -87,13 +87,13 @@ describe('extractEvents', () => {
 
     const result = extractEvents(classDecl, { astData });
 
-    const eventNames = result.events.map((event) => event.name);
+    const eventNames = result.items.map((event) => event.name);
     expect(eventNames).toContain('ready');
     expect(eventNames).toContain('simple');
     expect(eventNames).toContain('custom-event');
     expect(eventNames).not.toContain('React');
 
-    const readyEvent = result.events.find((event) => event.name === 'ready');
+    const readyEvent = result.items.find((event) => event.name === 'ready');
     expect(readyEvent?.reactHandler).toBe('onReady');
   });
 
@@ -116,7 +116,7 @@ describe('extractEvents', () => {
 
     const result = extractEvents(classDecl, { astData });
 
-    expect(result.events).toHaveLength(0);
+    expect(result.items).toHaveLength(0);
   });
 
   it('should ignores unsupported dispatch patterns and empty JSDoc tags', () => {
@@ -146,7 +146,7 @@ describe('extractEvents', () => {
 
     const result = extractEvents(classDecl, { astData });
 
-    expect(result.events).toHaveLength(0);
+    expect(result.items).toHaveLength(0);
   });
 });
 
@@ -177,7 +177,7 @@ describe('extractEventsFromChain', () => {
     }
 
     const result = extractEventsFromChain([baseClass, derivedClass], { astData });
-    const eventNames = result.events.map((event) => event.name);
+    const eventNames = result.items.map((event) => event.name);
 
     expect(eventNames).toContain('ready');
     expect(eventNames).toContain('toggle');
@@ -215,7 +215,7 @@ describe('extractEventsFromChain', () => {
     }
 
     const result = extractEventsFromChain([baseClass, derivedClass], { astData });
-    const readyEvents = result.events.filter((event) => event.name === 'ready');
+    const readyEvents = result.items.filter((event) => event.name === 'ready');
 
     expect(readyEvents).toHaveLength(1);
   });

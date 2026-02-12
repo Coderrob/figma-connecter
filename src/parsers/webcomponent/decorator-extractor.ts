@@ -17,16 +17,17 @@
 import ts from 'typescript';
 
 import type { PropertyDescriptor } from '../../core/types';
-import { FigmaPropertyType, PropertyVisibility } from '../../core/types';
+import type { EventDescriptor, PropertyDescriptor } from '../../core/types';
+import { FigmaPropertyType, PropertyVisibility, type ExtractionResult } from '../../core/types';
 import { toKebabCase } from '../../utils/strings';
 import { getDecoratorOptions, getJSDocSummary, getLiteralValue } from '../../utils/ts';
 
 import { extractFromChain } from './chain-extractor';
 
-export interface PropertyExtractionResult {
-  readonly properties: readonly PropertyDescriptor[];
-  readonly warnings: readonly string[];
-}
+/**
+ * Result of property extraction containing properties and warnings.
+ */
+export type PropertyExtractionResult = ExtractionResult<PropertyDescriptor>;
 
 /**
  * Context for property extraction operations.
@@ -330,7 +331,7 @@ const extractPropertyDecoratorsFromClass = (
   }
 
   return {
-    properties: descriptors,
+    items: descriptors,
     warnings,
   };
 };
@@ -354,8 +355,8 @@ export const extractPropertyDecorators = (
      * @returns Extracted items and warnings for the class node.
      */
     extract: (classNode) => {
-      const { properties, warnings } = extractPropertyDecoratorsFromClass(classNode, context);
-      return { items: properties, warnings };
+      const { items, warnings } = extractPropertyDecoratorsFromClass(classNode, context);
+      return { items, warnings };
     },
     /**
      * Provides the merge key for a property descriptor.
@@ -367,7 +368,7 @@ export const extractPropertyDecorators = (
   });
 
   return {
-    properties: extracted.items,
+    items: extracted.items,
     warnings: extracted.warnings,
   };
 };

@@ -71,13 +71,13 @@ describe('extractPropertyDecorators', () => {
     const classDecl = findClassDeclaration(sourceFile, 'Sample');
 
     const result = extractPropertyDecorators([classDecl], { checker });
-    const names = result.properties.map((prop) => prop.name);
+    const names = result.items.map((prop) => prop.name);
 
     expect(names).toContain('publicProp');
     expect(names).toContain('protectedProp');
     expect(names).not.toContain('privateProp');
 
-    const protectedProp = result.properties.find((prop) => prop.name === 'protectedProp');
+    const protectedProp = result.items.find((prop) => prop.name === 'protectedProp');
     expect(protectedProp?.visibility).toBe('protected');
   });
 
@@ -101,9 +101,9 @@ describe('extractPropertyDecorators', () => {
     const classDecl = findClassDeclaration(sourceFile, 'OptionsSample');
 
     const result = extractPropertyDecorators([classDecl], { checker });
-    const disabled = result.properties.find((prop) => prop.name === 'disabled');
-    const count = result.properties.find((prop) => prop.name === 'count');
-    const label = result.properties.find((prop) => prop.name === 'label');
+    const disabled = result.items.find((prop) => prop.name === 'disabled');
+    const count = result.items.find((prop) => prop.name === 'count');
+    const label = result.items.find((prop) => prop.name === 'label');
 
     expect(disabled?.attribute).toBeNull();
     expect(disabled?.reflect).toBe(true);
@@ -144,10 +144,10 @@ describe('extractPropertyDecorators', () => {
     const classDecl = findClassDeclaration(sourceFile, 'AdvancedSample');
 
     const result = extractPropertyDecorators([classDecl], { checker });
-    const variant = result.properties.find((prop) => prop.name === 'variant');
-    const autoFocus = result.properties.find((prop) => prop.name === 'autoFocus');
-    const value = result.properties.find((prop) => prop.name === 'value');
-    const dataLabel = result.properties.find((prop) => prop.name === 'data-label');
+    const variant = result.items.find((prop) => prop.name === 'variant');
+    const autoFocus = result.items.find((prop) => prop.name === 'autoFocus');
+    const value = result.items.find((prop) => prop.name === 'value');
+    const dataLabel = result.items.find((prop) => prop.name === 'data-label');
 
     expect(variant?.type).toBe('enum');
     expect(variant?.enumValues).toEqual(['primary', 'secondary']);
@@ -205,7 +205,7 @@ describe('extractPropertyDecorators', () => {
     const classDecl = findClassDeclaration(sourceFile, 'MixedSample');
 
     const result = extractPropertyDecorators([classDecl], { checker });
-    const names = result.properties.map((prop) => prop.name);
+    const names = result.items.map((prop) => prop.name);
 
     expect(names).toContain('withAttribute');
     expect(names).toContain('namespacedType');
@@ -213,11 +213,11 @@ describe('extractPropertyDecorators', () => {
     expect(names).toContain('template-name');
     expect(names).not.toContain('ignored');
 
-    const withAttribute = result.properties.find((prop) => prop.name === 'withAttribute');
+    const withAttribute = result.items.find((prop) => prop.name === 'withAttribute');
     expect(withAttribute?.attribute).toBe('SOME_CONST');
     expect(withAttribute?.doc).toBeNull();
 
-    const namespacedType = result.properties.find((prop) => prop.name === 'namespacedType');
+    const namespacedType = result.items.find((prop) => prop.name === 'namespacedType');
     expect(namespacedType?.type).toBe('string');
     expect(namespacedType?.reflect).toBe(false);
     expect(namespacedType?.doc).toContain('Summary');
@@ -243,7 +243,7 @@ describe('extractPropertyDecorators', () => {
     const classDecl = findClassDeclaration(sourceFile, 'Sample');
 
     const result = extractPropertyDecorators([classDecl], { checker });
-    const names = result.properties.map((prop) => prop.name);
+    const names = result.items.map((prop) => prop.name);
 
     expect(names).toContain('withCall');
     expect(names).not.toContain('withoutCall');
@@ -267,7 +267,7 @@ describe('extractPropertyDecorators', () => {
     const classDecl = findClassDeclaration(sourceFile, 'Sample');
 
     const result = extractPropertyDecorators([classDecl], { checker });
-    const names = result.properties.map((prop) => prop.name);
+    const names = result.items.map((prop) => prop.name);
 
     expect(names).toContain('named');
     expect(result.warnings.length).toBeGreaterThan(0);
@@ -290,7 +290,7 @@ describe('extractPropertyDecorators', () => {
     const classDecl = findClassDeclaration(sourceFile, 'Sample');
 
     const result = extractPropertyDecorators([classDecl], { checker });
-    const normalProp = result.properties.find((prop) => prop.name === 'normalProp');
+    const normalProp = result.items.find((prop) => prop.name === 'normalProp');
 
     expect(normalProp?.type).toBe('string');
   });
@@ -309,7 +309,7 @@ describe('extractPropertyDecorators', () => {
     const classDecl = findClassDeclaration(sourceFile, 'Sample');
 
     const result = extractPropertyDecorators([classDecl], { checker });
-    const plainString = result.properties.find((prop) => prop.name === 'plainString');
+    const plainString = result.items.find((prop) => prop.name === 'plainString');
 
     expect(plainString?.enumValues).toBeUndefined();
     expect(plainString?.type).toBe('string');
