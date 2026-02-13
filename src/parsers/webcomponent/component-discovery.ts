@@ -39,25 +39,18 @@ const isDefaultExportedClass = (node: ts.ClassDeclaration): boolean => {
 };
 
 /**
- * Dummy function retained for backward compatibility.
- * AST traversal now handled by unified visitor.
+ * Discovers the primary component class from pre-collected AST data.
  *
- * @param astData - Pre-collected AST data.
- * @returns Array of class declarations.
+ * @param astData - Pre-collected AST data from unified visitor.
+ * @returns Discovery result or null when no class is found.
  */
-const findClassDeclarations = (astData: ASTVisitorResult): readonly ts.ClassDeclaration[] => astData.classDeclarations;
+export const discoverComponentClass = (astData: ASTVisitorResult): ComponentDiscoveryResult | null => {
+  const classes = astData.classDeclarations;
+  if (classes.length === 0) {
+    return null;
+  }
 
-/**
- * Resolves a default-exported class declaration, if present.
- *
- * @param astData - Pre-collected AST data.
- * @param classes - Class declarations found in the file.
- * @returns Discovery result or null when not found.
- */
-const resolveDefaultExportedClass = (
-  astData: ASTVisitorResult,
-  classes: readonly ts.ClassDeclaration[],
-): ComponentDiscoveryResult | null => {
+  // Check for default exported class
   const directDefault = classes.find(isDefaultExportedClass);
   if (directDefault) {
     return {
@@ -69,43 +62,22 @@ const resolveDefaultExportedClass = (
     };
   }
 
+  // Check for named export assigned as default
   const { defaultExport } = astData;
   const statement = defaultExport ? ({ expression: defaultExport } as ts.ExportAssignment) : undefined;
 
-  if (!statement || !ts.isIdentifier(statement.expression)) {
-    return null;
-  }
-
-  const exportName = statement.expression.text;
-  const matched = classes.find((node) => node.name?.text === exportName);
-  if (!matched) {
-    return null;
-  }
-
-  return {
-    classDeclaration: matched,
-    source: {
-      discoveryMethod: 'default-export',
-      filePath: '',
-    },
-  };
-};
-
-/**
- * Discovers the primary component class from pre-collected AST data.
- *
- * @param astData - Pre-collected AST data from unified visitor.
- * @returns Discovery result or null when no class is found.
- */
-export const discoverComponentClass = (astData: ASTVisitorResult): ComponentDiscoveryResult | null => {
-  const classes = findClassDeclarations(astData);
-  if (classes.length === 0) {
-    return null;
-  }
-
-  const defaultExport = resolveDefaultExportedClass(astData, classes);
-  if (defaultExport) {
-    return defaultExport;
+  if (statement && ts.isIdentifier(statement.expression)) {
+    const exportName = statement.expression.text;
+    const matched = classes.find((node) => node.name?.text === exportName);
+    if (matched) {
+      return {
+        classDeclaration: matched,
+        source: {
+          discoveryMethod: 'default-export',
+          filePath: '',
+        },
+      };
+    }
   }
 
   // Use pre-collected decorators and JSDoc tags

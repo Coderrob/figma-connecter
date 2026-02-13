@@ -56,9 +56,6 @@ describe('getDefaultParserTarget', () => {
   it('should return the first registered parser target', () => {
     expect(getDefaultParserTarget()).toBe(ParserTarget.WebComponent);
   });
-
-  // Note: The registry parameter is now ignored for backward compatibility
-  // The singleton factory pattern means we can't test with an empty registry
 });
 
 describe('listParserTargets', () => {

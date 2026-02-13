@@ -28,7 +28,7 @@
  * @module parsers/factory
  */
 
-import { RegistryFactory, type RegistryEntry } from '../core/registry-factory';
+import { RegistryFactory } from '../core/registry-factory';
 
 import { type Parser, ParserTarget } from './types';
 import { WebComponentParser } from './webcomponent';
@@ -122,63 +122,44 @@ export const hasParserPlugin = (target: ParserTarget): boolean => parserFactory.
 /**
  * Returns the list of registered parser targets.
  *
- * @param _registry - Registry map to read from (for backward compatibility, ignored).
  * @returns Array of registered parser targets.
  */
-export const listParserTargets = (
-  _registry?: ReadonlyMap<ParserTarget, RegistryEntry<Parser, ParserMetadata>>,
-): ParserTarget[] => parserFactory.listTargets();
+export const listParserTargets = (): ParserTarget[] => parserFactory.listTargets();
 
 /**
  * Gets metadata for a specific parser target.
  *
  * @param target - Parser target to query.
- * @param _registry - Registry map to read from (for backward compatibility, ignored).
  * @returns Metadata for the target.
  */
-export const getParserMetadata = (
-  target: ParserTarget,
-  _registry?: ReadonlyMap<ParserTarget, RegistryEntry<Parser, ParserMetadata>>,
-): ParserMetadata => parserFactory.getMetadata(target);
+export const getParserMetadata = (target: ParserTarget): ParserMetadata => parserFactory.getMetadata(target);
 
 /**
  * Gets metadata for all registered parsers.
  *
- * @param _registry - Registry map to read from (for backward compatibility, ignored).
  * @returns Map of targets to their metadata.
  */
-export const getAllParserMetadata = (
-  _registry?: ReadonlyMap<ParserTarget, RegistryEntry<Parser, ParserMetadata>>,
-): ReadonlyMap<ParserTarget, ParserMetadata> => parserFactory.getAllMetadata();
+export const getAllParserMetadata = (): ReadonlyMap<ParserTarget, ParserMetadata> =>
+  parserFactory.getAllMetadata();
 
 /**
  * Returns the default parser target.
  *
- * @param _registry - Registry map to read from (for backward compatibility, ignored).
  * @returns The first registered parser target.
  */
-export const getDefaultParserTarget = (
-  _registry?: ReadonlyMap<ParserTarget, RegistryEntry<Parser, ParserMetadata>>,
-): ParserTarget => parserFactory.getDefaultTarget();
+export const getDefaultParserTarget = (): ParserTarget => parserFactory.getDefaultTarget();
 
 /**
  * Creates a parser instance for the requested target.
  *
  * @param target - Parser target to instantiate.
- * @param _registry - Registry map to read from (for backward compatibility, ignored).
  * @returns Parser instance for the target.
  */
-export const createParser = (
-  target: ParserTarget,
-  _registry?: ReadonlyMap<ParserTarget, RegistryEntry<Parser, ParserMetadata>>,
-): Parser => parserFactory.createInstance(target);
+export const createParser = (target: ParserTarget): Parser => parserFactory.createInstance(target);
 
 /**
  * Creates the default parser instance.
  *
- * @param _registry - Registry map to read from (for backward compatibility, ignored).
  * @returns Parser instance for the default target.
  */
-export const createDefaultParser = (
-  _registry?: ReadonlyMap<ParserTarget, RegistryEntry<Parser, ParserMetadata>>,
-): Parser => parserFactory.createDefaultInstance();
+export const createDefaultParser = (): Parser => parserFactory.createDefaultInstance();
