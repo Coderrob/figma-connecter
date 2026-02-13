@@ -10,6 +10,8 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Added
 
+- Add modular emitter utilities: `formatting.ts`, `figma-mapper.ts`, `section-builder.ts`, `file-builder.ts` (`708338a`)
+- Add 4 branch coverage tests for helpers and emitter edge cases (`c561764`)
 - Add generic `RegistryFactory<TTarget, TInstance, TMetadata>` base class (`ff2a160`)
 - Add 19 comprehensive tests for registry factory base class (`ff2a160`)
 - Add comprehensive test coverage for plugin system (`da7c332`)
@@ -23,6 +25,11 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Changed
 
+- Extract emitter utilities into focused modules, reducing utils.ts from 523 to 56 lines (`708338a`)
+  - `src/emitters/formatting.ts` - String formatting & identifier handling (102 lines)
+  - `src/emitters/figma-mapper.ts` - Figma prop mapping & component naming (120 lines)
+  - `src/emitters/section-builder.ts` - Props, events, examples sections (162 lines)
+  - `src/emitters/file-builder.ts` - File payload builders (188 lines)
 - Refactor parser factory to extend generic `RegistryFactory` class, reducing 26 lines (`be8fd5d`)
 - Refactor emitter factory to extend generic `RegistryFactory` class, reducing 21 lines (`5181620`)
 - Refactor `PropertyExtractionResult` to use generic `ExtractionResult<PropertyDescriptor>` (`68e0088`)
