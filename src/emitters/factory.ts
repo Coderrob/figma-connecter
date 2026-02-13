@@ -29,7 +29,7 @@
  */
 
 import { EmitterTarget } from '../core/types';
-import { RegistryFactory, type RegistryEntry } from '../core/registry-factory';
+import { RegistryFactory } from '../core/registry-factory';
 
 import { FigmaReactEmitter } from './figma-react';
 import { FigmaWebComponentEmitter } from './figma-webcomponent';

@@ -20,12 +20,12 @@
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 
+import { GENERATED_SECTION_MARKERS } from '../../src/core/constants';
 import {
   buildEventsSection,
   buildPropsSection,
   formatPropAccessor,
   formatPropKey,
-  GENERATED_SECTION_MARKERS,
   getComponentBaseName,
   indent,
   indentBlock,

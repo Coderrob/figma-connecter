@@ -16,12 +16,12 @@
 
 import path from 'node:path';
 
+import { buildGeneratedSectionMarkers } from '../../core/constants';
 import { type EmitResult, EmitterTarget, GeneratedSectionName } from '../../core/types';
 import type { Emitter, EmitterContext } from '../types';
 import {
   buildExampleTemplate,
   buildFilePayload,
-  buildGeneratedSectionMarkers,
   buildPropsSection,
   createFilePayload,
   getComponentBaseName,

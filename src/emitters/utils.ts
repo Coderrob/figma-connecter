@@ -23,9 +23,6 @@
  * @module emitters/utils
  */
 
-// Re-export constants
-export { buildGeneratedSectionMarkers, GENERATED_SECTION_MARKERS } from '../core/constants';
-
 // Re-export from formatting module
 export { formatPropAccessor, formatPropKey, indent, indentBlock, isValidIdentifier, toTitleCase } from './formatting';
 
