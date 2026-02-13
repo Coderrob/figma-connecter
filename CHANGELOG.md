@@ -39,6 +39,15 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 - Export `RegistryFactory`, `PluginOptions`, and `RegistryEntry` from core module (`ff2a160`)
 - Export additional helper functions from core module: `addErrors`, `addWarnings`, `hasErrors`, `hasWarnings`, `hasDiagnostics` (`da7c332`)
 
+### Removed
+
+- Remove backward compatibility parameters from parser factory functions (`838479c`)
+  - Simplified `listParserTargets()`, `getParserMetadata()`, `getAllParserMetadata()`, `getDefaultParserTarget()`, `createParser()`, `createDefaultParser()`
+  - Removed unused `_registry` optional parameters
+- Remove deprecated `findClassDeclarations()` wrapper function (`838479c`)
+- Remove unnecessary `RegistryEntry` import from parser factory (`838479c`)
+- Remove backward compatibility comments from tests and documentation (`838479c`)
+
 ### Fixed
 
 - Fix failing unit tests: Update test expectations to match mdc- namespace prefix in fixtures (`pending`).
