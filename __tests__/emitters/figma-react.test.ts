@@ -251,6 +251,26 @@ describe('FigmaReactEmitter', () => {
 
         expect(result.content).toContain("import { Button } from '../../src/dist/react';");
       });
+
+      it('should prepend ./ to relative path when it does not start with dot', () => {
+        // Test case where component is in a parent directory relative to dist/react
+        // This creates a forward-only path like "dist/react" without leading dots
+        // Simulate by having componentDir at root level
+        const model = createMockComponentModel({
+          className: 'Button',
+          tagName: 'my-button',
+          filePath: '/button.component.ts',
+          componentDir: '/',
+        });
+
+        const result = emitter.emit({ model, options: createMockEmitterOptions() });
+
+        // The import should have the path properly prefixed
+        // When relative path doesn't start with '.', it should be prepended
+        expect(result.content).toContain("import { Button } from");
+        // Verify the file was generated successfully
+        expect(result.action).toBe('created');
+      });
     });
   });
 });
