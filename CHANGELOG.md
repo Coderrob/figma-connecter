@@ -10,6 +10,8 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Added
 
+- Add generic `RegistryFactory<TTarget, TInstance, TMetadata>` base class (`ff2a160`)
+- Add 19 comprehensive tests for registry factory base class (`ff2a160`)
 - Add comprehensive test coverage for plugin system (`da7c332`)
 - Add tests for `src/plugins.ts` module achieving 100% coverage (`da7c332`)
 - Add tests for `src/internal-plugin-registry.ts` achieving 100% coverage (`da7c332`)
@@ -18,25 +20,17 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 - Add tests for emitter utils file payload builders (`da7c332`)
 - Add generic `ExtractionResult<T>` type for extraction operations (`68e0088`)
 - Add `.gitignore` file to exclude build artifacts and dependencies (`4ec618a`)
-- Add comprehensive unit tests for IO adapter module to achieve 100% coverage (`pending`).
-- Add tslib as devDependency for Rollup TypeScript plugin support (`pending`).
-- Add emitter factory registry helper tests to improve coverage (`pending`).
 
 ### Changed
 
+- Refactor parser factory to extend generic `RegistryFactory` class, reducing 26 lines (`be8fd5d`)
+- Refactor emitter factory to extend generic `RegistryFactory` class, reducing 21 lines (`5181620`)
 - Refactor `PropertyExtractionResult` to use generic `ExtractionResult<PropertyDescriptor>` (`68e0088`)
 - Refactor `EventExtractionResult` to use generic `ExtractionResult<EventDescriptor>` (`68e0088`)
 - Update all extraction functions to use `.items` instead of `.properties` or `.events` (`68e0088`)
 - Update test files to reference `.items` from extraction results (`68e0088`)
+- Export `RegistryFactory`, `PluginOptions`, and `RegistryEntry` from core module (`ff2a160`)
 - Export additional helper functions from core module: `addErrors`, `addWarnings`, `hasErrors`, `hasWarnings`, `hasDiagnostics` (`da7c332`)
-- Upgrade ESLint to v9.39.2 with flat config format (`pending`).
-- Migrate all rules from `.eslintrc.cjs` to `eslint.config.mjs` as default config (`pending`).
-- Update typescript-eslint to v8.22.0 for better TypeScript support (`pending`).
-- Enable projectService for faster type-aware linting (`pending`).
-- Update eslint-plugin-jsdoc to v50.6.2 for improved JSDoc validation (`pending`).
-- Update eslint-plugin-import to v2.31.0 and install eslint-import-resolver-typescript (`pending`).
-- Update globals package to v15.14.0 for latest global definitions (`pending`).
-- Disable jsdoc/check-indentation to allow license headers (`pending`).
 
 ### Fixed
 
