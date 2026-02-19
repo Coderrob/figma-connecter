@@ -156,5 +156,5 @@ export const buildEventsSection = (events: readonly EventDescriptor[], depth = 1
     return `${indent(depth + 1)}${key}: '${event.reactHandler}',`;
   });
 
-  return [`${indent(depth)}events: {`, ...eventLines, `${indent(depth)},`];
+  return [`${indent(depth)}events: {`, ...eventLines, `${indent(depth)}},`];
 };

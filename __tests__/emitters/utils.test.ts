@@ -276,7 +276,7 @@ describe('file payload builders', () => {
     
     const result = buildFilePayload(
       draft, 
-      withProps({ content: 'disabled: boolean' })
+      withProps({ content: 'disabled: boolean', markers: GENERATED_SECTION_MARKERS })
     );
 
     expect(result.content).toContain('disabled: boolean');
@@ -288,7 +288,7 @@ describe('file payload builders', () => {
     
     const result = buildFilePayload(
       draft, 
-      withExample({ content: '<Button disabled={true} />' })
+      withExample({ content: '<Button disabled={true} />', markers: GENERATED_SECTION_MARKERS })
     );
 
     expect(result.content).toContain('<Button disabled={true} />');
