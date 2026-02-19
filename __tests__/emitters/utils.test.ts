@@ -186,6 +186,71 @@ describe('buildEventsSection', () => {
 
     expect(result[0]).toContain('    events: {');
   });
+
+  it('should properly close events object with closing brace', () => {
+    const events: EventDescriptor[] = [
+      { name: 'click', reactHandler: 'onClick' },
+      { name: 'change', reactHandler: 'onChange' },
+    ];
+    const result = buildEventsSection(events);
+
+    // Verify opening line
+    expect(result[0]).toBe('  events: {');
+    // Verify closing line has proper syntax with closing brace
+    expect(result[result.length - 1]).toBe('  },');
+    // Verify structure: opening + events + closing = 3 lines minimum
+    expect(result.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('should properly close empty events object', () => {
+    const result = buildEventsSection([]);
+
+    // Empty events should be a single line with proper closing
+    expect(result).toEqual(['  events: {},']);
+  });
+
+  it('should sort events by name', () => {
+    const events: EventDescriptor[] = [
+      { name: 'zChange', reactHandler: 'onZChange' },
+      { name: 'aClick', reactHandler: 'onAClick' },
+      { name: 'mMove', reactHandler: 'onMMove' },
+    ];
+    const result = buildEventsSection(events);
+
+    // Extract event lines (skip first and last)
+    const eventLines = result.slice(1, -1);
+    expect(eventLines[0]).toContain('aClick');
+    expect(eventLines[1]).toContain('mMove');
+    expect(eventLines[2]).toContain('zChange');
+  });
+
+  it('should handle special character event names with proper quoting', () => {
+    const events: EventDescriptor[] = [
+      { name: 'data-change', reactHandler: 'onDataChange' },
+      { name: 'custom-event', reactHandler: 'onCustomEvent' },
+    ];
+    const result = buildEventsSection(events);
+
+    // Special characters should be quoted
+    expect(result.some((line) => line.includes("'custom-event'"))).toBe(true);
+    expect(result.some((line) => line.includes("'data-change'"))).toBe(true);
+  });
+
+  it('should generate syntactically valid JavaScript object', () => {
+    const events: EventDescriptor[] = [
+      { name: 'click', reactHandler: 'onClick' },
+      { name: 'change', reactHandler: 'onChange' },
+    ];
+    const result = buildEventsSection(events);
+    const joined = result.join('\n');
+
+    // Verify it forms a valid object structure
+    expect(joined).toMatch(/events:\s*\{/);
+    expect(joined).toMatch(/\},\s*$/);
+    // Verify each event line has proper syntax
+    expect(joined).toMatch(/click:\s*'onClick',/);
+    expect(joined).toMatch(/change:\s*'onChange',/);
+  });
 });
 
 describe('file payload builders', () => {
