@@ -25,6 +25,7 @@
 
 import {
   type EmitResult,
+  FileChangeStatus,
   type GeneratedSectionMarkers,
   GeneratedSectionName,
   type GeneratedSectionPayload,
@@ -40,7 +41,7 @@ export interface FilePayloadDraft {
   /** File path for the emitted payload. */
   readonly filePath: string;
   /** Action for the emitted payload. */
-  readonly action: 'created' | 'updated' | 'unchanged';
+  readonly action: FileChangeStatus;
   /** Accumulated file content lines. */
   readonly contentLines: readonly string[];
   /** Accumulated generated section metadata. */
@@ -58,12 +59,12 @@ export type FilePayloadBuilder = (draft: FilePayloadDraft) => FilePayloadDraft;
  * Creates a new file payload draft with default empty values.
  *
  * @param filePath - Target file path.
- * @param action - File action to assign (default: 'created').
+ * @param action - File action to assign (default: FileChangeStatus.Created).
  * @returns Initialized file payload draft.
  */
 export const createFilePayload = (
   filePath: string,
-  action: 'created' | 'updated' | 'unchanged' = 'created',
+  action: FileChangeStatus = FileChangeStatus.Created,
 ): FilePayloadDraft => ({
   filePath,
   action,

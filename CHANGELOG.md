@@ -10,6 +10,9 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Added
 
+- Add named constants for Figma package imports: `FIGMA_PACKAGE_REACT`, `FIGMA_PACKAGE_HTML` (TBD)
+- Add `FileChangeStatus` enum for file action types (TBD)
+- Add explicit type annotations to all test variables (TBD)
 - Add modular emitter utilities: `formatting.ts`, `figma-mapper.ts`, `section-builder.ts`, `file-builder.ts` (`708338a`)
 - Add 4 branch coverage tests for helpers and emitter edge cases (`c561764`)
 - Add generic `RegistryFactory<TTarget, TInstance, TMetadata>` base class (`ff2a160`)
@@ -25,6 +28,14 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Changed
 
+- Replace magic strings with `FIGMA_PACKAGE_REACT` and `FIGMA_PACKAGE_HTML` constants (TBD)
+- Replace `'created' | 'updated' | 'unchanged'` union type with `FileChangeStatus` enum (TBD)
+- Update `EmitResult.action` to use `FileChangeStatus` enum instead of string literals (TBD)
+- Update `FilePayloadDraft.action` to use `FileChangeStatus` enum (TBD)
+- Update all emitters to use `FileChangeStatus.Created` instead of `'created'` (TBD)
+- Update all test assertions to use `FileChangeStatus` enum values (TBD)
+- Add explicit `jest.Mock` type annotations to all mock functions in tests (TBD)
+- Add explicit `NodeJS.WriteStream` type annotations to stream objects in tests (TBD)
 - Extract emitter utilities into focused modules, reducing utils.ts from 523 to 56 lines (`708338a`)
   - `src/emitters/formatting.ts` - String formatting & identifier handling (102 lines)
   - `src/emitters/figma-mapper.ts` - Figma prop mapping & component naming (120 lines)
@@ -38,6 +49,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 - Update test files to reference `.items` from extraction results (`68e0088`)
 - Export `RegistryFactory`, `PluginOptions`, and `RegistryEntry` from core module (`ff2a160`)
 - Export additional helper functions from core module: `addErrors`, `addWarnings`, `hasErrors`, `hasWarnings`, `hasDiagnostics` (`da7c332`)
+- Export `FileChangeStatus` enum and Figma package constants from core module (TBD)
 
 ### Removed
 

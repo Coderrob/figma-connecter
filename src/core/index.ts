@@ -26,6 +26,8 @@ export {
   buildGeneratedSectionMarkers,
   DEFAULT_CONNECT_OPTIONS,
   DEFAULT_IMPORT_BASE,
+  FIGMA_PACKAGE_HTML,
+  FIGMA_PACKAGE_REACT,
   GENERATED_SECTION_MARKERS,
 } from './constants';
 export { formatEmitTargetOptions, listEmitTargets, parseEmitTargets } from './emit-targets';
@@ -84,4 +86,4 @@ export type {
   PropertyVisibility,
   TagNameResult,
 } from './types';
-export { EmitterTarget } from './types';
+export { EmitterTarget, FileChangeStatus } from './types';
