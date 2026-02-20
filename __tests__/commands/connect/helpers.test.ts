@@ -37,8 +37,8 @@ describe('resolveLogLevel', () => {
 
 describe('runCommandStages', () => {
   it('should execute command stages successfully', async () => {
-    const mockContext = { value: 'test-context' };
-    const mockResult = { success: true };
+    const mockContext: { value: string } = { value: 'test-context' };
+    const mockResult: { success: boolean } = { success: true };
     
     const command: CommandStages<typeof mockContext, typeof mockResult> = {
       validate: jest.fn(() => mockContext),
@@ -54,9 +54,9 @@ describe('runCommandStages', () => {
   });
 
   it('should call onError callback when execute throws an error', async () => {
-    const mockContext = { value: 'test-context' };
-    const mockError = new Error('Test error');
-    const onErrorMock = jest.fn();
+    const mockContext: { value: string } = { value: 'test-context' };
+    const mockError: Error = new Error('Test error');
+    const onErrorMock: jest.Mock = jest.fn();
     
     const command: CommandStages<typeof mockContext, never> = {
       validate: jest.fn(() => mockContext),
@@ -76,8 +76,8 @@ describe('runCommandStages', () => {
   });
 
   it('should re-throw error even after calling onError', async () => {
-    const mockContext = { value: 'test-context' };
-    const mockError = new Error('Test error');
+    const mockContext: { value: string } = { value: 'test-context' };
+    const mockError: Error = new Error('Test error');
     
     const command: CommandStages<typeof mockContext, never> = {
       validate: jest.fn(() => mockContext),
