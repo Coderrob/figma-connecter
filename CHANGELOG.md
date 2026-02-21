@@ -10,8 +10,9 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Added
 
-- Add custom ESLint rule `custom/no-inline-require-typeof` to prevent inline require() anti-pattern (TBD)
-- Add import anti-pattern guidelines to AGENTS.md documentation (TBD)
+- Add custom ESLint rule `custom/no-inline-require-typeof` to prevent inline require() anti-pattern (`f4edc87`)
+- Add import anti-pattern guidelines to AGENTS.md documentation (`f4edc87`)
+- Add `isInsideJestIsolateModules()` helper function in ESLint rule for consistent exception handling (TBD)
 - Add named constants for Figma package imports: `FIGMA_PACKAGE_REACT`, `FIGMA_PACKAGE_HTML` (`f13a67e`)
 - Add `FileChangeStatus` enum for file action types (`f13a67e`)
 - Add explicit type annotations to all test variables (`b498db9`)
@@ -51,7 +52,11 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 - Update test files to reference `.items` from extraction results (`68e0088`)
 - Export `RegistryFactory`, `PluginOptions`, and `RegistryEntry` from core module (`ff2a160`)
 - Export additional helper functions from core module: `addErrors`, `addWarnings`, `hasErrors`, `hasWarnings`, `hasDiagnostics` (`da7c332`)
-- Export `FileChangeStatus` enum and Figma package constants from core module (TBD)
+- Export `FileChangeStatus` enum and Figma package constants from core module (`f13a67e`)
+- Fix `WebComponentParseResult` import in `__tests__/plugins.test.ts` to use correct module path (TBD)
+- Improve ESLint rule to check for `jest.isolateModules()` in all visitors, not just VariableDeclarator (TBD)
+- Reorder type assertion check before unwrapping in ESLint rule for proper specialized error message (TBD)
+- Change mock parser `model: null` to `model: undefined` in test to align with actual parser contract (TBD)
 
 ### Removed
 

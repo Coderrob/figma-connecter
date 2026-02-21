@@ -37,6 +37,28 @@ function unwrapExpression(node) {
 }
 
 /**
+ * Checks if a node is inside a jest.isolateModules() callback.
+ *
+ * @param {object} node - AST node to check
+ * @returns {boolean} True if node is inside jest.isolateModules()
+ */
+function isInsideJestIsolateModules(node) {
+  let current = node;
+  while (current) {
+    if (
+      current.type === 'CallExpression' &&
+      current.callee?.type === 'MemberExpression' &&
+      current.callee.object?.name === 'jest' &&
+      current.callee.property?.name === 'isolateModules'
+    ) {
+      return true;
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
+/**
  * Checks if a node is a require() call expression.
  *
  * @param {object} node - AST node to check
@@ -125,20 +147,20 @@ const noInlineRequireTypeofRule = {
        */
       VariableDeclarator(node) {
         // Allow jest.isolateModules() callback contexts
-        let current = node;
-        while (current) {
-          if (
-            current.type === 'CallExpression' &&
-            current.callee?.type === 'MemberExpression' &&
-            current.callee.object?.name === 'jest' &&
-            current.callee.property?.name === 'isolateModules'
-          ) {
-            return; // Skip - this is inside jest.isolateModules()
-          }
-          current = current.parent;
+        if (isInsideJestIsolateModules(node)) {
+          return;
         }
 
         if (!node.init) return;
+
+        // Check for require() with type assertion: require(...) as typeof import(...)
+        if (node.init.type === 'TSAsExpression' && isRequireCall(node.init.expression)) {
+          context.report({
+            node: node.init,
+            messageId: 'requireWithTypeAssertion',
+          });
+          return;
+        }
 
         const init = unwrapExpression(node.init);
 
@@ -147,15 +169,6 @@ const noInlineRequireTypeofRule = {
           context.report({
             node: node.init,
             messageId: 'inlineRequire',
-          });
-          return;
-        }
-
-        // Check for require() with type assertion: require(...) as typeof import(...)
-        if (node.init.type === 'TSAsExpression' && isRequireCall(node.init.expression)) {
-          context.report({
-            node: node.init,
-            messageId: 'requireWithTypeAssertion',
           });
           return;
         }
@@ -176,6 +189,10 @@ const noInlineRequireTypeofRule = {
        * @returns {void}
        */
       UnaryExpression(node) {
+        if (isInsideJestIsolateModules(node)) {
+          return;
+        }
+
         if (isTypeofWithInlineRequire(node)) {
           context.report({
             node,
@@ -191,6 +208,10 @@ const noInlineRequireTypeofRule = {
        * @returns {void}
        */
       BinaryExpression(node) {
+        if (isInsideJestIsolateModules(node)) {
+          return;
+        }
+
         if (isInstanceofWithInlineRequire(node)) {
           context.report({
             node,
@@ -212,6 +233,10 @@ const noInlineRequireTypeofRule = {
           node.callee.object?.name === 'jest' &&
           node.callee.property?.name === 'isolateModules'
         ) {
+          return;
+        }
+
+        if (isInsideJestIsolateModules(node)) {
           return;
         }
 

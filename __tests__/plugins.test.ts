@@ -22,8 +22,9 @@
 
 import type { Emitter, EmitterContext } from '../src/emitters/types';
 import type { Parser, ParseContext } from '../src/parsers/types';
-import { EmitterTarget, ParserTarget } from '../src/core/types';
-import type { EmitResult, WebComponentParseResult } from '../src/core/types';
+import { EmitterTarget, ParserTarget, FileChangeStatus } from '../src/core/types';
+import type { EmitResult } from '../src/core/types';
+import type { WebComponentParseResult } from '../src/parsers/webcomponent';
 
 /**
  * Creates a minimal test emitter for plugin registration.
@@ -36,7 +37,7 @@ const createTestEmitter = (target: EmitterTarget): Emitter => ({
   emit: (_context: EmitterContext): EmitResult => ({
     filePath: `/${target}.figma.ts`,
     content: '',
-    action: 'created',
+    action: FileChangeStatus.Created,
   }),
 });
 
