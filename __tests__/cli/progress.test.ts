@@ -31,9 +31,9 @@ describe('createProgressIndicator', () => {
 
   it('should return a no-op indicator when disabled', () => {
     const writes: string[] = [];
-    const stream = {
+    const stream: NodeJS.WriteStream = {
       isTTY: true,
-      write: (chunk: string) => {
+      write: (chunk: string): boolean => {
         writes.push(chunk);
         return true;
       },
@@ -49,9 +49,9 @@ describe('createProgressIndicator', () => {
 
   it('should render spinner frames and final status', () => {
     const writes: string[] = [];
-    const stream = {
+    const stream: NodeJS.WriteStream = {
       isTTY: true,
-      write: (chunk: string) => {
+      write: (chunk: string): boolean => {
         writes.push(chunk);
         return true;
       },
@@ -77,9 +77,9 @@ describe('createProgressIndicator', () => {
 
   it('should render error status when stop is called with error', () => {
     const writes: string[] = [];
-    const stream = {
+    const stream: NodeJS.WriteStream = {
       isTTY: true,
-      write: (chunk: string) => {
+      write: (chunk: string): boolean => {
         writes.push(chunk);
         return true;
       },
@@ -96,9 +96,9 @@ describe('createProgressIndicator', () => {
 
   it('should allow stop before start', () => {
     const writes: string[] = [];
-    const stream = {
+    const stream: NodeJS.WriteStream = {
       isTTY: true,
-      write: (chunk: string) => {
+      write: (chunk: string): boolean => {
         writes.push(chunk);
         return true;
       },
@@ -129,9 +129,9 @@ describe('createProgressIndicator', () => {
 
   it('should infer enabled state from the stream when not provided', () => {
     const writes: string[] = [];
-    const stream = {
+    const stream: NodeJS.WriteStream = {
       isTTY: true,
-      write: (chunk: string) => {
+      write: (chunk: string): boolean => {
         writes.push(chunk);
         return true;
       },

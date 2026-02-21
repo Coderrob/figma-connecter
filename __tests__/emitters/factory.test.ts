@@ -18,6 +18,8 @@
  * @fileoverview Tests for emitter factory module.
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 import { EmitterTarget } from '../../src/core/types';
 import type { EmitResult } from '../../src/core/types';
 import { createEmitter, createEmitters, listEmitterTargets } from '../../src/emitters/factory';

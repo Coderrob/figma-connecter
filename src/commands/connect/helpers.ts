@@ -22,6 +22,9 @@
 import type { CommandStages, GlobalCliOptions } from '../../cli';
 import { LogLevel } from '../../core/logger';
 
+// Re-export types used by this module for convenience
+export type { CommandStages };
+
 /**
  * Resolves the log level based on global CLI options.
  *

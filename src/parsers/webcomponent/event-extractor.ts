@@ -16,7 +16,7 @@
 
 import ts from 'typescript';
 
-import type { EventDescriptor } from '../../core/types';
+import type { EventDescriptor, ExtractionResult } from '../../core/types';
 import { mergeByKey } from '../../utils/merge-by-key';
 import { toPascalCase } from '../../utils/strings';
 import { getJSDocTagText } from '../../utils/ts';
@@ -24,10 +24,10 @@ import { getJSDocTagText } from '../../utils/ts';
 import type { ASTVisitorResult } from './ast-visitor';
 import { extractFromChain } from './chain-extractor';
 
-export interface EventExtractionResult {
-  readonly events: readonly EventDescriptor[];
-  readonly warnings: readonly string[];
-}
+/**
+ * Result of event extraction containing events and warnings.
+ */
+export type EventExtractionResult = ExtractionResult<EventDescriptor>;
 
 /**
  * Context for event extraction operations.
@@ -145,7 +145,7 @@ export const extractEvents = (
   });
 
   return {
-    events: Array.from(unique.values()),
+    items: Array.from(unique.values()),
     warnings,
   };
 };
@@ -186,7 +186,7 @@ export const extractEventsFromChain = (
   });
 
   return {
-    events: extracted.items,
+    items: extracted.items,
     warnings: extracted.warnings,
   };
 };

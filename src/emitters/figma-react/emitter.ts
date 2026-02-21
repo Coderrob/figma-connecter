@@ -16,12 +16,12 @@
 
 import path from 'node:path';
 
-import { type EmitResult, EmitterTarget, GeneratedSectionName } from '../../core/types';
+import { buildGeneratedSectionMarkers, FIGMA_PACKAGE_REACT } from '../../core/constants';
+import { type EmitResult, EmitterTarget, FileChangeStatus, GeneratedSectionName } from '../../core/types';
 import { normalizePath } from '../../utils/paths';
 import type { Emitter, EmitterContext } from '../types';
 import {
   buildFilePayload,
-  buildGeneratedSectionMarkers,
   buildPropsSection,
   buildReactExampleSection,
   createFilePayload,
@@ -91,10 +91,10 @@ export class FigmaReactEmitter implements Emitter {
     const exampleMarkers = buildGeneratedSectionMarkers(GeneratedSectionName.Example);
 
     return buildFilePayload(
-      createFilePayload(filePath, 'created'),
+      createFilePayload(filePath, FileChangeStatus.Created),
       withImports([
         `import { ${model.className} } from '${importPath}';`,
-        "import figma from '@figma/code-connect';",
+        `import figma from '${FIGMA_PACKAGE_REACT}';`,
         '',
       ]),
       withSections({ lines: [`figma.connect('${figmaUrl}', {`] }),

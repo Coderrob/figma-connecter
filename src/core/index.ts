@@ -26,10 +26,13 @@ export {
   buildGeneratedSectionMarkers,
   DEFAULT_CONNECT_OPTIONS,
   DEFAULT_IMPORT_BASE,
+  FIGMA_PACKAGE_HTML,
+  FIGMA_PACKAGE_REACT,
   GENERATED_SECTION_MARKERS,
 } from './constants';
 export { formatEmitTargetOptions, listEmitTargets, parseEmitTargets } from './emit-targets';
 export type { LogContext, LoggerOptions } from './logger';
+export { RegistryFactory, type PluginOptions, type RegistryEntry } from './registry-factory';
 export { createScopedLogger, Logger, LogLevel, resolveLogLevel } from './logger';
 export type { ReportTimer } from './report';
 export {
@@ -47,11 +50,16 @@ export {
 } from './report';
 export type { AggregateResult, Diagnostics, Result } from './result';
 export {
+  addErrors,
+  addWarnings,
   aggregateResults,
   applyAggregateDiagnostics,
   applyDiagnostics,
   chain,
   createResult,
+  hasDiagnostics,
+  hasErrors,
+  hasWarnings,
   map as mapResult,
   mergeDiagnostics,
   mergeErrors,
@@ -67,6 +75,7 @@ export type {
   EmitTarget,
   EmitterOptions,
   EventDescriptor,
+  ExtractionResult,
   FigmaPropertyType,
   GeneratedSectionMarkers,
   GeneratedSectionName,
@@ -77,4 +86,4 @@ export type {
   PropertyVisibility,
   TagNameResult,
 } from './types';
-export { EmitterTarget } from './types';
+export { EmitterTarget, FileChangeStatus } from './types';

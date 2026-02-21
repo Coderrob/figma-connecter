@@ -18,7 +18,8 @@
  * @fileoverview Tests for FigmaWebComponentEmitter.
  */
 
-import { EmitterTarget, FigmaPropertyType } from '../../src/core/types';
+import { EmitterTarget, FigmaPropertyType, FileChangeStatus } from '../../src/core/types';
+import { FIGMA_PACKAGE_HTML } from '../../src/core/constants';
 import { FigmaWebComponentEmitter } from '../../src/emitters/figma-webcomponent';
 import { expectContainsAll, expectContainsInOrder, expectGeneratedSectionMarkers } from '../helpers/assertions';
 import {
@@ -58,12 +59,12 @@ describe('FigmaWebComponentEmitter', () => {
         const result = emitter.emit({ model, options: createMockEmitterOptions() });
 
         expect(result.filePath).toBe('/src/components/button/code-connect/button.webcomponent.figma.ts');
-        expect(result.content).toContain("import figma, { html } from '@figma/code-connect/html';");
+        expect(result.content).toContain(`import figma, { html } from '${FIGMA_PACKAGE_HTML}';`);
         expect(result.content).toContain('figma.connect(');
         expect(result.content).toContain('<FIGMA_BUTTON_URL>');
         expect(result.content).toContain('props: {},');
         expect(result.content).toContain('<my-button></my-button>');
-        expect(result.action).toBe('created');
+        expect(result.action).toBe(FileChangeStatus.Created);
       });
 
       it('should generate props section for component with properties', () => {
@@ -175,7 +176,7 @@ describe('FigmaWebComponentEmitter', () => {
         const result = emitter.emit({ model, options: createMockEmitterOptions() });
 
         expectContainsInOrder(result.content, [
-          "import figma, { html } from '@figma/code-connect/html';",
+          `import figma, { html } from '${FIGMA_PACKAGE_HTML}';`,
           "figma.connect('<FIGMA_BUTTON_URL>', {",
         ]);
         expectGeneratedSectionMarkers(result.content);

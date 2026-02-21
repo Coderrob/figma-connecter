@@ -50,6 +50,12 @@ export const DEFAULT_CONNECT_OPTIONS = {
 export const DEFAULT_IMPORT_BASE = '@momentum-design/components';
 
 /**
+ * Figma Code Connect package imports.
+ */
+export const FIGMA_PACKAGE_REACT = '@figma/code-connect';
+export const FIGMA_PACKAGE_HTML = '@figma/code-connect/html';
+
+/**
  * Builds named markers for a specific generated section.
  *
  * @param name - The generated section name to embed in markers.

@@ -28,6 +28,8 @@
  * @module parsers/factory
  */
 
+import { RegistryFactory } from '../core/registry-factory';
+
 import { type Parser, ParserTarget } from './types';
 import { WebComponentParser } from './webcomponent';
 
@@ -44,9 +46,10 @@ export interface ParserMetadata {
 }
 
 /**
- * Registry entry combining factory and metadata.
+ * Plugin registration options for parsers.
  */
-interface ParserRegistryEntry {
+export interface ParserPluginOptions {
+  readonly target: ParserTarget;
   readonly factory: () => Parser;
   readonly metadata: ParserMetadata;
 }
@@ -59,11 +62,16 @@ interface ParserRegistryEntry {
 const createWebComponentParser = (): Parser => new WebComponentParser();
 
 /**
- * Central registry mapping targets to parser factories and metadata.
- * All parser selection logic flows through this registry.
- * Mutable to support plugin registration.
+ * Parser factory implementation extending generic registry factory.
  */
-const PARSER_REGISTRY = new Map<ParserTarget, ParserRegistryEntry>([
+class ParserFactoryImpl extends RegistryFactory<ParserTarget, Parser, ParserMetadata> {
+  protected readonly factoryTypeName = 'Parser';
+}
+
+/**
+ * Singleton parser factory instance with initial registrations.
+ */
+const parserFactory = new ParserFactoryImpl([
   [
     ParserTarget.WebComponent,
     {
@@ -76,15 +84,6 @@ const PARSER_REGISTRY = new Map<ParserTarget, ParserRegistryEntry>([
     },
   ],
 ]);
-
-/**
- * Plugin registration options for parsers.
- */
-export interface ParserPluginOptions {
-  readonly target: ParserTarget;
-  readonly factory: () => Parser;
-  readonly metadata: ParserMetadata;
-}
 
 /**
  * Registers a new parser plugin at runtime.
@@ -109,13 +108,7 @@ export interface ParserPluginOptions {
  * ```
  */
 export const registerParserPlugin = (options: ParserPluginOptions): void => {
-  if (PARSER_REGISTRY.has(options.target)) {
-    throw new Error(`Parser plugin already registered for target: ${options.target}`);
-  }
-  PARSER_REGISTRY.set(options.target, {
-    factory: options.factory,
-    metadata: options.metadata,
-  });
+  parserFactory.registerPlugin(options);
 };
 
 /**
@@ -124,87 +117,49 @@ export const registerParserPlugin = (options: ParserPluginOptions): void => {
  * @param target - Target to check.
  * @returns True if registered.
  */
-export const hasParserPlugin = (target: ParserTarget): boolean => PARSER_REGISTRY.has(target);
+export const hasParserPlugin = (target: ParserTarget): boolean => parserFactory.hasPlugin(target);
 
 /**
  * Returns the list of registered parser targets.
  *
- * @param registry - Registry map to read from.
  * @returns Array of registered parser targets.
  */
-export const listParserTargets = (
-  registry: ReadonlyMap<ParserTarget, ParserRegistryEntry> = PARSER_REGISTRY,
-): ParserTarget[] => [...registry.keys()];
+export const listParserTargets = (): ParserTarget[] => parserFactory.listTargets();
 
 /**
  * Gets metadata for a specific parser target.
  *
  * @param target - Parser target to query.
- * @param registry - Registry map to read from.
  * @returns Metadata for the target.
  */
-export const getParserMetadata = (
-  target: ParserTarget,
-  registry: ReadonlyMap<ParserTarget, ParserRegistryEntry> = PARSER_REGISTRY,
-): ParserMetadata => {
-  const entry = registry.get(target);
-  if (!entry) {
-    throw new Error(`No parser registered for target: ${target}`);
-  }
-  return entry.metadata;
-};
+export const getParserMetadata = (target: ParserTarget): ParserMetadata => parserFactory.getMetadata(target);
 
 /**
  * Gets metadata for all registered parsers.
  *
- * @param registry - Registry map to read from.
  * @returns Map of targets to their metadata.
  */
-export const getAllParserMetadata = (
-  registry: ReadonlyMap<ParserTarget, ParserRegistryEntry> = PARSER_REGISTRY,
-): ReadonlyMap<ParserTarget, ParserMetadata> =>
-  new Map(Array.from(registry, ([target, entry]) => [target, entry.metadata]));
+export const getAllParserMetadata = (): ReadonlyMap<ParserTarget, ParserMetadata> =>
+  parserFactory.getAllMetadata();
 
 /**
  * Returns the default parser target.
  *
- * @param registry - Registry map to read from.
  * @returns The first registered parser target.
  */
-export const getDefaultParserTarget = (
-  registry: ReadonlyMap<ParserTarget, ParserRegistryEntry> = PARSER_REGISTRY,
-): ParserTarget => {
-  const targets = listParserTargets(registry);
-  if (targets.length === 0) {
-    throw new Error('No parser targets registered.');
-  }
-  return targets[0];
-};
+export const getDefaultParserTarget = (): ParserTarget => parserFactory.getDefaultTarget();
 
 /**
  * Creates a parser instance for the requested target.
  *
  * @param target - Parser target to instantiate.
- * @param registry - Registry map to read from.
  * @returns Parser instance for the target.
  */
-export const createParser = (
-  target: ParserTarget,
-  registry: ReadonlyMap<ParserTarget, ParserRegistryEntry> = PARSER_REGISTRY,
-): Parser => {
-  const entry = registry.get(target);
-  if (!entry) {
-    throw new Error(`No parser registered for target: ${target}`);
-  }
-  return entry.factory();
-};
+export const createParser = (target: ParserTarget): Parser => parserFactory.createInstance(target);
 
 /**
  * Creates the default parser instance.
  *
- * @param registry - Registry map to read from.
  * @returns Parser instance for the default target.
  */
-export const createDefaultParser = (
-  registry: ReadonlyMap<ParserTarget, ParserRegistryEntry> = PARSER_REGISTRY,
-): Parser => createParser(getDefaultParserTarget(registry), registry);
+export const createDefaultParser = (): Parser => parserFactory.createDefaultInstance();

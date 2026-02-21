@@ -23,14 +23,14 @@ import { Command } from 'commander';
 import { runConnectCommand } from '../../../src/commands/connect/handler';
 import type { ConnectCommandOptions } from '../../../src/commands/connect/types';
 
-const mockGetGlobalOptions = jest.fn();
-const mockValidateGlobalOptions = jest.fn();
-const mockValidatePathOption = jest.fn();
-const mockValidateConfigPath = jest.fn();
-const mockParseEmitTargets = jest.fn();
-const mockRunConnectPipeline = jest.fn();
-const mockFormatReportSummary = jest.fn();
-const mockCreateProgressIndicator = jest.fn();
+const mockGetGlobalOptions: jest.Mock = jest.fn();
+const mockValidateGlobalOptions: jest.Mock = jest.fn();
+const mockValidatePathOption: jest.Mock = jest.fn();
+const mockValidateConfigPath: jest.Mock = jest.fn();
+const mockParseEmitTargets: jest.Mock = jest.fn();
+const mockRunConnectPipeline: jest.Mock = jest.fn();
+const mockFormatReportSummary: jest.Mock = jest.fn();
+const mockCreateProgressIndicator: jest.Mock = jest.fn();
 
 jest.mock('../../../src/cli/options', () => ({
   getGlobalOptions: (...args: unknown[]) => mockGetGlobalOptions(...args),

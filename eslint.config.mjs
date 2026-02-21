@@ -19,6 +19,12 @@ import importPlugin from 'eslint-plugin-import';
 import jsdocPlugin from 'eslint-plugin-jsdoc';
 import globals from 'globals';
 
+// Custom Rules
+import noInlineRequireTypeof from './eslint/rules/no-inline-require-typeof.mjs';
+import requireClassImplementsInterface from './eslint/rules/require-class-implements-interface.mjs';
+import requireItShould from './eslint/rules/require-it-should.mjs';
+import requireZodDescribe from './eslint/rules/require-zod-describe.mjs';
+
 // ============================================================================
 // CONFIGURATION CONSTANTS
 // ============================================================================
@@ -401,6 +407,12 @@ export default [
     plugins: {
       import: importPlugin,
       jsdoc: jsdocPlugin,
+      custom: {
+        'no-inline-require-typeof': noInlineRequireTypeof,
+        'require-class-implements-interface': requireClassImplementsInterface,
+        'require-it-should': requireItShould,
+        'require-zod-describe': requireZodDescribe,
+      },
     },
     rules: {
       ...typescriptRules,
@@ -408,6 +420,7 @@ export default [
       ...jsdocRules,
       ...importRules,
       ...codeQualityRules,
+      'custom/no-inline-require-typeof': 'error',
     },
     settings: {
       'import/resolver': {

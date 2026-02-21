@@ -44,6 +44,25 @@ export enum EmitterTarget {
  */
 export type EmitTarget = `${EmitterTarget}`;
 
+// ============================================================================
+// Generic Extraction Result
+// ============================================================================
+
+/**
+ * Generic result type for extraction operations.
+ * Provides a consistent shape for operations that extract items and may produce warnings.
+ * 
+ * @template T - The type of items being extracted
+ */
+export interface ExtractionResult<T> {
+  readonly items: readonly T[];
+  readonly warnings: readonly string[];
+}
+
+// ============================================================================
+// CLI Configuration Types (continued)
+// ============================================================================
+
 /**
  * Configuration options for the connect command.
  */
@@ -342,7 +361,7 @@ export interface EmitResult {
   /** Optional generated section payloads for partial updates. */
   readonly sections?: readonly GeneratedSectionPayload[];
   /** Whether the file was created, updated, or unchanged. */
-  readonly action: 'created' | 'updated' | 'unchanged';
+  readonly action: FileChangeStatus;
   /** Warnings encountered during emission (e.g., unknown property types). */
   readonly warnings?: readonly string[];
 }

@@ -125,6 +125,59 @@ if (!parseResult.model) {
 2. **Readonly arrays and objects** in interfaces.
 3. **Discriminated unions** for variant types.
 4. **No `any`** - Use `unknown` and narrow with type guards.
+5. **No inline require() or import()** - All imports and requires must be defined at the top of the file module.
+
+### Import Anti-Patterns
+
+**❌ NEVER use inline require() statements:**
+
+```typescript
+// ❌ BAD - Inline require with type assertion
+const factory = require('../../src/parsers/factory') as typeof import('../../src/parsers/factory');
+
+// ❌ BAD - Inline require in typeof check
+if (typeof value === typeof require('./module').SomeType) { ... }
+
+// ❌ BAD - Inline require in instanceof check
+if (value instanceof require('./module').SomeClass) { ... }
+
+// ❌ BAD - Inline require in variable declaration
+const { helper } = require('./utils');
+```
+
+**✅ ALWAYS use static imports at the top of the file:**
+
+```typescript
+// ✅ GOOD - Import at top of file
+import * as factory from '../../src/parsers/factory';
+import { SomeType, SomeClass } from './module';
+import { helper } from './utils';
+
+// Then use normally in your code
+if (typeof value === typeof SomeType) { ... }
+if (value instanceof SomeClass) { ... }
+```
+
+**Exception**: Inline requires are permitted ONLY within `jest.isolateModules()` callbacks for testing module isolation:
+
+```typescript
+// ✅ ALLOWED - Testing module isolation
+it('should isolate module', () => {
+  jest.isolateModules(() => {
+    const factory = require('../../src/parsers/factory');
+    // test logic...
+  });
+});
+```
+
+**Why this matters**:
+- **Maintainability**: All dependencies are clearly visible at the top of the file
+- **Performance**: Static imports can be optimized by bundlers and tree-shaking
+- **Type Safety**: TypeScript can better infer types with static imports
+- **Readability**: Easier to understand module dependencies at a glance
+- **Refactoring**: IDEs can better track and update import paths
+
+This anti-pattern is enforced by the custom ESLint rule `custom/no-inline-require-typeof`.
 
 ---
 

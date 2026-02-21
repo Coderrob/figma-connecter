@@ -10,9 +10,62 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Added
 
-- Add comprehensive unit tests for IO adapter module to achieve 100% coverage (`pending`).
-- Add tslib as devDependency for Rollup TypeScript plugin support (`pending`).
-- Add emitter factory registry helper tests to improve coverage (`pending`).
+- Add custom ESLint rule `custom/no-inline-require-typeof` to prevent inline require() anti-pattern (`f4edc87`)
+- Add import anti-pattern guidelines to AGENTS.md documentation (`f4edc87`)
+- Add `isInsideJestIsolateModules()` helper function in ESLint rule for consistent exception handling (TBD)
+- Add named constants for Figma package imports: `FIGMA_PACKAGE_REACT`, `FIGMA_PACKAGE_HTML` (`f13a67e`)
+- Add `FileChangeStatus` enum for file action types (`f13a67e`)
+- Add explicit type annotations to all test variables (`b498db9`)
+- Add modular emitter utilities: `formatting.ts`, `figma-mapper.ts`, `section-builder.ts`, `file-builder.ts` (`708338a`)
+- Add 4 branch coverage tests for helpers and emitter edge cases (`c561764`)
+- Add generic `RegistryFactory<TTarget, TInstance, TMetadata>` base class (`ff2a160`)
+- Add 19 comprehensive tests for registry factory base class (`ff2a160`)
+- Add comprehensive test coverage for plugin system (`da7c332`)
+- Add tests for `src/plugins.ts` module achieving 100% coverage (`da7c332`)
+- Add tests for `src/internal-plugin-registry.ts` achieving 100% coverage (`da7c332`)
+- Add tests for parser factory uncovered branches (`da7c332`)
+- Add tests for core result module functions (`da7c332`)
+- Add tests for emitter utils file payload builders (`da7c332`)
+- Add generic `ExtractionResult<T>` type for extraction operations (`68e0088`)
+- Add `.gitignore` file to exclude build artifacts and dependencies (`4ec618a`)
+
+### Changed
+
+- Replace magic strings with `FIGMA_PACKAGE_REACT` and `FIGMA_PACKAGE_HTML` constants (`f13a67e`)
+- Replace `'created' | 'updated' | 'unchanged'` union type with `FileChangeStatus` enum (`f13a67e`)
+- Update `EmitResult.action` to use `FileChangeStatus` enum instead of string literals (`f13a67e`)
+- Update `FilePayloadDraft.action` to use `FileChangeStatus` enum (`f13a67e`)
+- Update all emitters to use `FileChangeStatus.Created` instead of `'created'` (`f13a67e`)
+- Update all test assertions to use `FileChangeStatus` enum values (`f13a67e`)
+- Add explicit `jest.Mock` type annotations to all mock functions in tests (`b498db9`)
+- Add explicit `NodeJS.WriteStream` type annotations to stream objects in tests (`b498db9`)
+- Extract emitter utilities into focused modules, reducing utils.ts from 523 to 56 lines (`708338a`)
+  - `src/emitters/formatting.ts` - String formatting & identifier handling (102 lines)
+  - `src/emitters/figma-mapper.ts` - Figma prop mapping & component naming (120 lines)
+  - `src/emitters/section-builder.ts` - Props, events, examples sections (162 lines)
+  - `src/emitters/file-builder.ts` - File payload builders (188 lines)
+- Refactor parser factory to extend generic `RegistryFactory` class, reducing 26 lines (`be8fd5d`)
+- Refactor emitter factory to extend generic `RegistryFactory` class, reducing 21 lines (`5181620`)
+- Refactor `PropertyExtractionResult` to use generic `ExtractionResult<PropertyDescriptor>` (`68e0088`)
+- Refactor `EventExtractionResult` to use generic `ExtractionResult<EventDescriptor>` (`68e0088`)
+- Update all extraction functions to use `.items` instead of `.properties` or `.events` (`68e0088`)
+- Update test files to reference `.items` from extraction results (`68e0088`)
+- Export `RegistryFactory`, `PluginOptions`, and `RegistryEntry` from core module (`ff2a160`)
+- Export additional helper functions from core module: `addErrors`, `addWarnings`, `hasErrors`, `hasWarnings`, `hasDiagnostics` (`da7c332`)
+- Export `FileChangeStatus` enum and Figma package constants from core module (`f13a67e`)
+- Fix `WebComponentParseResult` import in `__tests__/plugins.test.ts` to use correct module path (TBD)
+- Improve ESLint rule to check for `jest.isolateModules()` in all visitors, not just VariableDeclarator (TBD)
+- Reorder type assertion check before unwrapping in ESLint rule for proper specialized error message (TBD)
+- Change mock parser `model: null` to `model: undefined` in test to align with actual parser contract (TBD)
+
+### Removed
+
+- Remove backward compatibility parameters from parser factory functions (`838479c`)
+  - Simplified `listParserTargets()`, `getParserMetadata()`, `getAllParserMetadata()`, `getDefaultParserTarget()`, `createParser()`, `createDefaultParser()`
+  - Removed unused `_registry` optional parameters
+- Remove deprecated `findClassDeclarations()` wrapper function (`838479c`)
+- Remove unnecessary `RegistryEntry` import from parser factory (`838479c`)
+- Remove backward compatibility comments from tests and documentation (`838479c`)
 
 ### Fixed
 

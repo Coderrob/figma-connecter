@@ -29,6 +29,7 @@
  */
 
 import { EmitterTarget } from '../core/types';
+import { RegistryFactory } from '../core/registry-factory';
 
 import { FigmaReactEmitter } from './figma-react';
 import { FigmaWebComponentEmitter } from './figma-webcomponent';
@@ -54,9 +55,10 @@ export interface EmitterMetadata {
 }
 
 /**
- * Registry entry combining factory and metadata.
+ * Plugin registration options for emitters.
  */
-interface EmitterRegistryEntry {
+export interface EmitterPluginOptions {
+  readonly target: EmitterTarget;
   readonly factory: () => Emitter;
   readonly metadata: EmitterMetadata;
 }
@@ -76,11 +78,16 @@ const createWebComponentEmitter = (): Emitter => new FigmaWebComponentEmitter();
 const createReactEmitter = (): Emitter => new FigmaReactEmitter();
 
 /**
- * Central registry mapping targets to emitter factories and metadata.
- * All emitter selection logic flows through this registry.
- * Mutable to support plugin registration.
+ * Emitter factory implementation extending generic registry factory.
  */
-const EMITTER_REGISTRY = new Map<EmitterTarget, EmitterRegistryEntry>([
+class EmitterFactoryImpl extends RegistryFactory<EmitterTarget, Emitter, EmitterMetadata> {
+  protected readonly factoryTypeName = 'Emitter';
+}
+
+/**
+ * Singleton emitter factory instance with initial registrations.
+ */
+const emitterFactory = new EmitterFactoryImpl([
   [
     EmitterTarget.WebComponent,
     {
@@ -106,15 +113,6 @@ const EMITTER_REGISTRY = new Map<EmitterTarget, EmitterRegistryEntry>([
 ]);
 
 /**
- * Plugin registration options for emitters.
- */
-export interface EmitterPluginOptions {
-  readonly target: EmitterTarget;
-  readonly factory: () => Emitter;
-  readonly metadata: EmitterMetadata;
-}
-
-/**
  * Registers a new emitter plugin at runtime.
  * Allows external packages to extend emitter support without modifying this file.
  *
@@ -137,13 +135,7 @@ export interface EmitterPluginOptions {
  * ```
  */
 export const registerEmitterPlugin = (options: EmitterPluginOptions): void => {
-  if (EMITTER_REGISTRY.has(options.target)) {
-    throw new Error(`Emitter plugin already registered for target: ${options.target}`);
-  }
-  EMITTER_REGISTRY.set(options.target, {
-    factory: options.factory,
-    metadata: options.metadata,
-  });
+  emitterFactory.registerPlugin(options);
 };
 
 /**
@@ -152,14 +144,14 @@ export const registerEmitterPlugin = (options: EmitterPluginOptions): void => {
  * @param target - Target to check.
  * @returns True if registered.
  */
-export const hasEmitterPlugin = (target: EmitterTarget): boolean => EMITTER_REGISTRY.has(target);
+export const hasEmitterPlugin = (target: EmitterTarget): boolean => emitterFactory.hasPlugin(target);
 
 /**
  * Returns the list of registered emitter targets.
  *
  * @returns Array of registered emitter targets.
  */
-export const listEmitterTargets = (): EmitterTarget[] => [...EMITTER_REGISTRY.keys()];
+export const listEmitterTargets = (): EmitterTarget[] => emitterFactory.listTargets();
 
 /**
  * Gets metadata for a specific emitter target.
@@ -167,13 +159,7 @@ export const listEmitterTargets = (): EmitterTarget[] => [...EMITTER_REGISTRY.ke
  * @param target - Emitter target to query.
  * @returns Metadata for the target.
  */
-export const getEmitterMetadata = (target: EmitterTarget): EmitterMetadata => {
-  const entry = EMITTER_REGISTRY.get(target);
-  if (!entry) {
-    throw new Error(`No emitter registered for target: ${target}`);
-  }
-  return entry.metadata;
-};
+export const getEmitterMetadata = (target: EmitterTarget): EmitterMetadata => emitterFactory.getMetadata(target);
 
 /**
  * Gets metadata for all registered emitters.
@@ -181,7 +167,7 @@ export const getEmitterMetadata = (target: EmitterTarget): EmitterMetadata => {
  * @returns Map of targets to their metadata.
  */
 export const getAllEmitterMetadata = (): ReadonlyMap<EmitterTarget, EmitterMetadata> =>
-  new Map(Array.from(EMITTER_REGISTRY, ([target, entry]) => [target, entry.metadata]));
+  emitterFactory.getAllMetadata();
 
 /**
  * Creates a single emitter instance for the requested target.
@@ -189,13 +175,7 @@ export const getAllEmitterMetadata = (): ReadonlyMap<EmitterTarget, EmitterMetad
  * @param target - Emitter target to instantiate.
  * @returns Emitter instance for the target.
  */
-export const createEmitter = (target: EmitterTarget): Emitter => {
-  const entry = EMITTER_REGISTRY.get(target);
-  if (!entry) {
-    throw new Error(`No emitter registered for target: ${target}`);
-  }
-  return entry.factory();
-};
+export const createEmitter = (target: EmitterTarget): Emitter => emitterFactory.createInstance(target);
 
 /**
  * Creates emitter instances for the requested targets.
@@ -206,9 +186,8 @@ export const createEmitter = (target: EmitterTarget): Emitter => {
  */
 export const createEmitters = (options: EmitterFactoryOptions): Emitter[] => {
   const targets = new Set(options.targets);
+  const allTargets = emitterFactory.listTargets();
 
   // Iterate in registry order to ensure consistent output
-  return Array.from(EMITTER_REGISTRY)
-    .filter(([target]) => targets.has(target))
-    .map(([, entry]) => entry.factory());
+  return allTargets.filter((target) => targets.has(target)).map((target) => emitterFactory.createInstance(target));
 };
