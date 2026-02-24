@@ -18,14 +18,23 @@
  * @fileoverview Tests for emitter utilities.
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
+
+import { GENERATED_SECTION_MARKERS } from '../../src/core/constants';
 import {
+  buildEventsSection,
   buildPropsSection,
   formatPropAccessor,
-  GENERATED_SECTION_MARKERS,
+  formatPropKey,
   getComponentBaseName,
+  indent,
+  indentBlock,
+  isValidIdentifier,
+  toTitleCase,
   wrapGeneratedSection,
 } from '../../src/emitters/utils';
 import { createMockComponentModel } from '../helpers/fixtures';
+import type { EventDescriptor } from '../../src/core/types';
 
 describe('getComponentBaseName', () => {
   it('should return file-based component name when pattern matches', () => {
@@ -72,5 +81,302 @@ describe('wrapGeneratedSection', () => {
 
     expect(wrapped[0]).toContain(GENERATED_SECTION_MARKERS.start);
     expect(wrapped[wrapped.length - 1]).toContain(GENERATED_SECTION_MARKERS.end);
+  });
+});
+
+describe('toTitleCase', () => {
+  it('should convert kebab-case to title case', () => {
+    expect(toTitleCase('my-component-name')).toBe('My Component Name');
+  });
+
+  it('should handle single word components', () => {
+    expect(toTitleCase('button')).toBe('Button');
+  });
+
+  it('should handle multiple separators', () => {
+    expect(toTitleCase('data--value')).toBe('Data Value');
+  });
+
+  it('should handle leading separator', () => {
+    expect(toTitleCase('-my-component')).toBe('My Component');
+  });
+
+  it('should handle trailing separator', () => {
+    expect(toTitleCase('my-component-')).toBe('My Component');
+  });
+});
+
+describe('indent', () => {
+  it('should return empty string for depth 0', () => {
+    expect(indent(0)).toBe('');
+  });
+
+  it('should return correct indentation for depth 1', () => {
+    expect(indent(1)).toBe('  ');
+  });
+
+  it('should return correct indentation for depth 3', () => {
+    expect(indent(3)).toBe('      ');
+  });
+});
+
+describe('indentBlock', () => {
+  it('should indent each line of a content block', () => {
+    const content = 'line1\nline2\nline3';
+    const result = indentBlock(content, 1);
+
+    expect(result).toEqual(['  line1', '  line2', '  line3']);
+  });
+
+  it('should handle depth 0', () => {
+    const content = 'line1\nline2';
+    const result = indentBlock(content, 0);
+
+    expect(result).toEqual(['line1', 'line2']);
+  });
+});
+
+describe('isValidIdentifier', () => {
+  it('should return true for valid identifiers', () => {
+    expect(isValidIdentifier('validName')).toBe(true);
+    expect(isValidIdentifier('_private')).toBe(true);
+    expect(isValidIdentifier('$jquery')).toBe(true);
+    expect(isValidIdentifier('name123')).toBe(true);
+  });
+
+  it('should return false for invalid identifiers', () => {
+    expect(isValidIdentifier('data-value')).toBe(false);
+    expect(isValidIdentifier('123invalid')).toBe(false);
+    expect(isValidIdentifier('my-component')).toBe(false);
+  });
+});
+
+describe('formatPropKey', () => {
+  it('should return unquoted key for valid identifiers', () => {
+    expect(formatPropKey('disabled')).toBe('disabled');
+  });
+
+  it('should return quoted key for invalid identifiers', () => {
+    expect(formatPropKey('data-value')).toBe("'data-value'");
+  });
+});
+
+describe('buildEventsSection', () => {
+  it('should return empty events block when no events provided', () => {
+    const result = buildEventsSection([]);
+
+    expect(result).toContain('  events: {},');
+  });
+
+  it('should build events section with multiple events', () => {
+    const events: EventDescriptor[] = [
+      { name: 'click', reactHandler: 'onClick' },
+      { name: 'change', reactHandler: 'onChange' },
+    ];
+    const result = buildEventsSection(events);
+
+    expect(result).toContain('  events: {');
+    expect(result.some((line) => line.includes('click'))).toBe(true);
+    expect(result.some((line) => line.includes('onChange'))).toBe(true);
+  });
+
+  it('should handle events with custom depth', () => {
+    const events: EventDescriptor[] = [{ name: 'click', reactHandler: 'onClick' }];
+    const result = buildEventsSection(events, 2);
+
+    expect(result[0]).toContain('    events: {');
+  });
+
+  it('should properly close events object with closing brace', () => {
+    const events: EventDescriptor[] = [
+      { name: 'click', reactHandler: 'onClick' },
+      { name: 'change', reactHandler: 'onChange' },
+    ];
+    const result = buildEventsSection(events);
+
+    // Verify opening line
+    expect(result[0]).toBe('  events: {');
+    // Verify closing line has proper syntax with closing brace
+    expect(result[result.length - 1]).toBe('  },');
+    // Verify structure: opening + events + closing = 3 lines minimum
+    expect(result.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('should properly close empty events object', () => {
+    const result = buildEventsSection([]);
+
+    // Empty events should be a single line with proper closing
+    expect(result).toEqual(['  events: {},']);
+  });
+
+  it('should sort events by name', () => {
+    const events: EventDescriptor[] = [
+      { name: 'zChange', reactHandler: 'onZChange' },
+      { name: 'aClick', reactHandler: 'onAClick' },
+      { name: 'mMove', reactHandler: 'onMMove' },
+    ];
+    const result = buildEventsSection(events);
+
+    // Extract event lines (skip first and last)
+    const eventLines = result.slice(1, -1);
+    expect(eventLines[0]).toContain('aClick');
+    expect(eventLines[1]).toContain('mMove');
+    expect(eventLines[2]).toContain('zChange');
+  });
+
+  it('should handle special character event names with proper quoting', () => {
+    const events: EventDescriptor[] = [
+      { name: 'data-change', reactHandler: 'onDataChange' },
+      { name: 'custom-event', reactHandler: 'onCustomEvent' },
+    ];
+    const result = buildEventsSection(events);
+
+    // Special characters should be quoted
+    expect(result.some((line) => line.includes("'custom-event'"))).toBe(true);
+    expect(result.some((line) => line.includes("'data-change'"))).toBe(true);
+  });
+
+  it('should generate syntactically valid JavaScript object', () => {
+    const events: EventDescriptor[] = [
+      { name: 'click', reactHandler: 'onClick' },
+      { name: 'change', reactHandler: 'onChange' },
+    ];
+    const result = buildEventsSection(events);
+    const joined = result.join('\n');
+
+    // Verify it forms a valid object structure
+    expect(joined).toMatch(/events:\s*\{/);
+    expect(joined).toMatch(/\},\s*$/);
+    // Verify each event line has proper syntax
+    expect(joined).toMatch(/click:\s*'onClick',/);
+    expect(joined).toMatch(/change:\s*'onChange',/);
+  });
+});
+
+describe('file payload builders', () => {
+  it('should create a file payload with default action', () => {
+    const { createFilePayload } = require('../../src/emitters/utils');
+    const payload = createFilePayload('/path/to/file.ts');
+
+    expect(payload.filePath).toBe('/path/to/file.ts');
+    expect(payload.action).toBe('created');
+    expect(payload.contentLines).toEqual([]);
+    expect(payload.sections).toEqual([]);
+    expect(payload.warnings).toEqual([]);
+  });
+
+  it('should create a file payload with custom action', () => {
+    const { createFilePayload } = require('../../src/emitters/utils');
+    const payload = createFilePayload('/path/to/file.ts', 'updated');
+
+    expect(payload.action).toBe('updated');
+  });
+
+  it('should build file payload from draft', () => {
+    const { createFilePayload, buildFilePayload } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    const result = buildFilePayload(draft);
+
+    expect(result.filePath).toBe('/path/to/file.ts');
+    expect(result.action).toBe('created');
+    expect(result.content).toBe('');
+    expect(result.sections).toBeUndefined();
+  });
+
+  it('should apply builders in order', () => {
+    const { createFilePayload, buildFilePayload } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const builder1 = (d: any) => ({ ...d, contentLines: [...d.contentLines, 'line1'] });
+    const builder2 = (d: any) => ({ ...d, contentLines: [...d.contentLines, 'line2'] });
+    
+    const result = buildFilePayload(draft, builder1, builder2);
+
+    expect(result.content).toBe('line1\nline2');
+  });
+
+  it('should include sections when present', () => {
+    const { createFilePayload, buildFilePayload } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const builder = (d: any) => ({ 
+      ...d, 
+      sections: [{ name: 'props', content: 'props: {}', markers: {} }] 
+    });
+    
+    const result = buildFilePayload(draft, builder);
+
+    expect(result.sections).toBeDefined();
+    expect(result.sections?.length).toBe(1);
+  });
+
+  it('should add imports with withImports builder', () => {
+    const { createFilePayload, buildFilePayload, withImports } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(draft, withImports(['import { A } from "a";']));
+
+    expect(result.content).toContain('import { A } from "a";');
+  });
+
+  it('should add sections with withSections builder', () => {
+    const { createFilePayload, buildFilePayload, withSections } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(
+      draft, 
+      withSections({ 
+        lines: ['props: {}'], 
+        sections: [{ name: 'props', content: 'props: {}' }] 
+      })
+    );
+
+    expect(result.content).toContain('props: {}');
+    expect(result.sections?.length).toBe(1);
+  });
+
+  it('should add props with withProps builder', () => {
+    const { createFilePayload, buildFilePayload, withProps } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(
+      draft, 
+      withProps({ content: 'disabled: boolean', markers: GENERATED_SECTION_MARKERS })
+    );
+
+    expect(result.content).toContain('disabled: boolean');
+  });
+
+  it('should add example with withExample builder', () => {
+    const { createFilePayload, buildFilePayload, withExample } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(
+      draft, 
+      withExample({ content: '<Button disabled={true} />', markers: GENERATED_SECTION_MARKERS })
+    );
+
+    expect(result.content).toContain('<Button disabled={true} />');
+  });
+
+  it('should add warnings with withWarnings builder', () => {
+    const { createFilePayload, buildFilePayload, withWarnings } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(
+      draft, 
+      withWarnings(['warning1', 'warning2'])
+    );
+
+    expect(result.warnings).toEqual(['warning1', 'warning2']);
+  });
+
+  it('should handle withWarnings with default empty array', () => {
+    const { createFilePayload, buildFilePayload, withWarnings } = require('../../src/emitters/utils');
+    const draft = createFilePayload('/path/to/file.ts');
+    
+    const result = buildFilePayload(draft, withWarnings());
+
+    expect(result.warnings).toEqual([]);
   });
 });

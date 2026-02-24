@@ -81,8 +81,8 @@ export const parseWebComponent = (parseContext: ParseContext): WebComponentParse
     tagName: tagNameResolution.tagName,
     filePath: parseContext.filePath,
     componentDir: parseContext.componentDir,
-    props: properties.properties,
-    events: eventsExtraction.events,
+    props: properties.items,
+    events: eventsExtraction.items,
   });
 
   const strictErrors =

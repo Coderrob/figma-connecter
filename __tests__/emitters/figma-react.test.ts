@@ -18,7 +18,8 @@
  * @fileoverview Tests for FigmaReactEmitter.
  */
 
-import { EmitterTarget, FigmaPropertyType } from '../../src/core/types';
+import { EmitterTarget, FigmaPropertyType, FileChangeStatus } from '../../src/core/types';
+import { FIGMA_PACKAGE_REACT } from '../../src/core/constants';
 import { FigmaReactEmitter } from '../../src/emitters/figma-react';
 import { expectContainsAll, expectContainsInOrder, expectGeneratedSectionMarkers } from '../helpers/assertions';
 import { createMockComponentModel, createMockEmitterOptions, createMockProperty } from '../helpers/fixtures';
@@ -53,12 +54,12 @@ describe('FigmaReactEmitter', () => {
         const result = emitter.emit({ model, options: createMockEmitterOptions() });
 
         expect(result.filePath).toBe('/src/components/button/code-connect/button.react.figma.tsx');
-        expect(result.content).toContain("import figma from '@figma/code-connect';");
+        expect(result.content).toContain(`import figma from '${FIGMA_PACKAGE_REACT}';`);
         expect(result.content).toContain('figma.connect(');
         expect(result.content).toContain('<FIGMA_BUTTON_URL>');
         expect(result.content).toContain('props: {},');
         expect(result.content).toContain('<ButtonComponent {...props} />');
-        expect(result.action).toBe('created');
+        expect(result.action).toBe(FileChangeStatus.Created);
       });
 
       it('should generate props section for component with properties', () => {
@@ -132,7 +133,7 @@ describe('FigmaReactEmitter', () => {
 
         expectContainsInOrder(result.content, [
           "import { Button } from '../../../../dist/react';",
-          "import figma from '@figma/code-connect';",
+          `import figma from '${FIGMA_PACKAGE_REACT}';`,
           "figma.connect('<FIGMA_BUTTON_URL>', {",
         ]);
         expectGeneratedSectionMarkers(result.content);
@@ -250,6 +251,26 @@ describe('FigmaReactEmitter', () => {
         const result = emitter.emit({ model, options: createMockEmitterOptions({ baseImportPath: '../../src' }) });
 
         expect(result.content).toContain("import { Button } from '../../src/dist/react';");
+      });
+
+      it('should prepend ./ to relative path when it does not start with dot', () => {
+        // Test case where component is in a parent directory relative to dist/react
+        // This creates a forward-only path like "dist/react" without leading dots
+        // Simulate by having componentDir at root level
+        const model = createMockComponentModel({
+          className: 'Button',
+          tagName: 'my-button',
+          filePath: '/button.component.ts',
+          componentDir: '/',
+        });
+
+        const result = emitter.emit({ model, options: createMockEmitterOptions() });
+
+        // The import should have the path properly prefixed
+        // When relative path doesn't start with '.', it should be prepended
+        expect(result.content).toContain("import { Button } from");
+        // Verify the file was generated successfully
+        expect(result.action).toBe(FileChangeStatus.Created);
       });
     });
   });

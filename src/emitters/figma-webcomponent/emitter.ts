@@ -16,12 +16,12 @@
 
 import path from 'node:path';
 
-import { type EmitResult, EmitterTarget, GeneratedSectionName } from '../../core/types';
+import { buildGeneratedSectionMarkers, FIGMA_PACKAGE_HTML } from '../../core/constants';
+import { type EmitResult, EmitterTarget, FileChangeStatus, GeneratedSectionName } from '../../core/types';
 import type { Emitter, EmitterContext } from '../types';
 import {
   buildExampleTemplate,
   buildFilePayload,
-  buildGeneratedSectionMarkers,
   buildPropsSection,
   createFilePayload,
   getComponentBaseName,
@@ -68,8 +68,8 @@ export class FigmaWebComponentEmitter implements Emitter {
     const propsMarkers = buildGeneratedSectionMarkers(GeneratedSectionName.Props);
     const exampleMarkers = buildGeneratedSectionMarkers(GeneratedSectionName.Example);
     return buildFilePayload(
-      createFilePayload(filePath, 'created'),
-      withImports(['// @ts-ignore', "import figma, { html } from '@figma/code-connect/html';", '']),
+      createFilePayload(filePath, FileChangeStatus.Created),
+      withImports(['// @ts-ignore', `import figma, { html } from '${FIGMA_PACKAGE_HTML}';`, '']),
       withSections({ lines: [`figma.connect('${figmaUrl}', {`] }),
       withProps({ content: propsSection, markers: propsMarkers, name: GeneratedSectionName.Props, depth: 1 }),
       withExample({ content: exampleSection, markers: exampleMarkers, name: GeneratedSectionName.Example, depth: 1 }),

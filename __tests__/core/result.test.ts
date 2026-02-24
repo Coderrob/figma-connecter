@@ -19,11 +19,18 @@
  */
 
 import {
+  addError,
+  addErrors,
+  addWarning,
+  addWarnings,
   aggregateResults,
   applyAggregateDiagnostics,
   applyDiagnostics,
   chain,
   createResult,
+  hasDiagnostics,
+  hasErrors,
+  hasWarnings,
   mapResult,
   mergeDiagnostics,
   mergeErrors,
@@ -114,5 +121,63 @@ describe('Result helpers', () => {
 
     expect(applied[0].warnings).toEqual(['warn-1']);
     expect(applied[1].errors).toEqual(['err-1']);
+  });
+
+  it('should merge warnings and return same result when warnings array is empty', () => {
+    const base = createResult('value', ['warn-1']);
+    const merged = mergeWarnings(base, []);
+
+    expect(merged).toBe(base);
+  });
+
+  it('should merge errors and return same result when errors array is empty', () => {
+    const base = createResult('value', [], ['error-1']);
+    const merged = mergeErrors(base, []);
+
+    expect(merged).toBe(base);
+  });
+
+  it('should add a single warning to a result', () => {
+    const base = createResult('value');
+    const result = addWarning(base, 'warning');
+
+    expect(result.warnings).toEqual(['warning']);
+  });
+
+  it('should add multiple warnings to a result', () => {
+    const base = createResult('value');
+    const result = addWarnings(base, ['warn1', 'warn2']);
+
+    expect(result.warnings).toEqual(['warn1', 'warn2']);
+  });
+
+  it('should add a single error to a result', () => {
+    const base = createResult('value');
+    const result = addError(base, 'error');
+
+    expect(result.errors).toEqual(['error']);
+  });
+
+  it('should add multiple errors to a result', () => {
+    const base = createResult('value');
+    const result = addErrors(base, ['error1', 'error2']);
+
+    expect(result.errors).toEqual(['error1', 'error2']);
+  });
+
+  it('should detect warnings', () => {
+    expect(hasWarnings({ warnings: ['warn'], errors: [] })).toBe(true);
+    expect(hasWarnings({ warnings: [], errors: [] })).toBe(false);
+  });
+
+  it('should detect errors', () => {
+    expect(hasErrors({ warnings: [], errors: ['err'] })).toBe(true);
+    expect(hasErrors({ warnings: [], errors: [] })).toBe(false);
+  });
+
+  it('should detect any diagnostics', () => {
+    expect(hasDiagnostics({ warnings: ['warn'], errors: [] })).toBe(true);
+    expect(hasDiagnostics({ warnings: [], errors: ['err'] })).toBe(true);
+    expect(hasDiagnostics({ warnings: [], errors: [] })).toBe(false);
   });
 });
