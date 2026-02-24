@@ -50,7 +50,7 @@ const createTestEmitter = (target: EmitterTarget): Emitter => ({
 const createTestParser = (target: ParserTarget): Parser => ({
   target,
   parse: (_context: ParseContext): WebComponentParseResult => ({
-    model: undefined,
+    value: undefined,
     warnings: [],
     errors: [],
   }),
