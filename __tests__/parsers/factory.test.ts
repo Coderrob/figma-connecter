@@ -73,7 +73,7 @@ describe('listParserTargets', () => {
 const createTestParser = (target: ParserTarget): Parser => ({
   target,
   parse: (_context: ParseContext): WebComponentParseResult => ({
-    model: null,
+    value: undefined,
     warnings: [],
     errors: [],
   }),
