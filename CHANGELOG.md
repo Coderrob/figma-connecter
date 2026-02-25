@@ -10,15 +10,15 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Added
 
-- Add `ClassDiscoveryMethod` enum to replace string literal union in `ClassSource.discoveryMethod` (TBD)
+- Add `ClassDiscoveryMethod` enum to replace string literal union in `ClassSource.discoveryMethod` (`9234c52`)
 
 ### Changed
 
-- Replace `figmaType as string === 'enum'` with `figmaType === FigmaPropertyType.Enum` in `decorator-extractor.ts` (TBD)
-- Replace `Record<string, string>` mapping and `propType === 'enum'` with `Partial<Record<FigmaPropertyType, string>>` in `figma-mapper.ts` (TBD)
-- Update `component-discovery.ts` to use `ClassDiscoveryMethod` enum values (TBD)
-- Update `component-discovery.test.ts` assertions to use `ClassDiscoveryMethod` enum values (TBD)
-- Export `ClassDiscoveryMethod` from `src/core/index.ts` barrel (TBD)
+- Replace `figmaType as string === 'enum'` with `figmaType === FigmaPropertyType.Enum` in `decorator-extractor.ts` (`9234c52`)
+- Replace `Record<string, string>` mapping and `propType === 'enum'` with `Partial<Record<FigmaPropertyType, string>>` in `figma-mapper.ts` (`9234c52`)
+- Update `component-discovery.ts` to use `ClassDiscoveryMethod` enum values (`9234c52`)
+- Update `component-discovery.test.ts` assertions to use `ClassDiscoveryMethod` enum values (`9234c52`)
+- Export `ClassDiscoveryMethod` from `src/core/index.ts` barrel (`9234c52`)
 
 ### Added
 
