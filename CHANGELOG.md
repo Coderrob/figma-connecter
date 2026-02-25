@@ -31,6 +31,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Changed
 
+- Replace `"\r\n"` and `"\n"` magic strings in `section-updater.ts` with named `CRLF` and `LF` constants (`4f29bec`)
 - Replace magic strings with `FIGMA_PACKAGE_REACT` and `FIGMA_PACKAGE_HTML` constants (`f13a67e`)
 - Replace `'created' | 'updated' | 'unchanged'` union type with `FileChangeStatus` enum (`f13a67e`)
 - Update `EmitResult.action` to use `FileChangeStatus` enum instead of string literals (`f13a67e`)
