@@ -10,6 +10,18 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Added
 
+- Add `ClassDiscoveryMethod` enum to replace string literal union in `ClassSource.discoveryMethod` (TBD)
+
+### Changed
+
+- Replace `figmaType as string === 'enum'` with `figmaType === FigmaPropertyType.Enum` in `decorator-extractor.ts` (TBD)
+- Replace `Record<string, string>` mapping and `propType === 'enum'` with `Partial<Record<FigmaPropertyType, string>>` in `figma-mapper.ts` (TBD)
+- Update `component-discovery.ts` to use `ClassDiscoveryMethod` enum values (TBD)
+- Update `component-discovery.test.ts` assertions to use `ClassDiscoveryMethod` enum values (TBD)
+- Export `ClassDiscoveryMethod` from `src/core/index.ts` barrel (TBD)
+
+### Added
+
 - Add custom ESLint rule `custom/no-inline-require-typeof` to prevent inline require() anti-pattern (`f4edc87`)
 - Add import anti-pattern guidelines to AGENTS.md documentation (`f4edc87`)
 - Add `isInsideJestIsolateModules()` helper function in ESLint rule for consistent exception handling (TBD)

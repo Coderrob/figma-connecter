@@ -16,6 +16,7 @@
 
 import ts from 'typescript';
 
+import { ClassDiscoveryMethod } from '../../core/types';
 import type { ClassSource } from '../../core/types';
 
 import type { ASTVisitorResult } from './ast-visitor';
@@ -56,7 +57,7 @@ export const discoverComponentClass = (astData: ASTVisitorResult): ComponentDisc
     return {
       classDeclaration: directDefault,
       source: {
-        discoveryMethod: 'default-export',
+        discoveryMethod: ClassDiscoveryMethod.DefaultExport,
         filePath: '',
       },
     };
@@ -73,7 +74,7 @@ export const discoverComponentClass = (astData: ASTVisitorResult): ComponentDisc
       return {
         classDeclaration: matched,
         source: {
-          discoveryMethod: 'default-export',
+          discoveryMethod: ClassDiscoveryMethod.DefaultExport,
           filePath: '',
         },
       };
@@ -101,7 +102,7 @@ export const discoverComponentClass = (astData: ASTVisitorResult): ComponentDisc
     return {
       classDeclaration: customElement,
       source: {
-        discoveryMethod: 'custom-element',
+        discoveryMethod: ClassDiscoveryMethod.CustomElement,
         filePath: '',
       },
     };
@@ -115,7 +116,7 @@ export const discoverComponentClass = (astData: ASTVisitorResult): ComponentDisc
     return {
       classDeclaration: jsdocTagged,
       source: {
-        discoveryMethod: 'tagname-jsdoc',
+        discoveryMethod: ClassDiscoveryMethod.TagnameJSDoc,
         filePath: '',
       },
     };
@@ -124,7 +125,7 @@ export const discoverComponentClass = (astData: ASTVisitorResult): ComponentDisc
   return {
     classDeclaration: classes[0],
     source: {
-      discoveryMethod: 'first-class',
+      discoveryMethod: ClassDiscoveryMethod.FirstClass,
       filePath: '',
     },
   };

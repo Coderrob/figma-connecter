@@ -86,4 +86,4 @@ export type {
   PropertyVisibility,
   TagNameResult,
 } from './types';
-export { EmitterTarget, FileChangeStatus } from './types';
+export { ClassDiscoveryMethod, EmitterTarget, FileChangeStatus } from './types';

@@ -323,7 +323,7 @@ const extractPropertyDecoratorsFromClass = (
       defaultValue: ts.isPropertyDeclaration(member) ? getDefaultValue(member, sourceFile) : null,
       doc: getJSDocSummary(member),
       visibility,
-      ...(figmaType as string === 'enum' && enumValuesFromType ? { enumValues: enumValuesFromType } : {}),
+      ...(figmaType === FigmaPropertyType.Enum && enumValuesFromType ? { enumValues: enumValuesFromType } : {}),
     };
 
     descriptors.push(descriptor);
