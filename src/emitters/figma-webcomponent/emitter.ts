@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import path from "node:path";
-
 import {
   buildGeneratedSectionMarkers,
   FIGMA_PACKAGE_HTML,
@@ -26,6 +24,7 @@ import {
   FileChangeStatus,
   GeneratedSectionName,
 } from "../../core/types";
+import { buildCodeConnectFilePath } from "../../utils/paths";
 import type { Emitter, EmitterContext } from "../types";
 import {
   buildExampleTemplate,
@@ -60,12 +59,7 @@ export class FigmaWebComponentEmitter implements Emitter {
     const { model, options } = emitterContext;
     const componentName = getComponentBaseName(model);
     const fileName = `${componentName}.webcomponent.figma.ts`;
-    const normalizedComponentDir = model.componentDir.replace(/\\/g, "/");
-    const filePath = path.posix.join(
-      normalizedComponentDir,
-      "code-connect",
-      fileName,
-    );
+    const filePath = buildCodeConnectFilePath(model.componentDir, fileName);
     const figmaUrl = `<FIGMA_${componentName.toUpperCase()}_URL>`;
 
     // Build props section with warning collection

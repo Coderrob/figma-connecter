@@ -23,7 +23,7 @@
  */
 
 export { mergeByKey } from "./merge-by-key";
-export { normalizePath } from "./paths";
+export { buildCodeConnectFilePath, normalizedBasename, normalizePath, resolveDistReactImportPath } from "./paths";
 export {
   kebabToTitleCase,
   toCamelCase,

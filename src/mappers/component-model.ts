@@ -22,10 +22,8 @@
  * @module mappers/component-model
  */
 
-import path from 'node:path';
-
 import type { ComponentModel, EventDescriptor, PropertyDescriptor } from '../core/types';
-import { normalizePath } from '../utils/paths';
+import { normalizedBasename, normalizePath } from '../utils/paths';
 
 import { mapPropertiesToAttributes } from './attribute-mapper';
 
@@ -54,7 +52,7 @@ export const deriveImportPath = (componentDir: string): string => {
   if (index >= 0) {
     return normalized.slice(index + marker.length);
   }
-  return path.posix.basename(normalized);
+  return normalizedBasename(componentDir);
 };
 
 /**
