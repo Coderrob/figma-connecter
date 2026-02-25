@@ -10,7 +10,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Added
 
-- Add JSDoc documentation to `CommandBuilder` class and all public methods in `command-builder.ts` (TBD)
+- Add JSDoc documentation to `CommandBuilder` class and all public methods in `command-builder.ts` (`e62a497`)
 - Add custom ESLint rule `custom/no-inline-require-typeof` to prevent inline require() anti-pattern (`f4edc87`)
 - Add import anti-pattern guidelines to AGENTS.md documentation (`f4edc87`)
 - Add `isInsideJestIsolateModules()` helper function in ESLint rule for consistent exception handling (TBD)
