@@ -10,7 +10,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Changed
 
-- Refactor `src/core/logger.ts` to use type guard functions (`isString`, `isNumber`, `isObject`, `isFunction`) replacing verbose `typeof` expressions (TBD)
+- Refactor `src/core/logger.ts` to use type guard functions (`isString`, `isNumber`, `isObject`, `isFunction`) replacing verbose `typeof` expressions (`3f2b91c`)
 
 ### Added
 
