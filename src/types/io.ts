@@ -75,6 +75,7 @@ export interface SourceLoaderOptions {
   readonly context: import("../types/pipeline").PipelineContextSeed;
   readonly searchPath?: string;
   readonly tsconfigPath?: string;
+  readonly tsconfigFileName?: string;
 }
 
 export interface SourceLoadResult {
