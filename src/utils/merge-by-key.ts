@@ -22,12 +22,7 @@
  * @module utils/merge-by-key
  */
 
-export interface MergeByKeyOptions<TItem, TKey> {
-  /** Returns the key used to merge items. */
-  readonly getKey: (item: TItem) => TKey;
-  /** Merge strategy when the key already exists (defaults to last-in-wins). */
-  readonly merge?: (existing: TItem, incoming: TItem) => TItem;
-}
+import type { MergeByKeyOptions } from "../types/utils";
 
 /**
  * Merges a list of items into a Map keyed by the provided selector.

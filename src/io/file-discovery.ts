@@ -1,3 +1,8 @@
+import type {
+  DiscoveredFile,
+  FileDiscoveryOptions,
+  FileDiscoveryFileSystem,
+} from "../types/io";
 /**
  * Copyright (c) 2026 Robert Lindley
  *
@@ -22,48 +27,23 @@
  * @module io/file-discovery
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
 
 /** File suffix for component source files. */
-export const COMPONENT_SUFFIX = '.component.ts';
+export const COMPONENT_SUFFIX = ".component.ts";
 
 /** Glob pattern for component discovery. */
 export const COMPONENT_GLOB = `**/*${COMPONENT_SUFFIX}`;
 
 /** Default directory names to exclude from traversal. */
-export const DEFAULT_EXCLUDE_DIRS = ['node_modules', 'dist'] as const;
+export const DEFAULT_EXCLUDE_DIRS = ["node_modules", "dist"] as const;
 
 /** Metadata for a discovered component file. */
-export interface DiscoveredFile {
-  /** Absolute path to the component file. */
-  readonly filePath: string;
-  /** Path relative to the discovery root. */
-  readonly relativePath: string;
-  /** File name including extension. */
-  readonly fileName: string;
-  /** Component name inferred from the file name. */
-  readonly componentName: string;
-  /** Directory containing the file. */
-  readonly dirPath: string;
-}
 
 /** Options for component discovery. */
-export interface FileDiscoveryOptions {
-  /** Whether to traverse subdirectories. */
-  readonly recursive?: boolean;
-  /** Directory names to exclude. */
-  readonly excludeDirs?: readonly string[];
-  /** Optional file system provider for testing. */
-  readonly fileSystem?: FileDiscoveryFileSystem;
-}
 
 /** File system provider interface for discovery. */
-export interface FileDiscoveryFileSystem {
-  readonly existsSync: (targetPath: string) => boolean;
-  readonly statSync: (targetPath: string) => fs.Stats;
-  readonly readdirSync: (targetPath: string) => fs.Dirent[];
-}
 
 /** Default file system provider using Node.js fs. */
 const defaultFileSystem: FileDiscoveryFileSystem = {
@@ -75,7 +55,8 @@ const defaultFileSystem: FileDiscoveryFileSystem = {
    * @param targetPath - Directory path to read.
    * @returns Directory entries for the path.
    */
-  readdirSync: (targetPath: string) => fs.readdirSync(targetPath, { withFileTypes: true }),
+  readdirSync: (targetPath: string) =>
+    fs.readdirSync(targetPath, { withFileTypes: true }),
 };
 
 /**
@@ -84,7 +65,8 @@ const defaultFileSystem: FileDiscoveryFileSystem = {
  * @param filePath - File path to check.
  * @returns True when the path ends with the component suffix.
  */
-export const isComponentFile = (filePath: string): boolean => filePath.toLowerCase().endsWith(COMPONENT_SUFFIX);
+export const isComponentFile = (filePath: string): boolean =>
+  filePath.toLowerCase().endsWith(COMPONENT_SUFFIX);
 
 /**
  * Discovers component files from a file or directory path.
@@ -93,24 +75,31 @@ export const isComponentFile = (filePath: string): boolean => filePath.toLowerCa
  * @param options - Discovery options.
  * @returns Array of discovered component metadata.
  */
-export function discoverComponentFiles(inputPath: string, options: FileDiscoveryOptions = {}): DiscoveredFile[] {
+export function discoverComponentFiles(
+  inputPath: string,
+  options: FileDiscoveryOptions = {},
+): DiscoveredFile[] {
   if (!inputPath) {
     return [];
   }
 
   const fileSystem = options.fileSystem ?? defaultFileSystem;
-  const resolvedPath = path.resolve(inputPath);
+  const targetPath = inputPath;
 
-  if (!fileSystem.existsSync(resolvedPath)) {
+  if (!fileSystem.existsSync(targetPath)) {
     return [];
   }
 
-  const excludeDirs = new Set((options.excludeDirs ?? DEFAULT_EXCLUDE_DIRS).map((dir) => dir.toLowerCase()));
+  const excludeDirs = new Set(
+    (options.excludeDirs ?? DEFAULT_EXCLUDE_DIRS).map((dir) =>
+      dir.toLowerCase(),
+    ),
+  );
   const recursive = options.recursive ?? false;
   const results: DiscoveredFile[] = [];
 
-  const stats = fileSystem.statSync(resolvedPath);
-  const rootDir = stats.isDirectory() ? resolvedPath : path.dirname(resolvedPath);
+  const stats = fileSystem.statSync(targetPath);
+  const rootDir = stats.isDirectory() ? targetPath : path.dirname(targetPath);
 
   /**
    * Adds a matching component file to the results list.
@@ -145,7 +134,9 @@ export function discoverComponentFiles(inputPath: string, options: FileDiscovery
    */
   const traverse = (dirPath: string): void => {
     for (const entry of fileSystem.readdirSync(dirPath)) {
-      const entryPath = path.join(dirPath, entry.name);
+      const entryPath = dirPath.includes("/")
+        ? path.posix.join(dirPath, entry.name)
+        : path.join(dirPath, entry.name);
 
       if (entry.isDirectory()) {
         if (excludeDirs.has(entry.name.toLowerCase())) {
@@ -164,9 +155,9 @@ export function discoverComponentFiles(inputPath: string, options: FileDiscovery
   };
 
   if (stats.isFile()) {
-    addFile(resolvedPath);
+    addFile(targetPath);
   } else if (stats.isDirectory()) {
-    traverse(resolvedPath);
+    traverse(targetPath);
   }
 
   return results.sort((a, b) => a.filePath.localeCompare(b.filePath));

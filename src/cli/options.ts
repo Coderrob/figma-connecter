@@ -22,9 +22,9 @@
  * @module cli/options
  */
 
-import { Command } from 'commander';
+import { Command } from "commander";
 
-import type { GlobalCliOptions } from './types';
+import type { GlobalCliOptions } from "../types/cli";
 
 /** Commander Command instance type. */
 type CommandInstance = InstanceType<typeof Command>;
@@ -48,7 +48,9 @@ export function getGlobalOptions(command?: CommandInstance): GlobalCliOptions {
    * @param key - The option key to resolve.
    * @returns The resolved option value.
    */
-  const pickOption = (key: keyof GlobalCliOptions): string | boolean | undefined => {
+  const pickOption = (
+    key: keyof GlobalCliOptions,
+  ): string | boolean | undefined => {
     if (localOptions[key] !== undefined) {
       return localOptions[key] as string | boolean | undefined;
     }
@@ -56,9 +58,9 @@ export function getGlobalOptions(command?: CommandInstance): GlobalCliOptions {
   };
 
   return {
-    verbose: Boolean(pickOption('verbose')),
-    quiet: Boolean(pickOption('quiet')),
-    dryRun: Boolean(pickOption('dryRun')),
-    config: pickOption('config') as string | undefined,
+    verbose: Boolean(pickOption("verbose")),
+    quiet: Boolean(pickOption("quiet")),
+    dryRun: Boolean(pickOption("dryRun")),
+    config: pickOption("config") as string | undefined,
   };
 }

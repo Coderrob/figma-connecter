@@ -14,21 +14,11 @@
  * limitations under the License.
  */
 
-import ts from 'typescript';
-
-export interface InheritanceResolution {
-  readonly chain: readonly ts.ClassLikeDeclaration[];
-  readonly warnings: readonly string[];
-  readonly unresolved: readonly string[];
-}
-
-/**
- * Context for inheritance resolution operations.
- */
-export interface InheritanceContext {
-  readonly checker: ts.TypeChecker;
-  readonly strict?: boolean;
-}
+import ts from "typescript";
+import type {
+  InheritanceResolution,
+  InheritanceContext,
+} from "../../types/parsers-webcomponent";
 
 /**
  * Resolves an aliased symbol for a node if present.
@@ -37,7 +27,10 @@ export interface InheritanceContext {
  * @param node - Node to resolve.
  * @returns Resolved symbol or undefined.
  */
-const resolveAliasedSymbol = (checker: ts.TypeChecker, node: ts.Node): ts.Symbol | undefined => {
+const resolveAliasedSymbol = (
+  checker: ts.TypeChecker,
+  node: ts.Node,
+): ts.Symbol | undefined => {
   const symbol = checker.getSymbolAtLocation(node);
   if (!symbol) {
     return undefined;
@@ -54,7 +47,9 @@ const resolveAliasedSymbol = (checker: ts.TypeChecker, node: ts.Node): ts.Symbol
  * @param symbol - Symbol to inspect.
  * @returns Class declaration or null when missing.
  */
-const resolveClassDeclarationFromSymbol = (symbol: ts.Symbol): ts.ClassDeclaration | null => {
+const resolveClassDeclarationFromSymbol = (
+  symbol: ts.Symbol,
+): ts.ClassDeclaration | null => {
   const declarations = symbol.getDeclarations() ?? [];
   return declarations.find(ts.isClassDeclaration) ?? null;
 };
@@ -99,7 +94,10 @@ const resolveClassDeclarationFromExpression = (
   checker: ts.TypeChecker,
   expression: ts.Expression,
 ): ts.ClassDeclaration | null => {
-  if (!ts.isIdentifier(expression) && !ts.isPropertyAccessExpression(expression)) {
+  if (
+    !ts.isIdentifier(expression) &&
+    !ts.isPropertyAccessExpression(expression)
+  ) {
     return null;
   }
 
@@ -123,7 +121,10 @@ const resolveClassDeclarationFromExpression = (
  * @returns Function body block or null.
  */
 const getFunctionBody = (declaration: ts.Declaration): ts.Block | null => {
-  if (ts.isFunctionDeclaration(declaration) || ts.isFunctionExpression(declaration)) {
+  if (
+    ts.isFunctionDeclaration(declaration) ||
+    ts.isFunctionExpression(declaration)
+  ) {
     return declaration.body ?? null;
   }
   if (ts.isArrowFunction(declaration)) {
@@ -161,14 +162,19 @@ const unwrapExpression = (expression: ts.Expression): ts.Expression => {
  * @param declaration - Declaration to inspect.
  * @returns Returned expression or null.
  */
-const getReturnExpression = (declaration: ts.Declaration): ts.Expression | null => {
+const getReturnExpression = (
+  declaration: ts.Declaration,
+): ts.Expression | null => {
   if (ts.isArrowFunction(declaration)) {
     if (!ts.isBlock(declaration.body)) {
       return declaration.body;
     }
   }
 
-  if (ts.isFunctionDeclaration(declaration) || ts.isFunctionExpression(declaration)) {
+  if (
+    ts.isFunctionDeclaration(declaration) ||
+    ts.isFunctionExpression(declaration)
+  ) {
     const { body } = declaration;
     if (!body) {
       return null;
@@ -183,11 +189,15 @@ const getReturnExpression = (declaration: ts.Declaration): ts.Expression | null 
       if (!ts.isBlock(initializer.body)) {
         return initializer.body;
       }
-      const returnStatement = initializer.body.statements.find(ts.isReturnStatement);
+      const returnStatement = initializer.body.statements.find(
+        ts.isReturnStatement,
+      );
       return returnStatement?.expression ?? null;
     }
     if (ts.isFunctionExpression(initializer)) {
-      const returnStatement = initializer.body?.statements.find(ts.isReturnStatement);
+      const returnStatement = initializer.body?.statements.find(
+        ts.isReturnStatement,
+      );
       return returnStatement?.expression ?? null;
     }
   }
@@ -224,7 +234,9 @@ const resolveMixinClassFromCall = (
       if (ts.isIdentifier(unwrapped) && body) {
         const returnName = unwrapped.text;
         const classDeclarations = body.statements.filter(ts.isClassDeclaration);
-        const match = classDeclarations.find((classDecl) => classDecl.name?.text === returnName);
+        const match = classDeclarations.find(
+          (classDecl) => classDecl.name?.text === returnName,
+        );
         if (match) {
           return match;
         }
@@ -232,8 +244,14 @@ const resolveMixinClassFromCall = (
         const classExpressionDeclaration = body.statements
           .filter(ts.isVariableStatement)
           .flatMap((statement) => statement.declarationList.declarations)
-          .find((decl) => ts.isIdentifier(decl.name) && decl.name.text === returnName);
-        if (classExpressionDeclaration?.initializer && ts.isClassExpression(classExpressionDeclaration.initializer)) {
+          .find(
+            (decl) =>
+              ts.isIdentifier(decl.name) && decl.name.text === returnName,
+          );
+        if (
+          classExpressionDeclaration?.initializer &&
+          ts.isClassExpression(classExpressionDeclaration.initializer)
+        ) {
           return classExpressionDeclaration.initializer;
         }
       }
@@ -257,7 +275,10 @@ const resolveMixinClassFromCall = (
  * @param classDecl - Class declaration to key.
  * @returns Unique key for the class declaration.
  */
-const getSymbolKey = (checker: ts.TypeChecker, classDecl: ts.ClassLikeDeclaration): string =>
+const getSymbolKey = (
+  checker: ts.TypeChecker,
+  classDecl: ts.ClassLikeDeclaration,
+): string =>
   // Always use file path + position for uniqueness, especially important for
   // mixin patterns where multiple classes may have the same name (e.g., InnerMixinClass)
   `${classDecl.getSourceFile().fileName}:${classDecl.pos}`;
@@ -344,7 +365,10 @@ export const resolveInheritanceChain = (
 
     // Check if this identifier/property access couldn't be resolved
     // but is an acceptable case (external or parameter)
-    if (ts.isIdentifier(expression) || ts.isPropertyAccessExpression(expression)) {
+    if (
+      ts.isIdentifier(expression) ||
+      ts.isPropertyAccessExpression(expression)
+    ) {
       const symbol = resolveAliasedSymbol(checker, expression);
       if (symbol) {
         // If there's a symbol and it's external (like HTMLElement), skip silently

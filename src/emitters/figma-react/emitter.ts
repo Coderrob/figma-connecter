@@ -14,12 +14,20 @@
  * limitations under the License.
  */
 
-import path from 'node:path';
+import path from "node:path";
 
-import { buildGeneratedSectionMarkers, FIGMA_PACKAGE_REACT } from '../../core/constants';
-import { type EmitResult, EmitterTarget, FileChangeStatus, GeneratedSectionName } from '../../core/types';
-import { normalizePath } from '../../utils/paths';
-import type { Emitter, EmitterContext } from '../types';
+import {
+  buildGeneratedSectionMarkers,
+  FIGMA_PACKAGE_REACT,
+} from "../../core/constants";
+import {
+  type EmitResult,
+  EmitterTarget,
+  FileChangeStatus,
+  GeneratedSectionName,
+} from "../../core/types";
+import { normalizePath } from "../../utils/paths";
+import type { Emitter, EmitterContext } from "../types";
 import {
   buildFilePayload,
   buildPropsSection,
@@ -31,7 +39,7 @@ import {
   withProps,
   withSections,
   withWarnings,
-} from '../utils';
+} from "../utils";
 
 /**
  * Emitter for generating Figma Code Connect files for React components.
@@ -47,23 +55,30 @@ export class FigmaReactEmitter implements Emitter {
    * @param baseImportPath - Optional override for component import base.
    * @returns Import path string for the React component.
    */
-  private resolveReactImportPath(componentDir: string, baseImportPath?: string): string {
+  private resolveReactImportPath(
+    componentDir: string,
+    baseImportPath?: string,
+  ): string {
     if (baseImportPath) {
       return `${baseImportPath}/dist/react`;
     }
 
     const normalizedComponentDir = normalizePath(componentDir);
-    const srcMarker = '/src/';
+    const srcMarker = "/src/";
     const markerIndex = normalizedComponentDir.lastIndexOf(srcMarker);
     let rootCandidate = path.posix.dirname(normalizedComponentDir);
     if (markerIndex >= 0) {
       rootCandidate = normalizedComponentDir.slice(0, markerIndex);
     }
-    const packageRoot = rootCandidate || path.posix.parse(normalizedComponentDir).root;
-    const distReactPath = path.posix.join(packageRoot, 'dist', 'react');
-    const codeConnectDir = path.posix.join(normalizedComponentDir, 'code-connect');
+    const packageRoot =
+      rootCandidate || path.posix.parse(normalizedComponentDir).root;
+    const distReactPath = path.posix.join(packageRoot, "dist", "react");
+    const codeConnectDir = path.posix.join(
+      normalizedComponentDir,
+      "code-connect",
+    );
     let relativePath = path.posix.relative(codeConnectDir, distReactPath);
-    if (!relativePath.startsWith('.')) {
+    if (!relativePath.startsWith(".")) {
       relativePath = `./${relativePath}`;
     }
     return relativePath;
@@ -79,28 +94,50 @@ export class FigmaReactEmitter implements Emitter {
     const { model, options } = emitterContext;
     const componentName = getComponentBaseName(model);
     const fileName = `${componentName}.react.figma.tsx`;
-    const filePath = path.join(model.componentDir, 'code-connect', fileName);
+    const normalizedComponentDir = model.componentDir.replace(/\\/g, "/");
+    const filePath = path.posix.join(
+      normalizedComponentDir,
+      "code-connect",
+      fileName,
+    );
     const figmaUrl = `<FIGMA_${componentName.toUpperCase()}_URL>`;
 
-    const importPath = this.resolveReactImportPath(model.componentDir, options.baseImportPath);
+    const importPath = this.resolveReactImportPath(
+      model.componentDir,
+      options.baseImportPath,
+    );
 
     const { lines: propsLines, warnings } = buildPropsSection(model.props, 0);
-    const propsSection = propsLines.join('\n');
+    const propsSection = propsLines.join("\n");
     const exampleSection = buildReactExampleSection(model.className);
-    const propsMarkers = buildGeneratedSectionMarkers(GeneratedSectionName.Props);
-    const exampleMarkers = buildGeneratedSectionMarkers(GeneratedSectionName.Example);
+    const propsMarkers = buildGeneratedSectionMarkers(
+      GeneratedSectionName.Props,
+    );
+    const exampleMarkers = buildGeneratedSectionMarkers(
+      GeneratedSectionName.Example,
+    );
 
     return buildFilePayload(
       createFilePayload(filePath, FileChangeStatus.Created),
       withImports([
         `import { ${model.className} } from '${importPath}';`,
         `import figma from '${FIGMA_PACKAGE_REACT}';`,
-        '',
+        "",
       ]),
       withSections({ lines: [`figma.connect('${figmaUrl}', {`] }),
-      withProps({ content: propsSection, markers: propsMarkers, name: GeneratedSectionName.Props, depth: 1 }),
-      withExample({ content: exampleSection, markers: exampleMarkers, name: GeneratedSectionName.Example, depth: 1 }),
-      withSections({ lines: ['});', ''] }),
+      withProps({
+        content: propsSection,
+        markers: propsMarkers,
+        name: GeneratedSectionName.Props,
+        depth: 1,
+      }),
+      withExample({
+        content: exampleSection,
+        markers: exampleMarkers,
+        name: GeneratedSectionName.Example,
+        depth: 1,
+      }),
+      withSections({ lines: ["});", ""] }),
       withWarnings(warnings),
     );
   }

@@ -22,16 +22,10 @@
  * @module parsers/webcomponent
  */
 
-export type { WebComponentParseResult } from './parser';
-export { parseWebComponent, WebComponentParser } from './parser';
+export { parseWebComponent, WebComponentParser } from "./parser";
 
-export type { ComponentDiscoveryResult } from './component-discovery';
-export { discoverComponentClass } from './component-discovery';
-export type { PropertyExtractionContext, PropertyExtractionResult } from './decorator-extractor';
-export { extractPropertyDecorators } from './decorator-extractor';
-export type { EventExtractionContext, EventExtractionResult } from './event-extractor';
-export { extractEvents, extractEventsFromChain } from './event-extractor';
-export type { InheritanceContext, InheritanceResolution } from './inheritance-resolver';
-export { resolveInheritanceChain } from './inheritance-resolver';
-export type { TagNameResolution, TagNameResolverOptions } from './tagname-resolver';
-export { resolveTagName } from './tagname-resolver';
+export { discoverComponentClass } from "./component-discovery";
+export { extractPropertyDecorators } from "./decorator-extractor";
+export { extractEvents, extractEventsFromChain } from "./event-extractor";
+export { resolveInheritanceChain } from "./inheritance-resolver";
+export { resolveTagName } from "./tagname-resolver";

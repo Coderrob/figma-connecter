@@ -67,22 +67,22 @@ export interface LoggerOptions {
  * Log level names for output formatting.
  */
 const LOG_LEVEL_NAMES: Record<LogLevel, string> = {
-  [LogLevel.ERROR]: 'ERROR',
-  [LogLevel.WARN]: 'WARN',
-  [LogLevel.INFO]: 'INFO',
-  [LogLevel.DEBUG]: 'DEBUG',
+  [LogLevel.ERROR]: "ERROR",
+  [LogLevel.WARN]: "WARN",
+  [LogLevel.INFO]: "INFO",
+  [LogLevel.DEBUG]: "DEBUG",
 };
 
 /**
  * ANSI color codes for terminal output.
  */
 const COLORS = {
-  reset: '\x1b[0m',
-  red: '\x1b[31m',
-  yellow: '\x1b[33m',
-  green: '\x1b[32m',
-  cyan: '\x1b[36m',
-  dim: '\x1b[2m',
+  reset: "\x1b[0m",
+  red: "\x1b[31m",
+  yellow: "\x1b[33m",
+  green: "\x1b[32m",
+  cyan: "\x1b[36m",
+  dim: "\x1b[2m",
 } as const;
 
 /**
@@ -127,13 +127,17 @@ export class Logger {
    * @param levelOrOptions - Log level or options object.
    * @param useColors - Whether to enable ANSI colors.
    */
-  constructor(levelOrOptions: LogLevel | LoggerOptions = LogLevel.INFO, useColors = true) {
-     
+  constructor(
+    levelOrOptions: LogLevel | LoggerOptions = LogLevel.INFO,
+    useColors = false,
+  ) {
     const options: LoggerOptions =
-      typeof levelOrOptions === 'object' ? levelOrOptions : { level: levelOrOptions, useColors };
+      typeof levelOrOptions === "object"
+        ? levelOrOptions
+        : { level: levelOrOptions, useColors };
 
     this.level = resolveLogLevel(options);
-    this.useColors = (options.useColors ?? true) && process.stdout.isTTY;
+    this.useColors = Boolean(options.useColors) && process.stdout.isTTY;
     this.baseContext = options.baseContext ?? {};
   }
 
@@ -190,8 +194,10 @@ export class Logger {
    */
   success(message: string, context?: LogContext): void {
     if (this.level >= LogLevel.INFO) {
-      const prefix = this.useColors ? `${COLORS.green}✓${COLORS.reset}` : '✓';
-      console.log(`${prefix} ${message}${this.formatContext(this.mergeContext(context))}`);
+      const prefix = this.useColors ? `${COLORS.green}✓${COLORS.reset}` : "✓";
+      console.log(
+        `${prefix} ${message}${this.formatContext(this.mergeContext(context))}`,
+      );
     }
   }
 
@@ -254,25 +260,28 @@ export class Logger {
    */
   private formatContext(context?: LogContext): string {
     if (!context || Object.keys(context).length === 0) {
-      return '';
+      return "";
     }
 
     const orderedPairs = this.orderContextEntries(context);
     if (orderedPairs.length === 0) {
-      return '';
+      return "";
     }
 
     const pairs = orderedPairs
       .map(([key, value]) => {
-        if (key === 'durationMs' && typeof value === 'number') {
+        if (key === "durationMs" && typeof value === "number") {
           return `${key}=${value}ms`;
         }
-        const formatted = typeof value === 'string' ? value : JSON.stringify(value);
+        const formatted =
+          typeof value === "string" ? value : JSON.stringify(value);
         return `${key}=${formatted}`;
       })
-      .join(' ');
+      .join(" ");
 
-    return this.useColors ? ` ${COLORS.dim}(${pairs})${COLORS.reset}` : ` (${pairs})`;
+    return this.useColors
+      ? ` ${COLORS.dim}(${pairs})${COLORS.reset}`
+      : ` (${pairs})`;
   }
 
   /**
@@ -282,7 +291,11 @@ export class Logger {
    * @returns Ordered key-value entries.
    */
   private orderContextEntries(context: LogContext): [string, unknown][] {
-    const priorityKeys: (keyof LogContext)[] = ['stage', 'component', 'durationMs'];
+    const priorityKeys: (keyof LogContext)[] = [
+      "stage",
+      "component",
+      "durationMs",
+    ];
     const used = new Set<string>();
     const entries: [string, unknown][] = [];
 
@@ -312,7 +325,9 @@ export class Logger {
    */
   private mergeContext(context?: LogContext): LogContext | undefined {
     if (!context || Object.keys(context).length === 0) {
-      return Object.keys(this.baseContext).length > 0 ? this.baseContext : undefined;
+      return Object.keys(this.baseContext).length > 0
+        ? this.baseContext
+        : undefined;
     }
     if (Object.keys(this.baseContext).length === 0) {
       return context;
@@ -328,7 +343,11 @@ export class Logger {
    */
   withContext(context: LogContext): Logger {
     const merged = { ...this.baseContext, ...context };
-    return new Logger({ level: this.level, useColors: this.useColors, baseContext: merged });
+    return new Logger({
+      level: this.level,
+      useColors: this.useColors,
+      baseContext: merged,
+    });
   }
 }
 
@@ -351,9 +370,13 @@ export function createScopedLogger(logger: Logger, scope: string): Logger {
      */
     get(target, prop: keyof Logger) {
       const value = target[prop];
-      if (typeof value === 'function') {
+      if (typeof value === "function") {
         return (message: string, context?: LogContext) => {
-          (value as (msg: string, ctx?: LogContext) => void).call(target, `[${scope}] ${message}`, context);
+          (value as (msg: string, ctx?: LogContext) => void).call(
+            target,
+            `[${scope}] ${message}`,
+            context,
+          );
         };
       }
       return value;
