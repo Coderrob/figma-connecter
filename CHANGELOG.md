@@ -8,6 +8,10 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ## [Unreleased]
 
+### Changed
+
+- Refactor `src/core/logger.ts` to use type guard functions (`isString`, `isNumber`, `isObject`, `isFunction`) replacing verbose `typeof` expressions (TBD)
+
 ### Added
 
 - Add custom ESLint rule `custom/no-inline-require-typeof` to prevent inline require() anti-pattern (`f4edc87`)

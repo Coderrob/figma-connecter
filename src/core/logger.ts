@@ -86,6 +86,39 @@ const COLORS = {
 } as const;
 
 /**
+ * Type guard for string values.
+ *
+ * @param value - Value to check.
+ * @returns True if value is a string.
+ */
+const isString = (value: unknown): value is string => typeof value === "string";
+
+/**
+ * Type guard for number values.
+ *
+ * @param value - Value to check.
+ * @returns True if value is a number.
+ */
+const isNumber = (value: unknown): value is number => typeof value === "number";
+
+/**
+ * Type guard for object values.
+ *
+ * @param value - Value to check.
+ * @returns True if value is an object.
+ */
+const isObject = (value: unknown): value is object => typeof value === "object";
+
+/**
+ * Type guard for function values.
+ *
+ * @param value - Value to check.
+ * @returns True if value is a function.
+ */
+const isFunction = (value: unknown): value is (...args: unknown[]) => unknown =>
+  typeof value === "function";
+
+/**
  * Logger class for structured CLI output.
  *
  * Supports multiple log levels and can be configured for verbose
@@ -132,8 +165,8 @@ export class Logger {
     useColors = false,
   ) {
     const options: LoggerOptions =
-      typeof levelOrOptions === "object"
-        ? levelOrOptions
+      isObject(levelOrOptions)
+        ? (levelOrOptions as LoggerOptions)
         : { level: levelOrOptions, useColors };
 
     this.level = resolveLogLevel(options);
@@ -270,11 +303,10 @@ export class Logger {
 
     const pairs = orderedPairs
       .map(([key, value]) => {
-        if (key === "durationMs" && typeof value === "number") {
+        if (key === "durationMs" && isNumber(value)) {
           return `${key}=${value}ms`;
         }
-        const formatted =
-          typeof value === "string" ? value : JSON.stringify(value);
+        const formatted = isString(value) ? value : JSON.stringify(value);
         return `${key}=${formatted}`;
       })
       .join(" ");
@@ -370,7 +402,7 @@ export function createScopedLogger(logger: Logger, scope: string): Logger {
      */
     get(target, prop: keyof Logger) {
       const value = target[prop];
-      if (typeof value === "function") {
+      if (isFunction(value)) {
         return (message: string, context?: LogContext) => {
           (value as (msg: string, ctx?: LogContext) => void).call(
             target,
