@@ -64,6 +64,34 @@ export interface LoggerOptions {
 }
 
 /**
+ * Known keys in the LogContext object.
+ */
+export enum LogContextKey {
+  Stage = "stage",
+  Component = "component",
+  DurationMs = "durationMs",
+}
+
+/**
+ * Keys given priority in context output ordering.
+ */
+const PRIORITY_CONTEXT_KEYS: readonly LogContextKey[] = [
+  LogContextKey.Stage,
+  LogContextKey.Component,
+  LogContextKey.DurationMs,
+];
+
+/**
+ * Suffix appended to duration values in log output.
+ */
+const DURATION_UNIT_SUFFIX = "ms";
+
+/**
+ * Indicator prefix for success log messages.
+ */
+const SUCCESS_INDICATOR = "✓";
+
+/**
  * Log level names for output formatting.
  */
 const LOG_LEVEL_NAMES: Record<LogLevel, string> = {
@@ -194,7 +222,9 @@ export class Logger {
    */
   success(message: string, context?: LogContext): void {
     if (this.level >= LogLevel.INFO) {
-      const prefix = this.useColors ? `${COLORS.green}✓${COLORS.reset}` : "✓";
+      const prefix = this.useColors
+        ? `${COLORS.green}${SUCCESS_INDICATOR}${COLORS.reset}`
+        : SUCCESS_INDICATOR;
       console.log(
         `${prefix} ${message}${this.formatContext(this.mergeContext(context))}`,
       );
@@ -270,8 +300,8 @@ export class Logger {
 
     const pairs = orderedPairs
       .map(([key, value]) => {
-        if (key === "durationMs" && typeof value === "number") {
-          return `${key}=${value}ms`;
+        if (key === LogContextKey.DurationMs && typeof value === "number") {
+          return `${key}=${value}${DURATION_UNIT_SUFFIX}`;
         }
         const formatted =
           typeof value === "string" ? value : JSON.stringify(value);
@@ -291,15 +321,10 @@ export class Logger {
    * @returns Ordered key-value entries.
    */
   private orderContextEntries(context: LogContext): [string, unknown][] {
-    const priorityKeys: (keyof LogContext)[] = [
-      "stage",
-      "component",
-      "durationMs",
-    ];
     const used = new Set<string>();
     const entries: [string, unknown][] = [];
 
-    for (const key of priorityKeys) {
+    for (const key of PRIORITY_CONTEXT_KEYS) {
       const value = context[key];
       if (value !== undefined) {
         entries.push([key as string, value]);
