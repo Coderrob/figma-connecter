@@ -31,6 +31,16 @@ import type { PipelineContext, PipelineContextSeed } from "../types/pipeline";
 import type { SourceLoaderOptions, SourceLoadResult } from "../types/io";
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+/** Unix read permission bits for owner, group, and others (r--r--r--). */
+const UNIX_READ_PERMISSION_MASK = 0o444;
+
+/** Unix write permission bits for owner, group, and others (-w--w--w-). */
+const UNIX_WRITE_PERMISSION_MASK = 0o222;
+
+// ============================================================================
 // Private Helper Functions
 // ============================================================================
 
@@ -49,11 +59,11 @@ const isReadableFile = (filePath: string, errors: string[]): boolean => {
 
   try {
     const mode = fs.statSync(filePath).mode;
-    if ((mode & 0o444) === 0) {
+    if ((mode & UNIX_READ_PERMISSION_MASK) === 0) {
       errors.push(`Source file is not readable: ${filePath}`);
       return false;
     }
-    if (process.platform === "win32" && (mode & 0o222) === 0) {
+    if (process.platform === "win32" && (mode & UNIX_WRITE_PERMISSION_MASK) === 0) {
       errors.push(`Source file is not readable: ${filePath}`);
       return false;
     }

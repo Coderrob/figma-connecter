@@ -93,6 +93,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Changed
 
+- Extract named constants `UNIX_READ_PERMISSION_MASK` and `UNIX_WRITE_PERMISSION_MASK` in `source-loader.ts` to replace cryptic inline octal literals with self-documenting identifiers (TBD)
 - Upgrade ESLint to v9.39.2 with flat config format (`pending`).
 - Migrate all rules from `.eslintrc.cjs` to `eslint.config.mjs` as default config (`pending`).
 - Update typescript-eslint to v8.22.0 for better TypeScript support (`pending`).
