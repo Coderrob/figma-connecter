@@ -75,6 +75,20 @@ describe('source-loader', () => {
     expect(resolveTsconfigPath(undefined, filePath)).toBe(configPath);
   });
 
+  it('should resolves a custom-named tsconfig file by configFileName', () => {
+    const configPath = path.join(tempDir, 'tsconfig.base.json');
+    fs.writeFileSync(configPath, '{"compilerOptions": {}}', 'utf8');
+
+    expect(resolveTsconfigPath(undefined, tempDir, 'tsconfig.base.json')).toBe(configPath);
+  });
+
+  it('should not find tsconfig.json when configFileName is tsconfig.base.json', () => {
+    const configPath = path.join(tempDir, 'tsconfig.json');
+    fs.writeFileSync(configPath, '{"compilerOptions": {}}', 'utf8');
+
+    expect(resolveTsconfigPath(undefined, tempDir, 'tsconfig.base.json')).toBeUndefined();
+  });
+
   it('should merges program data into the provided context', () => {
     const filePath = path.join(tempDir, 'sample.component.ts');
     fs.writeFileSync(filePath, 'export class Sample {}', 'utf8');
@@ -141,6 +155,23 @@ describe('source-loader', () => {
     });
 
     expect(result.errors.some((error) => error.includes('tsconfig.json not found'))).toBe(true);
+  });
+
+  it('should use a custom tsconfigFileName when searching for tsconfig', () => {
+    const filePath = path.join(tempDir, 'sample.component.ts');
+    fs.writeFileSync(filePath, 'export const sample = 1;', 'utf8');
+
+    const configPath = path.join(tempDir, 'tsconfig.base.json');
+    fs.writeFileSync(configPath, '{"compilerOptions": {}}', 'utf8');
+
+    const result = loadSourceProgram([filePath], {
+      context: createContextSeed(),
+      searchPath: tempDir,
+      tsconfigFileName: 'tsconfig.base.json',
+    });
+
+    expect(result.configPath).toBe(configPath);
+    expect(result.errors).toHaveLength(0);
   });
 
   it('should reports invalid tsconfig files', () => {
