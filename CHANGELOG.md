@@ -10,6 +10,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Added
 
+- Add `POSIX_PATH_SEPARATOR` named constant to `src/utils/paths.ts` for reuse across the repository (TBD)
 - Add custom ESLint rule `custom/no-inline-require-typeof` to prevent inline require() anti-pattern (`f4edc87`)
 - Add import anti-pattern guidelines to AGENTS.md documentation (`f4edc87`)
 - Add `isInsideJestIsolateModules()` helper function in ESLint rule for consistent exception handling (TBD)

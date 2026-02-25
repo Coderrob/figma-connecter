@@ -23,7 +23,7 @@
  */
 
 export { mergeByKey } from "./merge-by-key";
-export { normalizePath } from "./paths";
+export { normalizePath, POSIX_PATH_SEPARATOR } from "./paths";
 export {
   kebabToTitleCase,
   toCamelCase,

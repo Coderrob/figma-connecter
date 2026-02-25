@@ -24,6 +24,9 @@
 
 import path from 'node:path';
 
+/** POSIX path separator character. */
+export const POSIX_PATH_SEPARATOR = '/';
+
 /**
  * Normalizes a file system path to an absolute, POSIX-style string.
  *
