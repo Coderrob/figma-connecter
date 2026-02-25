@@ -10,6 +10,18 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Added
 
+- Add `buildCodeConnectFilePath`, `resolveDistReactImportPath`, and `normalizedBasename` path builder utilities to `src/utils/paths.ts` (TBD)
+- Add tests for new path builder utilities in `__tests__/utils/paths.test.ts` (TBD)
+
+### Changed
+
+- Refactor `src/emitters/figma-react/emitter.ts` to use `buildCodeConnectFilePath` and `resolveDistReactImportPath` path builders, removing direct `node:path` usage (TBD)
+- Refactor `src/emitters/figma-webcomponent/emitter.ts` to use `buildCodeConnectFilePath` path builder (TBD)
+- Refactor `src/emitters/figma-mapper.ts` to use `normalizedBasename` path builder (TBD)
+- Refactor `src/mappers/component-model.ts` to use `normalizedBasename` path builder (TBD)
+
+### Added
+
 - Add custom ESLint rule `custom/no-inline-require-typeof` to prevent inline require() anti-pattern (`f4edc87`)
 - Add import anti-pattern guidelines to AGENTS.md documentation (`f4edc87`)
 - Add `isInsideJestIsolateModules()` helper function in ESLint rule for consistent exception handling (TBD)

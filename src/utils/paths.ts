@@ -17,7 +17,8 @@
 /**
  * Path Utilities Module
  *
- * Provides normalization helpers for consistent path handling across platforms.
+ * Provides normalization and path building helpers for consistent path
+ * handling across platforms and emitters.
  *
  * @module utils/paths
  */
@@ -36,4 +37,64 @@ export const normalizePath = (value: string): string => {
   }
 
   return path.resolve(value).replace(/\\/g, '/');
+};
+
+/**
+ * Returns the POSIX basename of a normalized path.
+ *
+ * @param value - The input path.
+ * @returns The last segment of the normalized path.
+ */
+export const normalizedBasename = (value: string): string =>
+  path.posix.basename(normalizePath(value));
+
+/**
+ * Builds the output file path for a Code Connect file.
+ * Places the file in a `code-connect` subdirectory under the component directory.
+ *
+ * @param componentDir - The component's directory path.
+ * @param fileName - The output file name.
+ * @returns The full POSIX output path.
+ *
+ * @example
+ * ```typescript
+ * buildCodeConnectFilePath('/src/components/button', 'button.react.figma.tsx');
+ * // '/src/components/button/code-connect/button.react.figma.tsx'
+ * ```
+ */
+export const buildCodeConnectFilePath = (componentDir: string, fileName: string): string =>
+  path.posix.join(componentDir.replace(/\\/g, '/'), 'code-connect', fileName);
+
+/**
+ * Resolves the relative dist/react import path from the code-connect directory.
+ *
+ * Walks up from the component directory to find the package root (the directory
+ * containing `src/`), then returns a relative path from `<componentDir>/code-connect`
+ * to `<packageRoot>/dist/react`.
+ *
+ * @param componentDir - The component's directory path.
+ * @returns A relative import path string (always prefixed with `./` or `../`).
+ *
+ * @example
+ * ```typescript
+ * resolveDistReactImportPath('/packages/components/src/components/button');
+ * // '../../../../dist/react'
+ * ```
+ */
+export const resolveDistReactImportPath = (componentDir: string): string => {
+  const normalizedDir = normalizePath(componentDir);
+  const srcMarker = '/src/';
+  const markerIndex = normalizedDir.lastIndexOf(srcMarker);
+  let rootCandidate = path.posix.dirname(normalizedDir);
+  if (markerIndex >= 0) {
+    rootCandidate = normalizedDir.slice(0, markerIndex);
+  }
+  const packageRoot = rootCandidate || path.posix.parse(normalizedDir).root;
+  const distReactPath = path.posix.join(packageRoot, 'dist', 'react');
+  const codeConnectDir = path.posix.join(normalizedDir, 'code-connect');
+  let relativePath = path.posix.relative(codeConnectDir, distReactPath);
+  if (!relativePath.startsWith('.')) {
+    relativePath = `./${relativePath}`;
+  }
+  return relativePath;
 };

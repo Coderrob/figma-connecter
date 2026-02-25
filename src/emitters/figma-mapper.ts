@@ -23,10 +23,8 @@
  * @module emitters/figma-mapper
  */
 
-import path from 'node:path';
-
 import type { ComponentModel, PropertyDescriptor } from '../core/types';
-import { normalizePath } from '../utils/paths';
+import { normalizedBasename } from '../utils/paths';
 
 import { toTitleCase } from './formatting';
 
@@ -110,11 +108,11 @@ export const sortByName = <T extends { name: string }>(items: readonly T[]): T[]
  * @returns The base name (e.g., 'button' from 'button.component.ts').
  */
 export const getComponentBaseName = (model: ComponentModel): string => {
-  const fileName = path.posix.basename(normalizePath(model.filePath));
+  const fileName = normalizedBasename(model.filePath);
   const pattern = /^(.*)\.component\.[tj]sx?$/i;
   const match = pattern.exec(fileName);
   if (match?.[1]) {
     return match[1];
   }
-  return path.posix.basename(normalizePath(model.componentDir));
+  return normalizedBasename(model.componentDir);
 };
