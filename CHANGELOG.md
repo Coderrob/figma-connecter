@@ -57,6 +57,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 - Improve ESLint rule to check for `jest.isolateModules()` in all visitors, not just VariableDeclarator (TBD)
 - Reorder type assertion check before unwrapping in ESLint rule for proper specialized error message (TBD)
 - Change mock parser `model: null` to `model: undefined` in test to align with actual parser contract (TBD)
+- Refactor `inheritance-resolver.ts` to decompose large conditional expressions into extracted helper functions: `getFunctionBodyFromVariableDeclaration`, `getReturnExpressionFromBlock`, `getReturnExpressionFromVariableDeclaration`, `findClassByNameInBlock`, `isSkippableExpression` (TBD)
 
 ### Removed
 

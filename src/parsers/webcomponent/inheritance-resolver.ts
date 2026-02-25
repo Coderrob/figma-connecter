@@ -115,6 +115,28 @@ const resolveClassDeclarationFromExpression = (
 };
 
 /**
+ * Retrieves the function body from a variable declaration's function initializer.
+ *
+ * @param declaration - Variable declaration to inspect.
+ * @returns Function body block or null.
+ */
+const getFunctionBodyFromVariableDeclaration = (
+  declaration: ts.VariableDeclaration,
+): ts.Block | null => {
+  const { initializer } = declaration;
+  if (!initializer) {
+    return null;
+  }
+  if (ts.isArrowFunction(initializer)) {
+    return ts.isBlock(initializer.body) ? initializer.body : null;
+  }
+  if (ts.isFunctionExpression(initializer)) {
+    return initializer.body ?? null;
+  }
+  return null;
+};
+
+/**
  * Retrieves the function body for a declaration if available.
  *
  * @param declaration - Declaration to inspect.
@@ -130,14 +152,8 @@ const getFunctionBody = (declaration: ts.Declaration): ts.Block | null => {
   if (ts.isArrowFunction(declaration)) {
     return ts.isBlock(declaration.body) ? declaration.body : null;
   }
-  if (ts.isVariableDeclaration(declaration) && declaration.initializer) {
-    const { initializer } = declaration;
-    if (ts.isArrowFunction(initializer)) {
-      return ts.isBlock(initializer.body) ? initializer.body : null;
-    }
-    if (ts.isFunctionExpression(initializer)) {
-      return initializer.body ?? null;
-    }
+  if (ts.isVariableDeclaration(declaration)) {
+    return getFunctionBodyFromVariableDeclaration(declaration);
   }
   return null;
 };
@@ -157,6 +173,42 @@ const unwrapExpression = (expression: ts.Expression): ts.Expression => {
 };
 
 /**
+ * Finds the return expression in a block body.
+ *
+ * @param body - Block body to search.
+ * @returns Return expression or null.
+ */
+const getReturnExpressionFromBlock = (body: ts.Block): ts.Expression | null => {
+  const returnStatement = body.statements.find(ts.isReturnStatement);
+  return returnStatement?.expression ?? null;
+};
+
+/**
+ * Resolves a returned expression from a variable declaration's function initializer.
+ *
+ * @param declaration - Variable declaration to inspect.
+ * @returns Returned expression or null.
+ */
+const getReturnExpressionFromVariableDeclaration = (
+  declaration: ts.VariableDeclaration,
+): ts.Expression | null => {
+  const { initializer } = declaration;
+  if (!initializer) {
+    return null;
+  }
+  if (ts.isArrowFunction(initializer)) {
+    if (!ts.isBlock(initializer.body)) {
+      return initializer.body;
+    }
+    return getReturnExpressionFromBlock(initializer.body);
+  }
+  if (ts.isFunctionExpression(initializer)) {
+    return initializer.body ? getReturnExpressionFromBlock(initializer.body) : null;
+  }
+  return null;
+};
+
+/**
  * Resolves a returned expression from a function or variable declaration.
  *
  * @param declaration - Declaration to inspect.
@@ -169,37 +221,49 @@ const getReturnExpression = (
     if (!ts.isBlock(declaration.body)) {
       return declaration.body;
     }
+    return getReturnExpressionFromBlock(declaration.body);
   }
 
   if (
     ts.isFunctionDeclaration(declaration) ||
     ts.isFunctionExpression(declaration)
   ) {
-    const { body } = declaration;
-    if (!body) {
-      return null;
-    }
-    const returnStatement = body.statements.find(ts.isReturnStatement);
-    return returnStatement?.expression ?? null;
+    return declaration.body ? getReturnExpressionFromBlock(declaration.body) : null;
   }
 
-  if (ts.isVariableDeclaration(declaration) && declaration.initializer) {
-    const { initializer } = declaration;
-    if (ts.isArrowFunction(initializer)) {
-      if (!ts.isBlock(initializer.body)) {
-        return initializer.body;
-      }
-      const returnStatement = initializer.body.statements.find(
-        ts.isReturnStatement,
-      );
-      return returnStatement?.expression ?? null;
-    }
-    if (ts.isFunctionExpression(initializer)) {
-      const returnStatement = initializer.body?.statements.find(
-        ts.isReturnStatement,
-      );
-      return returnStatement?.expression ?? null;
-    }
+  if (ts.isVariableDeclaration(declaration)) {
+    return getReturnExpressionFromVariableDeclaration(declaration);
+  }
+
+  return null;
+};
+
+/**
+ * Finds a class-like declaration by name within a function body block.
+ *
+ * Searches both class declarations and class-expression variable declarations.
+ *
+ * @param body - Function body block to search.
+ * @param name - Class name to find.
+ * @returns Matching class-like declaration or null.
+ */
+const findClassByNameInBlock = (
+  body: ts.Block,
+  name: string,
+): ts.ClassLikeDeclaration | null => {
+  const classDecl = body.statements
+    .filter(ts.isClassDeclaration)
+    .find((cls) => cls.name?.text === name);
+  if (classDecl) {
+    return classDecl;
+  }
+
+  const varDecl = body.statements
+    .filter(ts.isVariableStatement)
+    .flatMap((stmt) => stmt.declarationList.declarations)
+    .find((decl) => ts.isIdentifier(decl.name) && decl.name.text === name);
+  if (varDecl?.initializer && ts.isClassExpression(varDecl.initializer)) {
+    return varDecl.initializer;
   }
 
   return null;
@@ -232,27 +296,9 @@ const resolveMixinClassFromCall = (
         return unwrapped;
       }
       if (ts.isIdentifier(unwrapped) && body) {
-        const returnName = unwrapped.text;
-        const classDeclarations = body.statements.filter(ts.isClassDeclaration);
-        const match = classDeclarations.find(
-          (classDecl) => classDecl.name?.text === returnName,
-        );
+        const match = findClassByNameInBlock(body, unwrapped.text);
         if (match) {
           return match;
-        }
-
-        const classExpressionDeclaration = body.statements
-          .filter(ts.isVariableStatement)
-          .flatMap((statement) => statement.declarationList.declarations)
-          .find(
-            (decl) =>
-              ts.isIdentifier(decl.name) && decl.name.text === returnName,
-          );
-        if (
-          classExpressionDeclaration?.initializer &&
-          ts.isClassExpression(classExpressionDeclaration.initializer)
-        ) {
-          return classExpressionDeclaration.initializer;
         }
       }
     }
@@ -266,6 +312,30 @@ const resolveMixinClassFromCall = (
   }
 
   return null;
+};
+
+/**
+ * Determines whether a heritage expression should be silently skipped.
+ *
+ * Returns true for expressions that resolve to external (e.g., HTMLElement)
+ * or parameter (e.g., superClass mixin argument) symbols.
+ *
+ * @param checker - Type checker for symbol resolution.
+ * @param expression - Expression to evaluate.
+ * @returns True if the expression can be safely skipped without a warning.
+ */
+const isSkippableExpression = (
+  checker: ts.TypeChecker,
+  expression: ts.Expression,
+): boolean => {
+  if (
+    !ts.isIdentifier(expression) &&
+    !ts.isPropertyAccessExpression(expression)
+  ) {
+    return false;
+  }
+  const symbol = resolveAliasedSymbol(checker, expression);
+  return !!symbol && (isExternalSymbol(symbol) || isParameterSymbol(symbol));
 };
 
 /**
@@ -363,23 +433,9 @@ export const resolveInheritanceChain = (
       return;
     }
 
-    // Check if this identifier/property access couldn't be resolved
-    // but is an acceptable case (external or parameter)
-    if (
-      ts.isIdentifier(expression) ||
-      ts.isPropertyAccessExpression(expression)
-    ) {
-      const symbol = resolveAliasedSymbol(checker, expression);
-      if (symbol) {
-        // If there's a symbol and it's external (like HTMLElement), skip silently
-        if (isExternalSymbol(symbol)) {
-          return;
-        }
-        // If there's a symbol and it's a parameter (like superClass), skip silently
-        if (isParameterSymbol(symbol)) {
-          return;
-        }
-      }
+    // Skip silently for external (e.g., HTMLElement) or parameter (e.g., superClass) symbols
+    if (isSkippableExpression(checker, expression)) {
+      return;
     }
 
     // For all other unresolvable cases (including no symbol), report as unresolved
