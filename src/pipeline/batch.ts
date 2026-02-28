@@ -357,6 +357,76 @@ function applyWriteResult(
 }
 
 /**
+ * Writes content to a file and builds the corresponding file change detail.
+ *
+ * @param filePath - Destination file path.
+ * @param content - Content to write.
+ * @param dryRun - Whether to skip the actual write.
+ * @param io - IO adapter to use.
+ * @param exists - Whether the file already exists.
+ * @param reason - Reason for the file change.
+ * @returns Write outcome with result and change detail.
+ */
+function writeFileWithChange(
+  filePath: string,
+  content: string,
+  dryRun: boolean,
+  io: IoAdapter,
+  exists: boolean,
+  reason: FileChangeReason,
+): WriteOutcome {
+  const result = writeFile(filePath, content, { dryRun, io });
+  return {
+    result,
+    change: buildFileChange(result.status, exists, reason, filePath),
+  };
+}
+
+/**
+ * Applies generated section updates to an existing file.
+ *
+ * @param filePath - Destination file path.
+ * @param sections - Generated section payloads.
+ * @param dryRun - Whether to skip the actual write.
+ * @param io - IO adapter to use.
+ * @param exists - Whether the file already exists.
+ * @returns Write outcome with result, optional warning, and change detail.
+ */
+function applySectionUpdate(
+  filePath: string,
+  sections: NonNullable<EmitResult["sections"]>,
+  dryRun: boolean,
+  io: IoAdapter,
+  exists: boolean,
+): WriteOutcome {
+  const existingContent = io.readFile(filePath);
+  const updatedContent = applyGeneratedSectionUpdates(existingContent, sections);
+
+  if (!updatedContent) {
+    const result = { filePath, status: WriteStatus.Unchanged } as const;
+    return {
+      result,
+      warning: `Generated section markers not found in ${filePath}. Skipping update to preserve manual edits.`,
+      change: buildFileChange(
+        result.status,
+        exists,
+        FileChangeReason.SectionUpdated,
+        filePath,
+      ),
+    };
+  }
+
+  return writeFileWithChange(
+    filePath,
+    updatedContent,
+    dryRun,
+    io,
+    exists,
+    FileChangeReason.SectionUpdated,
+  );
+}
+
+/**
  * Writes an emission to disk, respecting generated section markers.
  *
  * @param emission - Emitter result to write.
@@ -371,87 +441,29 @@ function writeEmission(
   const sections = emission.sections ?? null;
   const exists = io.exists(emission.filePath);
 
-  if (force && exists) {
-    const result = writeFile(emission.filePath, emission.content, {
+  if ((force && exists) || !sections) {
+    return writeFileWithChange(
+      emission.filePath,
+      emission.content,
       dryRun,
       io,
-    });
-    return {
-      result,
-      change: buildFileChange(
-        result.status,
-        exists,
-        FileChangeReason.ContentUpdated,
-        emission.filePath,
-      ),
-    };
-  }
-
-  if (!sections) {
-    const result = writeFile(emission.filePath, emission.content, {
-      dryRun,
-      io,
-    });
-    return {
-      result,
-      change: buildFileChange(
-        result.status,
-        exists,
-        FileChangeReason.ContentUpdated,
-        emission.filePath,
-      ),
-    };
+      exists,
+      FileChangeReason.ContentUpdated,
+    );
   }
 
   if (!exists) {
-    const result = writeFile(emission.filePath, emission.content, {
+    return writeFileWithChange(
+      emission.filePath,
+      emission.content,
       dryRun,
       io,
-    });
-    return {
-      result,
-      change: buildFileChange(
-        result.status,
-        exists,
-        FileChangeReason.NewFile,
-        emission.filePath,
-      ),
-    };
-  }
-
-  const existingContent = io.readFile(emission.filePath);
-  const updatedContent = applyGeneratedSectionUpdates(
-    existingContent,
-    sections,
-  );
-
-  if (!updatedContent) {
-    const result = {
-      filePath: emission.filePath,
-      status: WriteStatus.Unchanged,
-    } as const;
-    return {
-      result,
-      warning: `Generated section markers not found in ${emission.filePath}. Skipping update to preserve manual edits.`,
-      change: buildFileChange(
-        result.status,
-        exists,
-        FileChangeReason.SectionUpdated,
-        emission.filePath,
-      ),
-    };
-  }
-
-  const result = writeFile(emission.filePath, updatedContent, { dryRun, io });
-  return {
-    result,
-    change: buildFileChange(
-      result.status,
       exists,
-      FileChangeReason.SectionUpdated,
-      emission.filePath,
-    ),
-  };
+      FileChangeReason.NewFile,
+    );
+  }
+
+  return applySectionUpdate(emission.filePath, sections, dryRun, io, exists);
 }
 
 /**
