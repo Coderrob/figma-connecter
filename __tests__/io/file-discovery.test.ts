@@ -26,9 +26,9 @@ import {
   COMPONENT_SUFFIX,
   DEFAULT_EXCLUDE_DIRS,
   discoverComponentFiles,
-  type FileDiscoveryFileSystem,
   isComponentFile,
 } from '../../src/io/file-discovery';
+import type { FileDiscoveryFileSystem } from '../../src/types/io';
 
 /**
  * Creates a mock Stats object.

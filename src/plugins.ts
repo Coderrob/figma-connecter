@@ -28,7 +28,7 @@ import {
   getAllParserMetadata,
   registerEmitterPlugin as registerEmitterPluginImpl,
   registerParserPlugin as registerParserPluginImpl,
-} from './internal-plugin-registry';
+} from "./internal-plugin-registry";
 
 // Re-export plugin interfaces and functions
 export {
@@ -36,19 +36,19 @@ export {
   hasEmitterPlugin,
   listEmitterTargets,
   registerEmitterPlugin,
-} from './emitters/factory';
-export { hasParserPlugin, listParserTargets, type ParserPluginOptions, registerParserPlugin } from './parsers/factory';
+} from "./emitters/factory";
+export {
+  hasParserPlugin,
+  listParserTargets,
+  type ParserPluginOptions,
+  registerParserPlugin,
+} from "./parsers/factory";
 
 /**
  * Unified plugin registration options.
  * Allows registering multiple emitters and parsers in a single call.
  */
-export interface PluginOptions {
-  /** Emitter plugins to register */
-  readonly emitters?: readonly import('./emitters/factory').EmitterPluginOptions[];
-  /** Parser plugins to register */
-  readonly parsers?: readonly import('./parsers/factory').ParserPluginOptions[];
-}
+import type { PluginOptions } from "./types/plugins";
 
 /**
  * Registers one or more plugins in a single call.
@@ -75,10 +75,7 @@ export const registerPlugin = (options: PluginOptions): void => {
 /**
  * Plugin information for display purposes.
  */
-export interface PluginInfo {
-  readonly emitters: ReadonlyMap<string, { displayName: string; description: string }>;
-  readonly parsers: ReadonlyMap<string, { displayName: string; description: string }>;
-}
+import type { PluginInfo } from "./types/plugins";
 
 /**
  * Gets information about all registered plugins.

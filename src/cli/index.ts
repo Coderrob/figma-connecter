@@ -22,18 +22,23 @@
  * @module cli
  */
 
-// Types
-export type { CommandContext, CommandStages } from './context';
-export type { GlobalCliOptions, ProgressIndicator, ProgressIndicatorOptions } from './types';
-
 // Program utilities
-export { addGlobalOptions, applyHelpFormatting, createProgram, run } from './program';
+export {
+  addGlobalOptions,
+  applyHelpFormatting,
+  createProgram,
+  run,
+} from "./program";
 
 // Option helpers
-export { getGlobalOptions } from './options';
+export { getGlobalOptions } from "./options";
 
 // Validators
-export { validateConfigPath, validateGlobalOptions, validatePathOption } from './validators';
+export {
+  validateConfigPath,
+  validateGlobalOptions,
+  validatePathOption,
+} from "./validators";
 
 // Progress indicators
-export { createProgressIndicator } from './progress';
+export { createProgressIndicator } from "./progress";

@@ -10,6 +10,18 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Added
 
+- Add `ClassDiscoveryMethod` enum to replace string literal union in `ClassSource.discoveryMethod` (`9234c52`)
+
+### Changed
+
+- Replace `figmaType as string === 'enum'` with `figmaType === FigmaPropertyType.Enum` in `decorator-extractor.ts` (`9234c52`)
+- Replace `Record<string, string>` mapping and `propType === 'enum'` with `Partial<Record<FigmaPropertyType, string>>` in `figma-mapper.ts` (`9234c52`)
+- Update `component-discovery.ts` to use `ClassDiscoveryMethod` enum values (`9234c52`)
+- Update `component-discovery.test.ts` assertions to use `ClassDiscoveryMethod` enum values (`9234c52`)
+- Export `ClassDiscoveryMethod` from `src/core/index.ts` barrel (`9234c52`)
+
+### Added
+
 - Add custom ESLint rule `custom/no-inline-require-typeof` to prevent inline require() anti-pattern (`f4edc87`)
 - Add import anti-pattern guidelines to AGENTS.md documentation (`f4edc87`)
 - Add `isInsideJestIsolateModules()` helper function in ESLint rule for consistent exception handling (TBD)
@@ -31,6 +43,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Changed
 
+- Extract `writeFileWithChange` and `applySectionUpdate` helpers from `writeEmission` in `src/pipeline/batch.ts` to reduce repetition and tighten the write logic (TBD)
 - Replace magic strings with `FIGMA_PACKAGE_REACT` and `FIGMA_PACKAGE_HTML` constants (`f13a67e`)
 - Replace `'created' | 'updated' | 'unchanged'` union type with `FileChangeStatus` enum (`f13a67e`)
 - Update `EmitResult.action` to use `FileChangeStatus` enum instead of string literals (`f13a67e`)

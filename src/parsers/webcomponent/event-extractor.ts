@@ -14,27 +14,23 @@
  * limitations under the License.
  */
 
-import ts from 'typescript';
+import ts from "typescript";
 
-import type { EventDescriptor, ExtractionResult } from '../../core/types';
-import { mergeByKey } from '../../utils/merge-by-key';
-import { toPascalCase } from '../../utils/strings';
-import { getJSDocTagText } from '../../utils/ts';
+import type { EventDescriptor } from "../../core/types";
+import type {
+  EventExtractionResult,
+  EventExtractionContext,
+} from "../../types/parsers-webcomponent";
+import { mergeByKey } from "../../utils/merge-by-key";
+import { toPascalCase } from "../../utils/strings";
+import { getJSDocTagText } from "../../utils/ts";
 
-import type { ASTVisitorResult } from './ast-visitor';
-import { extractFromChain } from './chain-extractor';
+import type { ASTVisitorResult } from "./ast-visitor";
+import { extractFromChain } from "./chain-extractor";
 
 /**
  * Result of event extraction containing events and warnings.
  */
-export type EventExtractionResult = ExtractionResult<EventDescriptor>;
-
-/**
- * Context for event extraction operations.
- */
-export interface EventExtractionContext {
-  readonly astData: ASTVisitorResult;
-}
 
 /**
  * Derives a React handler name from an event name and optional comment.
@@ -59,8 +55,12 @@ const deriveReactHandler = (eventName: string, comment?: string): string => {
  * @param classDeclaration - Class node to inspect.
  * @returns Extracted event descriptors.
  */
-const extractEventsFromJSDoc = (classDeclaration: ts.ClassLikeDeclaration): EventDescriptor[] => {
-  const tags = ts.getJSDocTags(classDeclaration).filter((tag) => tag.tagName.text === 'event');
+const extractEventsFromJSDoc = (
+  classDeclaration: ts.ClassLikeDeclaration,
+): EventDescriptor[] => {
+  const tags = ts
+    .getJSDocTags(classDeclaration)
+    .filter((tag) => tag.tagName.text === "event");
   return tags.flatMap((tag) => {
     const text = getJSDocTagText(tag);
     if (!text) {
@@ -170,7 +170,10 @@ export const extractEventsFromChain = (
      */
     extract: (classDecl) => {
       const jsdocEvents = extractEventsFromJSDoc(classDecl);
-      const dispatchEvents = extractEventsFromDispatch(classDecl, context.astData);
+      const dispatchEvents = extractEventsFromDispatch(
+        classDecl,
+        context.astData,
+      );
       return {
         items: [...jsdocEvents, ...dispatchEvents],
         warnings: [],

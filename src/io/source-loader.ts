@@ -22,38 +22,13 @@
  * @module io/source-loader
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
 
-import ts from 'typescript';
+import ts from "typescript";
 
-import type { PipelineContext, PipelineContextSeed } from '../pipeline/context';
-
-// ============================================================================
-// Types
-// ============================================================================
-
-/** Options for loading TypeScript source files. */
-export interface SourceLoaderOptions {
-  /** Pipeline context to enrich with TypeScript source data. */
-  readonly context: PipelineContextSeed;
-  /** Optional search path for locating tsconfig.json. */
-  readonly searchPath?: string;
-  /** Optional explicit tsconfig path. */
-  readonly tsconfigPath?: string;
-}
-
-/** Result of loading TypeScript sources. */
-export interface SourceLoadResult {
-  readonly context: PipelineContext;
-  readonly checker: ts.TypeChecker;
-  readonly configPath?: string;
-  readonly errors: readonly string[];
-  readonly options: ts.CompilerOptions;
-  readonly program: ts.Program;
-  readonly sourceFiles: readonly ts.SourceFile[];
-  readonly sourceFileMap: ReadonlyMap<string, ts.SourceFile>;
-}
+import type { PipelineContext, PipelineContextSeed } from "../types/pipeline";
+import type { SourceLoaderOptions, SourceLoadResult } from "../types/io";
 
 // ============================================================================
 // Private Helper Functions
@@ -73,6 +48,16 @@ const isReadableFile = (filePath: string, errors: string[]): boolean => {
   }
 
   try {
+    const mode = fs.statSync(filePath).mode;
+    if ((mode & 0o444) === 0) {
+      errors.push(`Source file is not readable: ${filePath}`);
+      return false;
+    }
+    if (process.platform === "win32" && (mode & 0o222) === 0) {
+      errors.push(`Source file is not readable: ${filePath}`);
+      return false;
+    }
+
     fs.accessSync(filePath, fs.constants.R_OK);
     return true;
   } catch {
@@ -88,9 +73,11 @@ const isReadableFile = (filePath: string, errors: string[]): boolean => {
  * @returns Formatted diagnostic string.
  */
 const formatDiagnostic = (diagnostic: ts.Diagnostic): string => {
-  const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+  const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
   if (diagnostic.file && diagnostic.start !== undefined) {
-    const location = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
+    const location = diagnostic.file.getLineAndCharacterOfPosition(
+      diagnostic.start,
+    );
     return `${diagnostic.file.fileName}:${location.line + 1}:${location.character + 1} - ${message}`;
   }
   return message;
@@ -107,16 +94,22 @@ const formatDiagnostic = (diagnostic: ts.Diagnostic): string => {
  * @param searchPath - Path to search from when resolving tsconfig.
  * @returns Resolved tsconfig path or undefined when not found.
  */
-export function resolveTsconfigPath(tsconfigPath: string | undefined, searchPath: string): string | undefined {
+export function resolveTsconfigPath(
+  tsconfigPath: string | undefined,
+  searchPath: string,
+): string | undefined {
   if (tsconfigPath) {
-    const resolved = path.isAbsolute(tsconfigPath) ? tsconfigPath : path.resolve(searchPath, tsconfigPath);
+    const resolved = path.isAbsolute(tsconfigPath)
+      ? tsconfigPath
+      : path.resolve(searchPath, tsconfigPath);
 
-    return fs.existsSync(resolved) ? resolved : undefined;
+    return fs.existsSync(resolved) ? path.normalize(resolved) : undefined;
   }
 
-   
   const searchRoot =
-    fs.existsSync(searchPath) && fs.statSync(searchPath).isDirectory() ? searchPath : path.dirname(searchPath);
+    fs.existsSync(searchPath) && fs.statSync(searchPath).isDirectory()
+      ? searchPath
+      : path.dirname(searchPath);
 
   /**
    * Checks if a file exists.
@@ -125,7 +118,9 @@ export function resolveTsconfigPath(tsconfigPath: string | undefined, searchPath
    * @returns True if the file exists, false otherwise.
    */
   const fileExists = (filename: string): boolean => ts.sys.fileExists(filename);
-  return ts.findConfigFile(searchRoot, fileExists, 'tsconfig.json') ?? undefined;
+  const found =
+    ts.findConfigFile(searchRoot, fileExists, "tsconfig.json") ?? undefined;
+  return found ? path.normalize(found) : undefined;
 }
 
 /**
@@ -135,16 +130,23 @@ export function resolveTsconfigPath(tsconfigPath: string | undefined, searchPath
  * @param options - Loader options.
  * @returns Source load result with program, checker, and context.
  */
-export function loadSourceProgram(componentFiles: readonly string[], options: SourceLoaderOptions): SourceLoadResult {
+export function loadSourceProgram(
+  componentFiles: readonly string[],
+  options: SourceLoaderOptions,
+): SourceLoadResult {
   const errors: string[] = [];
   const rootNames = componentFiles.map((filePath) => path.resolve(filePath));
-  const validFiles = rootNames.filter((filePath) => isReadableFile(filePath, errors));
+  const validFiles = rootNames.filter((filePath) =>
+    isReadableFile(filePath, errors),
+  );
 
   if (rootNames.length === 0) {
-    errors.push('No component files provided.');
+    errors.push("No component files provided.");
   }
 
-  const searchPath = options.searchPath ?? (validFiles[0] ? path.dirname(validFiles[0]) : process.cwd());
+  const searchPath =
+    options.searchPath ??
+    (validFiles[0] ? path.dirname(validFiles[0]) : process.cwd());
   const configPath = resolveTsconfigPath(options.tsconfigPath, searchPath);
 
   let compilerOptions = ts.getDefaultCompilerOptions();
@@ -156,14 +158,22 @@ export function loadSourceProgram(componentFiles: readonly string[], options: So
      * @param path - Path to the file to read.
      * @returns File contents as a string, or undefined if the file cannot be read.
      */
-    const readFile = (path: string): string | undefined => ts.sys.readFile(path);
-    const configFile = ts.readConfigFile(configPath, readFile);
+    const normalizedConfigPath = configPath.replace(/\\/g, "/");
+    const readFile = (filePath: string): string | undefined =>
+      ts.sys.readFile(filePath);
+    const configFile = ts.readConfigFile(normalizedConfigPath, readFile);
     if (configFile.error) {
       errors.push(formatDiagnostic(configFile.error));
     } else {
-      const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, path.dirname(configPath));
+      const parsed = ts.parseJsonConfigFileContent(
+        configFile.config,
+        ts.sys,
+        path.dirname(normalizedConfigPath),
+      );
       compilerOptions = parsed.options;
-      parsed.errors.forEach((diagnostic) => errors.push(formatDiagnostic(diagnostic)));
+      parsed.errors.forEach((diagnostic) =>
+        errors.push(formatDiagnostic(diagnostic)),
+      );
     }
   } else if (options.tsconfigPath) {
     errors.push(`tsconfig.json not found at: ${options.tsconfigPath}`);

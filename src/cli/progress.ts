@@ -22,10 +22,11 @@
  * @module cli/progress
  */
 
-import type { ProgressIndicator, ProgressIndicatorOptions } from './types';
+import type { ProgressIndicator, ProgressIndicatorOptions } from "../types/cli";
+import { ProgressStatus } from "../types/cli";
 
 /** Animation frames for the spinner. */
-const SPINNER_FRAMES = ['-', '\\', '|', '/'];
+const SPINNER_FRAMES = ["-", "\\", "|", "/"];
 
 /** Default animation interval in milliseconds. */
 const DEFAULT_INTERVAL_MS = 100;
@@ -78,7 +79,9 @@ function createNoOpIndicator(): ProgressIndicator {
  * progress.stop('Complete!', 'success');
  * ```
  */
-export function createProgressIndicator(options: ProgressIndicatorOptions = {}): ProgressIndicator {
+export function createProgressIndicator(
+  options: ProgressIndicatorOptions = {},
+): ProgressIndicator {
   const stream = options.stream ?? process.stdout;
   const enabled = options.enabled ?? stream.isTTY;
 
@@ -89,7 +92,7 @@ export function createProgressIndicator(options: ProgressIndicatorOptions = {}):
   const intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
   let timer: NodeJS.Timeout | number | undefined;
   let frameIndex = 0;
-  let label = '';
+  let label = "";
 
   /**
    * Renders the spinner frame and current label.
@@ -101,7 +104,7 @@ export function createProgressIndicator(options: ProgressIndicatorOptions = {}):
     frameIndex += 1;
     stream.write(`\r${frame} ${label}`);
     // Clear to end of line
-    stream.write('\x1b[0K');
+    stream.write("\x1b[0K");
   };
 
   return {
@@ -140,7 +143,10 @@ export function createProgressIndicator(options: ProgressIndicatorOptions = {}):
      * @param status - Final status label for success or error output.
      * @returns Nothing.
      */
-    stop(finalLabel?: string, status: 'success' | 'error' = 'success'): void {
+    stop(
+      finalLabel?: string,
+      status: ProgressStatus = ProgressStatus.Success,
+    ): void {
       if (timer) {
         clearInterval(timer);
         timer = undefined;
@@ -148,7 +154,7 @@ export function createProgressIndicator(options: ProgressIndicatorOptions = {}):
       if (finalLabel) {
         label = finalLabel;
       }
-      const prefix = status === 'error' ? 'x' : 'ok';
+      const prefix = status === ProgressStatus.Error ? "x" : "ok";
       stream.write(`\r${prefix} ${label}\n`);
     },
   };

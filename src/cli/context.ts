@@ -22,26 +22,4 @@
  * @module cli/context
  */
 
-import type { Logger } from '../core/logger';
-
-import type { GlobalCliOptions, ProgressIndicator } from './types';
-
-/**
- * Immutable command context for CLI actions.
- */
-export type CommandContext<Options, Resolved = Record<string, unknown>> = {
-  readonly options: Options;
-  readonly globalOptions: GlobalCliOptions;
-  readonly logger: Logger;
-  readonly progress: ProgressIndicator;
-} & Resolved;
-
-/**
- * Generic command stages for CLI actions.
- */
-export interface CommandStages<Context, Result> {
-  readonly validate: () => Context;
-  readonly execute: (context: Context) => Promise<Result>;
-  readonly report: (context: Context, result: Result) => void;
-  readonly onError?: (context: Context, error: unknown) => void;
-}
+import type { Logger } from "../core/logger";

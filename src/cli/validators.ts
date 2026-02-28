@@ -22,10 +22,9 @@
  * @module cli/validators
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-
-import type { GlobalCliOptions } from './types';
+import path from "node:path";
+import { nodeIoAdapter } from "../io/adapter";
+import type { GlobalCliOptions } from "../types/cli";
 
 /**
  * Validates global options for incompatible combinations.
@@ -35,7 +34,7 @@ import type { GlobalCliOptions } from './types';
  */
 export function validateGlobalOptions(options: GlobalCliOptions): void {
   if (options.verbose && options.quiet) {
-    throw new Error('Cannot use --verbose and --quiet together.');
+    throw new Error("Cannot use --verbose and --quiet together.");
   }
 }
 
@@ -47,14 +46,17 @@ export function validateGlobalOptions(options: GlobalCliOptions): void {
  * @returns The resolved absolute path.
  * @throws Error if the path is empty or does not exist.
  */
-export function validatePathOption(value: string, optionName = '--path'): string {
+export function validatePathOption(
+  value: string,
+  optionName = "--path",
+): string {
   if (!value || value.trim().length === 0) {
     throw new Error(`Missing required value for ${optionName}.`);
   }
 
   const resolved = path.resolve(process.cwd(), value);
 
-  if (!fs.existsSync(resolved)) {
+  if (!nodeIoAdapter.exists(resolved)) {
     throw new Error(`Path not found: ${value}`);
   }
 
@@ -75,11 +77,13 @@ export function validateConfigPath(value?: string): string | undefined {
 
   const resolved = path.resolve(process.cwd(), value);
 
-  if (!fs.existsSync(resolved)) {
+  if (!nodeIoAdapter.exists(resolved)) {
     throw new Error(`Config file not found: ${value}`);
   }
 
-  const stats = fs.statSync(resolved);
+  const stats = nodeIoAdapter.stat
+    ? nodeIoAdapter.stat(resolved)
+    : { isFile: () => true };
   if (!stats.isFile()) {
     throw new Error(`Config path is not a file: ${value}`);
   }

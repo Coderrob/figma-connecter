@@ -21,14 +21,14 @@
  *
  * @module pipeline/runner
  */
-import type { Logger } from '../core/logger';
+import type { Logger } from "../core/logger";
 import {
   createEmptyComponentResult,
   createEmptyReport,
   createReportTimer,
   reportReducer,
   type ReportTimer,
-} from '../core/report';
+} from "../core/report";
 import {
   applyAggregateDiagnostics,
   applyDiagnostics,
@@ -37,18 +37,23 @@ import {
   type Diagnostics,
   map as mapResult,
   type Result,
-} from '../core/result';
-import type { ComponentResult, ConnectOptions, GenerationReport } from '../core/types';
-import { createEmitters } from '../emitters/factory';
-import type { Emitter } from '../emitters/types';
-import { nodeIoAdapter } from '../io/adapter';
-import { discoverComponentFiles, type DiscoveredFile } from '../io/file-discovery';
-import { loadSourceProgram, type SourceLoadResult } from '../io/source-loader';
-import { createDefaultParser } from '../parsers/factory';
-import type { Parser } from '../parsers/types';
+} from "../core/result";
+import type {
+  ComponentResult,
+  ConnectOptions,
+  GenerationReport,
+} from "../core/types";
+import { createEmitters } from "../emitters/factory";
+import type { Emitter } from "../emitters/types";
+import { nodeIoAdapter } from "../io/adapter";
+import { discoverComponentFiles } from "../io/file-discovery";
+import type { DiscoveredFile, SourceLoadResult } from "../types/io";
+import { loadSourceProgram } from "../io/source-loader";
+import { createDefaultParser } from "../parsers/factory";
+import type { Parser } from "../parsers/types";
 
-import { processComponentBatch } from './batch';
-import type { PipelineContextSeed } from './context';
+import { processComponentBatch } from "./batch";
+import type { PipelineContextSeed } from "../types/pipeline";
 
 interface RunnerContext {
   readonly options: ConnectOptions;
@@ -74,8 +79,13 @@ type RunnerStep = (state: Result<RunnerContext>) => Result<RunnerContext>;
  * @param diagnostics - Diagnostics to append.
  * @returns Updated runner state.
  */
-const appendDiagnosticResult = (state: Result<RunnerContext>, diagnostics: Diagnostics): Result<RunnerContext> => {
-  const diagnosticResult = applyDiagnostics(createResultWithDiagnostics(createEmptyComponentResult(), diagnostics));
+const appendDiagnosticResult = (
+  state: Result<RunnerContext>,
+  diagnostics: Diagnostics,
+): Result<RunnerContext> => {
+  const diagnosticResult = applyDiagnostics(
+    createResultWithDiagnostics(createEmptyComponentResult(), diagnostics),
+  );
   return mapResult(state, (context) => ({
     ...context,
     results: [...context.results, diagnosticResult],
@@ -89,7 +99,10 @@ const appendDiagnosticResult = (state: Result<RunnerContext>, diagnostics: Diagn
  * @param steps - Steps to execute.
  * @returns Updated runner state.
  */
-const runSteps = (state: Result<RunnerContext>, steps: readonly RunnerStep[]): Result<RunnerContext> =>
+const runSteps = (
+  state: Result<RunnerContext>,
+  steps: readonly RunnerStep[],
+): Result<RunnerContext> =>
   steps.reduce((current, step) => step(current), state);
 
 /**
@@ -100,7 +113,7 @@ const runSteps = (state: Result<RunnerContext>, steps: readonly RunnerStep[]): R
  */
 const discoverComponentsStep: RunnerStep = (state) => {
   const { logger, options } = state.value;
-  logger.info('Discovering component files...', {
+  logger.info("Discovering component files...", {
     inputPath: options.inputPath,
     recursive: options.recursive,
   });
@@ -119,7 +132,7 @@ const discoverComponentsStep: RunnerStep = (state) => {
     }));
   }
 
-  logger.info('Component files discovered.', {
+  logger.info("Component files discovered.", {
     count: discovered.length,
   });
 
@@ -189,7 +202,7 @@ const loadSourcesStep: RunnerStep = (state) => {
   );
 
   if (sourceLoad.configPath) {
-    logger.debug('Using tsconfig for TypeScript program.', {
+    logger.debug("Using tsconfig for TypeScript program.", {
       configPath: sourceLoad.configPath,
     });
   }
@@ -219,7 +232,7 @@ const warnOnMissingEmittersStep: RunnerStep = (state) => {
 
   if (state.value.emitters.length === 0) {
     return appendDiagnosticResult(state, {
-      warnings: ['No emitters selected. Use --emit to specify targets.'],
+      warnings: ["No emitters selected. Use --emit to specify targets."],
     });
   }
 
@@ -243,7 +256,8 @@ const runBatchStep: RunnerStep = (state) => {
   }
 
   const aggregate = processComponentBatch(discovered, sourceLoad.context);
-  const componentResults: ComponentResult[] = applyAggregateDiagnostics(aggregate);
+  const componentResults: ComponentResult[] =
+    applyAggregateDiagnostics(aggregate);
   return mapResult(state, (context) => ({
     ...context,
     componentResults,
@@ -260,10 +274,14 @@ const runBatchStep: RunnerStep = (state) => {
 const finalizeReportStep: RunnerStep = (state) => {
   const { componentResults, discovered, results, timer } = state.value;
   const report = {
-    ...results.reduce(reportReducer, createEmptyReport()),
+    ...results.reduce(
+      (accumulator, element) => reportReducer(accumulator, element),
+      createEmptyReport(),
+    ),
     durationMs: timer.stop(),
   };
-  const reportWithComponents = discovered.length > 0 ? { ...report, componentResults } : report;
+  const reportWithComponents =
+    discovered.length > 0 ? { ...report, componentResults } : report;
 
   return mapResult(state, (context) => ({
     ...context,
@@ -278,7 +296,10 @@ const finalizeReportStep: RunnerStep = (state) => {
  * @param logger - Logger instance for pipeline output.
  * @returns Generation report for the pipeline run.
  */
-export function runConnectPipeline(options: ConnectOptions, logger: Logger): Promise<GenerationReport> {
+export function runConnectPipeline(
+  options: ConnectOptions,
+  logger: Logger,
+): Promise<GenerationReport> {
   const initialContext: RunnerContext = {
     options,
     logger,
@@ -308,13 +329,19 @@ export function runConnectPipeline(options: ConnectOptions, logger: Logger): Pro
   }
 
   const fallbackReport = {
-    ...finalState.value.results.reduce(reportReducer, createEmptyReport()),
+    ...finalState.value.results.reduce(
+      (accumulator, element) => reportReducer(accumulator, element),
+      createEmptyReport(),
+    ),
     durationMs: finalState.value.timer.stop(),
   };
 
   return Promise.resolve(
     finalState.value.discovered.length > 0
-      ? { ...fallbackReport, componentResults: finalState.value.componentResults }
+      ? {
+          ...fallbackReport,
+          componentResults: finalState.value.componentResults,
+        }
       : fallbackReport,
   );
 }

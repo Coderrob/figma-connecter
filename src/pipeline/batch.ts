@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-import path from 'node:path';
+import path from "node:path";
 
-import type ts from 'typescript';
+import type ts from "typescript";
 
-import { DEFAULT_CONNECT_OPTIONS } from '../core/constants';
-import { addCreatedFile, addUnchangedFile, addUpdatedFile, createEmptyComponentResult } from '../core/report';
+import { DEFAULT_CONNECT_OPTIONS } from "../core/constants";
+import {
+  addCreatedFile,
+  addUnchangedFile,
+  addUpdatedFile,
+  createEmptyComponentResult,
+} from "../core/report";
 import {
   addDiagnostics,
   addError,
@@ -29,16 +34,23 @@ import {
   createResult,
   map as mapResult,
   type Result,
-} from '../core/result';
-import type { ComponentModel, ComponentResult, EmitResult, FileChangeDetail } from '../core/types';
-import { FileChangeReason, FileChangeStatus } from '../core/types';
-import { type IoAdapter, nodeIoAdapter } from '../io/adapter';
-import type { DiscoveredFile } from '../io/file-discovery';
-import { type FileWriteResult, writeFile, WriteStatus } from '../io/file-writer';
-import { applyGeneratedSectionUpdates } from '../io/section-updater';
-import type { ParseContext } from '../parsers/types';
+} from "../core/result";
+import type {
+  ComponentModel,
+  ComponentResult,
+  EmitResult,
+  FileChangeDetail,
+} from "../core/types";
+import { FileChangeReason, FileChangeStatus } from "../core/types";
+import { nodeIoAdapter } from "../io/adapter";
+import type { IoAdapter } from "../types/io";
+import type { DiscoveredFile, FileWriteResult } from "../types/io";
+import { writeFile } from "../io/file-writer";
+import { WriteStatus } from "../types/io";
+import { applyGeneratedSectionUpdates } from "../io/section-updater";
+import type { ParseContext } from "../parsers/types";
 
-import type { PipelineContext } from './context';
+import type { PipelineContext } from "../types/pipeline";
 
 type WriteFileResult = FileWriteResult;
 
@@ -78,8 +90,10 @@ interface WriteContext {
  * @param steps - Steps to execute in order.
  * @returns Updated file context state.
  */
-const runSteps = (state: Result<FileContext>, steps: readonly FileStep[]): Result<FileContext> =>
-  steps.reduce((current, step) => step(current), state);
+const runSteps = (
+  state: Result<FileContext>,
+  steps: readonly FileStep[],
+): Result<FileContext> => steps.reduce((current, step) => step(current), state);
 
 /**
  * Updates the component result inside the file context.
@@ -104,7 +118,10 @@ const updateComponent = (
  * @param shouldContinue - Whether processing should continue.
  * @returns Updated file context state.
  */
-const setShouldContinue = (state: Result<FileContext>, shouldContinue: boolean): Result<FileContext> =>
+const setShouldContinue = (
+  state: Result<FileContext>,
+  shouldContinue: boolean,
+): Result<FileContext> =>
   mapResult(state, (context) => ({
     ...context,
     shouldContinue,
@@ -121,7 +138,10 @@ const resolveSourceFileStep: FileStep = (state) => {
   const sourceFile = pipeline.sourceFileMap.get(path.resolve(file.filePath));
 
   if (!sourceFile) {
-    const next = addError(state, `Source file not found in program: ${file.filePath}`);
+    const next = addError(
+      state,
+      `Source file not found in program: ${file.filePath}`,
+    );
     return setShouldContinue(next, continueOnError);
   }
 
@@ -143,7 +163,7 @@ const parseComponentStep: FileStep = (state) => {
     return state;
   }
 
-  pipeline.logger?.debug('Parsing component source.', {
+  pipeline.logger?.debug("Parsing component source.", {
     component: file.componentName,
     filePath: file.filePath,
   });
@@ -213,7 +233,9 @@ const emitComponentStep: FileStep = (state) => {
  * @param state - Final file processing state.
  * @returns File processing outcome.
  */
-const finalizeFileOutcome = (state: Result<FileContext>): FileProcessOutcome => ({
+const finalizeFileOutcome = (
+  state: Result<FileContext>,
+): FileProcessOutcome => ({
   result: mapResult(state, (context) => context.component),
   shouldContinue: state.value.shouldContinue,
 });
@@ -255,8 +277,13 @@ export function processComponentBatch(
   discovered: readonly DiscoveredFile[],
   context: PipelineContext,
 ): AggregateResult<ComponentResult> {
-  const continueOnError = context.continueOnError ?? DEFAULT_CONNECT_OPTIONS.continueOnError;
-  const steps: FileStep[] = [resolveSourceFileStep, parseComponentStep, emitComponentStep];
+  const continueOnError =
+    context.continueOnError ?? DEFAULT_CONNECT_OPTIONS.continueOnError;
+  const steps: FileStep[] = [
+    resolveSourceFileStep,
+    parseComponentStep,
+    emitComponentStep,
+  ];
 
   const batchState = discovered.reduce(
     (acc, file) => {
@@ -299,10 +326,14 @@ function applyEmissionOutcome(
 
   const { change } = writeOutcome;
   if (change) {
-    next = updateComponent(next, (component) => addFileChange(component, change));
+    next = updateComponent(next, (component) =>
+      addFileChange(component, change),
+    );
   }
 
-  return updateComponent(next, (component) => applyWriteResult(component, writeOutcome.result));
+  return updateComponent(next, (component) =>
+    applyWriteResult(component, writeOutcome.result),
+  );
 }
 
 /**
@@ -312,7 +343,10 @@ function applyEmissionOutcome(
  * @param writeResult - Write result payload.
  * @returns Updated component result.
  */
-function applyWriteResult(component: ComponentResult, writeResult: WriteFileResult): ComponentResult {
+function applyWriteResult(
+  component: ComponentResult,
+  writeResult: WriteFileResult,
+): ComponentResult {
   if (writeResult.status === WriteStatus.Created) {
     return addCreatedFile(component, writeResult.filePath);
   }
@@ -323,58 +357,113 @@ function applyWriteResult(component: ComponentResult, writeResult: WriteFileResu
 }
 
 /**
+ * Writes content to a file and builds the corresponding file change detail.
+ *
+ * @param filePath - Destination file path.
+ * @param content - Content to write.
+ * @param dryRun - Whether to skip the actual write.
+ * @param io - IO adapter to use.
+ * @param exists - Whether the file already exists.
+ * @param reason - Reason for the file change.
+ * @returns Write outcome with result and change detail.
+ */
+function writeFileWithChange(
+  filePath: string,
+  content: string,
+  dryRun: boolean,
+  io: IoAdapter,
+  exists: boolean,
+  reason: FileChangeReason,
+): WriteOutcome {
+  const result = writeFile(filePath, content, { dryRun, io });
+  return {
+    result,
+    change: buildFileChange(result.status, exists, reason, filePath),
+  };
+}
+
+/**
+ * Applies generated section updates to an existing file.
+ *
+ * @param filePath - Destination file path.
+ * @param sections - Generated section payloads.
+ * @param dryRun - Whether to skip the actual write.
+ * @param io - IO adapter to use.
+ * @param exists - Whether the file already exists.
+ * @returns Write outcome with result, optional warning, and change detail.
+ */
+function applySectionUpdate(
+  filePath: string,
+  sections: NonNullable<EmitResult["sections"]>,
+  dryRun: boolean,
+  io: IoAdapter,
+  exists: boolean,
+): WriteOutcome {
+  const existingContent = io.readFile(filePath);
+  const updatedContent = applyGeneratedSectionUpdates(existingContent, sections);
+
+  if (!updatedContent) {
+    const result = { filePath, status: WriteStatus.Unchanged } as const;
+    return {
+      result,
+      warning: `Generated section markers not found in ${filePath}. Skipping update to preserve manual edits.`,
+      change: buildFileChange(
+        result.status,
+        exists,
+        FileChangeReason.SectionUpdated,
+        filePath,
+      ),
+    };
+  }
+
+  return writeFileWithChange(
+    filePath,
+    updatedContent,
+    dryRun,
+    io,
+    exists,
+    FileChangeReason.SectionUpdated,
+  );
+}
+
+/**
  * Writes an emission to disk, respecting generated section markers.
  *
  * @param emission - Emitter result to write.
  * @param writeContext - Write configuration values.
  * @returns Write outcome including warnings and change details.
  */
-function writeEmission(emission: EmitResult, writeContext: WriteContext): WriteOutcome {
+function writeEmission(
+  emission: EmitResult,
+  writeContext: WriteContext,
+): WriteOutcome {
   const { dryRun, force, io } = writeContext;
   const sections = emission.sections ?? null;
   const exists = io.exists(emission.filePath);
 
-  if (force && exists) {
-    const result = writeFile(emission.filePath, emission.content, { dryRun, io });
-    return {
-      result,
-      change: buildFileChange(result.status, exists, FileChangeReason.ContentUpdated, emission.filePath),
-    };
-  }
-
-  if (!sections) {
-    const result = writeFile(emission.filePath, emission.content, { dryRun, io });
-    return {
-      result,
-      change: buildFileChange(result.status, exists, FileChangeReason.ContentUpdated, emission.filePath),
-    };
+  if ((force && exists) || !sections) {
+    return writeFileWithChange(
+      emission.filePath,
+      emission.content,
+      dryRun,
+      io,
+      exists,
+      FileChangeReason.ContentUpdated,
+    );
   }
 
   if (!exists) {
-    const result = writeFile(emission.filePath, emission.content, { dryRun, io });
-    return {
-      result,
-      change: buildFileChange(result.status, exists, FileChangeReason.NewFile, emission.filePath),
-    };
+    return writeFileWithChange(
+      emission.filePath,
+      emission.content,
+      dryRun,
+      io,
+      exists,
+      FileChangeReason.NewFile,
+    );
   }
 
-  const existingContent = io.readFile(emission.filePath);
-  const updatedContent = applyGeneratedSectionUpdates(existingContent, sections);
-
-  if (!updatedContent) {
-    const result = { filePath: emission.filePath, status: WriteStatus.Unchanged } as const;
-    return {
-      result,
-      warning: `Generated section markers not found in ${emission.filePath}. Skipping update to preserve manual edits.`,
-      change: buildFileChange(result.status, exists, FileChangeReason.SectionUpdated, emission.filePath),
-    };
-  }
-
-  const result = writeFile(emission.filePath, updatedContent, { dryRun, io });
-  return {
-    result,
-    change: buildFileChange(result.status, exists, FileChangeReason.SectionUpdated, emission.filePath),
-  };
+  return applySectionUpdate(emission.filePath, sections, dryRun, io, exists);
 }
 
 /**
@@ -384,7 +473,10 @@ function writeEmission(emission: EmitResult, writeContext: WriteContext): WriteO
  * @param change - File change detail to append.
  * @returns Updated component result.
  */
-function addFileChange(result: ComponentResult, change: FileChangeDetail): ComponentResult {
+function addFileChange(
+  result: ComponentResult,
+  change: FileChangeDetail,
+): ComponentResult {
   return {
     ...result,
     fileChanges: [...(result.fileChanges ?? []), change],
