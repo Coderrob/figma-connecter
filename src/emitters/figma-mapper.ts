@@ -25,6 +25,7 @@
 
 import path from 'node:path';
 
+import { FigmaPropertyType } from '../core/types';
 import type { ComponentModel, PropertyDescriptor } from '../core/types';
 import { normalizePath } from '../utils/paths';
 
@@ -60,8 +61,7 @@ export const mapPropToFigma = (prop: PropertyDescriptor): FigmaPropMapping => {
   const label = toTitleCase(prop.name);
 
   // Handle enum types with values
-  const propType = prop.type as string;
-  if (propType === 'enum' && prop.enumValues && prop.enumValues.length > 0) {
+  if (prop.type === FigmaPropertyType.Enum && prop.enumValues && prop.enumValues.length > 0) {
     const sorted = [...prop.enumValues].sort((a, b) => a.localeCompare(b));
     const lines = [
       `figma.enum('${label}', {`,
@@ -75,10 +75,10 @@ export const mapPropToFigma = (prop: PropertyDescriptor): FigmaPropMapping => {
   }
 
   // Type to Figma mapping
-  const mapping: Record<string, string> = {
-    string: `figma.string('${label}')`,
-    number: `figma.string('${label}')`,
-    boolean: `figma.boolean('${label}')`,
+  const mapping: Partial<Record<FigmaPropertyType, string>> = {
+    [FigmaPropertyType.String]: `figma.string('${label}')`,
+    [FigmaPropertyType.Number]: `figma.string('${label}')`,
+    [FigmaPropertyType.Boolean]: `figma.boolean('${label}')`,
   };
 
   const expression = mapping[prop.type];
