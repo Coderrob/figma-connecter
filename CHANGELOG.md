@@ -8,6 +8,10 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ## [Unreleased]
 
+### Changed
+
+- Refactor `src/core/logger.ts` to use type guard functions (`isString`, `isNumber`, `isObject`, `isFunction`) replacing verbose `typeof` expressions (`3f2b91c`)
+
 ### Added
 
 - Add `ClassDiscoveryMethod` enum to replace string literal union in `ClassSource.discoveryMethod` (`9234c52`)
