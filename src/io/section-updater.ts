@@ -33,10 +33,6 @@ import type {
 import type { SectionMarkers, SectionUpdateResult } from "../types/io";
 import { SectionUpdateStatus } from "../types/io";
 
-// ============================================================================
-// Types (imported from src/types/io)
-// ============================================================================
-
 interface SectionRange {
   readonly endLineEnd: number;
   readonly indent: string;
