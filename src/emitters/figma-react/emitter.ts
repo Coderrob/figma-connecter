@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import path from "node:path";
-
 import {
   buildGeneratedSectionMarkers,
   FIGMA_PACKAGE_REACT,
@@ -26,7 +24,7 @@ import {
   FileChangeStatus,
   GeneratedSectionName,
 } from "../../core/types";
-import { normalizePath } from "../../utils/paths";
+import { buildCodeConnectFilePath, resolveDistReactImportPath } from "../../utils/paths";
 import type { Emitter, EmitterContext } from "../types";
 import {
   buildFilePayload,
@@ -62,26 +60,7 @@ export class FigmaReactEmitter implements Emitter {
     if (baseImportPath) {
       return `${baseImportPath}/dist/react`;
     }
-
-    const normalizedComponentDir = normalizePath(componentDir);
-    const srcMarker = "/src/";
-    const markerIndex = normalizedComponentDir.lastIndexOf(srcMarker);
-    let rootCandidate = path.posix.dirname(normalizedComponentDir);
-    if (markerIndex >= 0) {
-      rootCandidate = normalizedComponentDir.slice(0, markerIndex);
-    }
-    const packageRoot =
-      rootCandidate || path.posix.parse(normalizedComponentDir).root;
-    const distReactPath = path.posix.join(packageRoot, "dist", "react");
-    const codeConnectDir = path.posix.join(
-      normalizedComponentDir,
-      "code-connect",
-    );
-    let relativePath = path.posix.relative(codeConnectDir, distReactPath);
-    if (!relativePath.startsWith(".")) {
-      relativePath = `./${relativePath}`;
-    }
-    return relativePath;
+    return resolveDistReactImportPath(componentDir);
   }
 
   /**
@@ -94,12 +73,7 @@ export class FigmaReactEmitter implements Emitter {
     const { model, options } = emitterContext;
     const componentName = getComponentBaseName(model);
     const fileName = `${componentName}.react.figma.tsx`;
-    const normalizedComponentDir = model.componentDir.replace(/\\/g, "/");
-    const filePath = path.posix.join(
-      normalizedComponentDir,
-      "code-connect",
-      fileName,
-    );
+    const filePath = buildCodeConnectFilePath(model.componentDir, fileName);
     const figmaUrl = `<FIGMA_${componentName.toUpperCase()}_URL>`;
 
     const importPath = this.resolveReactImportPath(

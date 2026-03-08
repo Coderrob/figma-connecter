@@ -23,11 +23,8 @@
  * @module emitters/figma-mapper
  */
 
-import path from 'node:path';
-
-import { FigmaPropertyType } from '../core/types';
 import type { ComponentModel, PropertyDescriptor } from '../core/types';
-import { normalizePath } from '../utils/paths';
+import { normalizedBasename } from '../utils/paths';
 
 import { toTitleCase } from './formatting';
 
@@ -61,7 +58,8 @@ export const mapPropToFigma = (prop: PropertyDescriptor): FigmaPropMapping => {
   const label = toTitleCase(prop.name);
 
   // Handle enum types with values
-  if (prop.type === FigmaPropertyType.Enum && prop.enumValues && prop.enumValues.length > 0) {
+  const propType = prop.type as string;
+  if (propType === 'enum' && prop.enumValues && prop.enumValues.length > 0) {
     const sorted = [...prop.enumValues].sort((a, b) => a.localeCompare(b));
     const lines = [
       `figma.enum('${label}', {`,
@@ -75,10 +73,10 @@ export const mapPropToFigma = (prop: PropertyDescriptor): FigmaPropMapping => {
   }
 
   // Type to Figma mapping
-  const mapping: Partial<Record<FigmaPropertyType, string>> = {
-    [FigmaPropertyType.String]: `figma.string('${label}')`,
-    [FigmaPropertyType.Number]: `figma.string('${label}')`,
-    [FigmaPropertyType.Boolean]: `figma.boolean('${label}')`,
+  const mapping: Record<string, string> = {
+    string: `figma.string('${label}')`,
+    number: `figma.string('${label}')`,
+    boolean: `figma.boolean('${label}')`,
   };
 
   const expression = mapping[prop.type];
@@ -110,11 +108,11 @@ export const sortByName = <T extends { name: string }>(items: readonly T[]): T[]
  * @returns The base name (e.g., 'button' from 'button.component.ts').
  */
 export const getComponentBaseName = (model: ComponentModel): string => {
-  const fileName = path.posix.basename(normalizePath(model.filePath));
+  const fileName = normalizedBasename(model.filePath);
   const pattern = /^(.*)\.component\.[tj]sx?$/i;
   const match = pattern.exec(fileName);
   if (match?.[1]) {
     return match[1];
   }
-  return path.posix.basename(normalizePath(model.componentDir));
+  return normalizedBasename(model.componentDir);
 };

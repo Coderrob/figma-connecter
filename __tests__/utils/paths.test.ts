@@ -20,7 +20,12 @@
 
 import path from 'node:path';
 
-import { normalizePath } from '../../src/utils/paths';
+import {
+  buildCodeConnectFilePath,
+  normalizedBasename,
+  normalizePath,
+  resolveDistReactImportPath,
+} from '../../src/utils/paths';
 
 describe('normalizePath', () => {
   it('should return empty string for empty input', () => {
@@ -34,5 +39,61 @@ describe('normalizePath', () => {
     expect(normalized).toContain('/');
     expect(normalized).not.toContain('\\');
     expect(normalized).toContain('some/dir/file.ts');
+  });
+});
+
+describe('normalizedBasename', () => {
+  it('should return the last path segment', () => {
+    expect(normalizedBasename('/src/components/button')).toBe('button');
+  });
+
+  it('should return the file name for a file path', () => {
+    expect(normalizedBasename('/src/components/button/button.component.ts')).toBe(
+      'button.component.ts',
+    );
+  });
+
+  it('should handle paths with backslashes', () => {
+    const result = normalizedBasename('src\\components\\button');
+    expect(result).toBe('button');
+  });
+});
+
+describe('buildCodeConnectFilePath', () => {
+  it('should build code-connect output path', () => {
+    const result = buildCodeConnectFilePath(
+      '/src/components/button',
+      'button.react.figma.tsx',
+    );
+    expect(result).toBe('/src/components/button/code-connect/button.react.figma.tsx');
+  });
+
+  it('should normalise backslashes in the component dir', () => {
+    const result = buildCodeConnectFilePath(
+      'src\\components\\button',
+      'button.webcomponent.figma.ts',
+    );
+    expect(result).toContain('code-connect/button.webcomponent.figma.ts');
+    expect(result).not.toContain('\\');
+  });
+});
+
+describe('resolveDistReactImportPath', () => {
+  it('should resolve relative path from code-connect to dist/react', () => {
+    const result = resolveDistReactImportPath(
+      '/packages/components/src/components/button',
+    );
+    expect(result).toBe('../../../../dist/react');
+  });
+
+  it('should prefix with ./ when there is no src/ marker', () => {
+    const result = resolveDistReactImportPath('/button');
+    expect(result.startsWith('../') || result.startsWith('./')).toBe(true);
+    expect(result).toContain('dist/react');
+  });
+
+  it('should always return a path that starts with . or ..', () => {
+    const result = resolveDistReactImportPath('/src/components/button');
+    expect(result.startsWith('.') || result.startsWith('../')).toBe(true);
   });
 });
