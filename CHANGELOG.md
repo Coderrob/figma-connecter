@@ -8,20 +8,14 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ## [Unreleased]
 
-### Added
-
-- Add `buildCodeConnectFilePath`, `resolveDistReactImportPath`, and `normalizedBasename` path builder utilities to `src/utils/paths.ts` (TBD)
-- Add tests for new path builder utilities in `__tests__/utils/paths.test.ts` (TBD)
-
 ### Changed
 
-- Refactor `src/emitters/figma-react/emitter.ts` to use `buildCodeConnectFilePath` and `resolveDistReactImportPath` path builders, removing direct `node:path` usage (TBD)
-- Refactor `src/emitters/figma-webcomponent/emitter.ts` to use `buildCodeConnectFilePath` path builder (TBD)
-- Refactor `src/emitters/figma-mapper.ts` to use `normalizedBasename` path builder (TBD)
-- Refactor `src/mappers/component-model.ts` to use `normalizedBasename` path builder (TBD)
+- Refactor `src/core/logger.ts` to use type guard functions (`isString`, `isNumber`, `isObject`, `isFunction`) replacing verbose `typeof` expressions (`3f2b91c`)
 
 ### Added
 
+- Add JSDoc documentation to `CommandBuilder` class and all public methods in `command-builder.ts` (`e62a497`)
+- Add `ClassDiscoveryMethod` enum to replace string literal union in `ClassSource.discoveryMethod` (`9234c52`)
 - Add custom ESLint rule `custom/no-inline-require-typeof` to prevent inline require() anti-pattern (`f4edc87`)
 - Add import anti-pattern guidelines to AGENTS.md documentation (`f4edc87`)
 - Add `isInsideJestIsolateModules()` helper function in ESLint rule for consistent exception handling (TBD)
@@ -43,6 +37,12 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Changed
 
+- Replace `figmaType as string === 'enum'` with `figmaType === FigmaPropertyType.Enum` in `decorator-extractor.ts` (`9234c52`)
+- Replace `Record<string, string>` mapping and `propType === 'enum'` with `Partial<Record<FigmaPropertyType, string>>` in `figma-mapper.ts` (`9234c52`)
+- Update `component-discovery.ts` to use `ClassDiscoveryMethod` enum values (`9234c52`)
+- Update `component-discovery.test.ts` assertions to use `ClassDiscoveryMethod` enum values (`9234c52`)
+- Export `ClassDiscoveryMethod` from `src/core/index.ts` barrel (`9234c52`)
+- Extract `writeFileWithChange` and `applySectionUpdate` helpers from `writeEmission` in `src/pipeline/batch.ts` to reduce repetition and tighten the write logic (TBD)
 - Replace magic strings with `FIGMA_PACKAGE_REACT` and `FIGMA_PACKAGE_HTML` constants (`f13a67e`)
 - Replace `'created' | 'updated' | 'unchanged'` union type with `FileChangeStatus` enum (`f13a67e`)
 - Update `EmitResult.action` to use `FileChangeStatus` enum instead of string literals (`f13a67e`)
@@ -69,6 +69,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 - Improve ESLint rule to check for `jest.isolateModules()` in all visitors, not just VariableDeclarator (TBD)
 - Reorder type assertion check before unwrapping in ESLint rule for proper specialized error message (TBD)
 - Change mock parser `model: null` to `model: undefined` in test to align with actual parser contract (TBD)
+- Refactor `inheritance-resolver.ts` to decompose large conditional expressions into extracted helper functions: `getFunctionBodyFromVariableDeclaration`, `getReturnExpressionFromBlock`, `getReturnExpressionFromVariableDeclaration`, `findClassByNameInBlock`, `isSkippableExpression` (TBD)
 
 ### Removed
 
