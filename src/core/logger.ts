@@ -64,6 +64,34 @@ export interface LoggerOptions {
 }
 
 /**
+ * Known keys in the LogContext object.
+ */
+export enum LogContextKey {
+  Stage = "stage",
+  Component = "component",
+  DurationMs = "durationMs",
+}
+
+/**
+ * Keys given priority in context output ordering.
+ */
+const PRIORITY_CONTEXT_KEYS: readonly LogContextKey[] = [
+  LogContextKey.Stage,
+  LogContextKey.Component,
+  LogContextKey.DurationMs,
+];
+
+/**
+ * Suffix appended to duration values in log output.
+ */
+const DURATION_UNIT_SUFFIX = "ms";
+
+/**
+ * Indicator prefix for success log messages.
+ */
+const SUCCESS_INDICATOR = "✓";
+
+/**
  * Log level names for output formatting.
  */
 const LOG_LEVEL_NAMES: Record<LogLevel, string> = {
@@ -76,47 +104,14 @@ const LOG_LEVEL_NAMES: Record<LogLevel, string> = {
 /**
  * ANSI color codes for terminal output.
  */
-enum Color {
-  RESET = "\x1b[0m",
-  RED = "\x1b[31m",
-  YELLOW = "\x1b[33m",
-  GREEN = "\x1b[32m",
-  CYAN = "\x1b[36m",
-  DIM = "\x1b[2m",
-}
-
-/**
- * Type guard for string values.
- *
- * @param value - Value to check.
- * @returns True if value is a string.
- */
-const isString = (value: unknown): value is string => typeof value === "string";
-
-/**
- * Type guard for number values.
- *
- * @param value - Value to check.
- * @returns True if value is a number.
- */
-const isNumber = (value: unknown): value is number => typeof value === "number";
-
-/**
- * Type guard for object values.
- *
- * @param value - Value to check.
- * @returns True if value is an object.
- */
-const isObject = (value: unknown): value is object => typeof value === "object";
-
-/**
- * Type guard for function values.
- *
- * @param value - Value to check.
- * @returns True if value is a function.
- */
-const isFunction = (value: unknown): value is (...args: unknown[]) => unknown =>
-  typeof value === "function";
+const COLORS = {
+  reset: "\x1b[0m",
+  red: "\x1b[31m",
+  yellow: "\x1b[33m",
+  green: "\x1b[32m",
+  cyan: "\x1b[36m",
+  dim: "\x1b[2m",
+} as const;
 
 /**
  * Logger class for structured CLI output.
@@ -165,8 +160,8 @@ export class Logger {
     useColors = false,
   ) {
     const options: LoggerOptions =
-      isObject(levelOrOptions)
-        ? (levelOrOptions as LoggerOptions)
+      typeof levelOrOptions === "object"
+        ? levelOrOptions
         : { level: levelOrOptions, useColors };
 
     this.level = resolveLogLevel(options);
@@ -227,7 +222,9 @@ export class Logger {
    */
   success(message: string, context?: LogContext): void {
     if (this.level >= LogLevel.INFO) {
-      const prefix = this.useColors ? `${Color.GREEN}✓${Color.RESET}` : "✓";
+      const prefix = this.useColors
+        ? `${COLORS.green}${SUCCESS_INDICATOR}${COLORS.reset}`
+        : SUCCESS_INDICATOR;
       console.log(
         `${prefix} ${message}${this.formatContext(this.mergeContext(context))}`,
       );
@@ -275,14 +272,14 @@ export class Logger {
     }
 
     const colorMap: Record<LogLevel, string> = {
-      [LogLevel.ERROR]: Color.RED,
-      [LogLevel.WARN]: Color.YELLOW,
-      [LogLevel.INFO]: Color.CYAN,
-      [LogLevel.DEBUG]: Color.DIM,
+      [LogLevel.ERROR]: COLORS.red,
+      [LogLevel.WARN]: COLORS.yellow,
+      [LogLevel.INFO]: COLORS.cyan,
+      [LogLevel.DEBUG]: COLORS.dim,
     };
 
     const color = colorMap[level];
-    return `${color}[${text}]${Color.RESET}`;
+    return `${color}[${text}]${COLORS.reset}`;
   }
 
   /**
@@ -303,16 +300,17 @@ export class Logger {
 
     const pairs = orderedPairs
       .map(([key, value]) => {
-        if (key === "durationMs" && isNumber(value)) {
-          return `${key}=${value}ms`;
+        if (key === LogContextKey.DurationMs && typeof value === "number") {
+          return `${key}=${value}${DURATION_UNIT_SUFFIX}`;
         }
-        const formatted = isString(value) ? value : JSON.stringify(value);
+        const formatted =
+          typeof value === "string" ? value : JSON.stringify(value);
         return `${key}=${formatted}`;
       })
       .join(" ");
 
     return this.useColors
-      ? ` ${Color.DIM}(${pairs})${Color.RESET}`
+      ? ` ${COLORS.dim}(${pairs})${COLORS.reset}`
       : ` (${pairs})`;
   }
 
@@ -323,15 +321,10 @@ export class Logger {
    * @returns Ordered key-value entries.
    */
   private orderContextEntries(context: LogContext): [string, unknown][] {
-    const priorityKeys: (keyof LogContext)[] = [
-      "stage",
-      "component",
-      "durationMs",
-    ];
     const used = new Set<string>();
     const entries: [string, unknown][] = [];
 
-    for (const key of priorityKeys) {
+    for (const key of PRIORITY_CONTEXT_KEYS) {
       const value = context[key];
       if (value !== undefined) {
         entries.push([key as string, value]);
@@ -402,7 +395,7 @@ export function createScopedLogger(logger: Logger, scope: string): Logger {
      */
     get(target, prop: keyof Logger) {
       const value = target[prop];
-      if (isFunction(value)) {
+      if (typeof value === "function") {
         return (message: string, context?: LogContext) => {
           (value as (msg: string, ctx?: LogContext) => void).call(
             target,
