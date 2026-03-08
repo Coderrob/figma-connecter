@@ -45,6 +45,12 @@ interface SectionRange {
 // Constants
 // ============================================================================
 
+/** Windows-style carriage-return + line-feed line ending. */
+const CRLF = "\r\n";
+
+/** Unix-style line-feed line ending. */
+const LF = "\n";
+
 /** Default markers for generated sections. */
 export const DEFAULT_SECTION_MARKERS: SectionMarkers = {
   end: GENERATED_SECTION_MARKERS.end,
@@ -62,7 +68,7 @@ export const DEFAULT_SECTION_MARKERS: SectionMarkers = {
  * @returns The detected line ending string.
  */
 const detectLineEnding = (content: string): string =>
-  content.includes("\r\n") ? "\r\n" : "\n";
+  content.includes(CRLF) ? CRLF : LF;
 
 /**
  * Normalizes all line endings to the specified line ending.
@@ -82,7 +88,7 @@ const normalizeLineEndings = (content: string, lineEnding: string): string =>
  * @returns Index of the previous line break or -1.
  */
 const lastLineBreak = (content: string, fromIndex: number): number =>
-  content.lastIndexOf("\n", fromIndex);
+  content.lastIndexOf(LF, fromIndex);
 
 /**
  * Finds the next line break after a given index.
@@ -97,7 +103,7 @@ const nextLineBreak = (
   fromIndex: number,
   includeLineBreak = false,
 ): number => {
-  const index = content.indexOf("\n", fromIndex);
+  const index = content.indexOf(LF, fromIndex);
   if (index === -1) {
     return -1;
   }
@@ -259,7 +265,7 @@ export function buildGeneratedSection(
   generatedSection: string,
   markers: SectionMarkers = DEFAULT_SECTION_MARKERS,
   indent = "",
-  lineEnding = "\n",
+  lineEnding = LF,
 ): string {
   const normalized = normalizeLineEndings(
     generatedSection,
