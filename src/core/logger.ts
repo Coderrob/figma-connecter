@@ -76,14 +76,47 @@ const LOG_LEVEL_NAMES: Record<LogLevel, string> = {
 /**
  * ANSI color codes for terminal output.
  */
-const COLORS = {
-  reset: "\x1b[0m",
-  red: "\x1b[31m",
-  yellow: "\x1b[33m",
-  green: "\x1b[32m",
-  cyan: "\x1b[36m",
-  dim: "\x1b[2m",
-} as const;
+enum Color {
+  RESET = "\x1b[0m",
+  RED = "\x1b[31m",
+  YELLOW = "\x1b[33m",
+  GREEN = "\x1b[32m",
+  CYAN = "\x1b[36m",
+  DIM = "\x1b[2m",
+}
+
+/**
+ * Type guard for string values.
+ *
+ * @param value - Value to check.
+ * @returns True if value is a string.
+ */
+const isString = (value: unknown): value is string => typeof value === "string";
+
+/**
+ * Type guard for number values.
+ *
+ * @param value - Value to check.
+ * @returns True if value is a number.
+ */
+const isNumber = (value: unknown): value is number => typeof value === "number";
+
+/**
+ * Type guard for object values.
+ *
+ * @param value - Value to check.
+ * @returns True if value is an object.
+ */
+const isObject = (value: unknown): value is object => typeof value === "object";
+
+/**
+ * Type guard for function values.
+ *
+ * @param value - Value to check.
+ * @returns True if value is a function.
+ */
+const isFunction = (value: unknown): value is (...args: unknown[]) => unknown =>
+  typeof value === "function";
 
 /**
  * Logger class for structured CLI output.
@@ -132,8 +165,8 @@ export class Logger {
     useColors = false,
   ) {
     const options: LoggerOptions =
-      typeof levelOrOptions === "object"
-        ? levelOrOptions
+      isObject(levelOrOptions)
+        ? (levelOrOptions as LoggerOptions)
         : { level: levelOrOptions, useColors };
 
     this.level = resolveLogLevel(options);
@@ -194,7 +227,7 @@ export class Logger {
    */
   success(message: string, context?: LogContext): void {
     if (this.level >= LogLevel.INFO) {
-      const prefix = this.useColors ? `${COLORS.green}✓${COLORS.reset}` : "✓";
+      const prefix = this.useColors ? `${Color.GREEN}✓${Color.RESET}` : "✓";
       console.log(
         `${prefix} ${message}${this.formatContext(this.mergeContext(context))}`,
       );
@@ -242,14 +275,14 @@ export class Logger {
     }
 
     const colorMap: Record<LogLevel, string> = {
-      [LogLevel.ERROR]: COLORS.red,
-      [LogLevel.WARN]: COLORS.yellow,
-      [LogLevel.INFO]: COLORS.cyan,
-      [LogLevel.DEBUG]: COLORS.dim,
+      [LogLevel.ERROR]: Color.RED,
+      [LogLevel.WARN]: Color.YELLOW,
+      [LogLevel.INFO]: Color.CYAN,
+      [LogLevel.DEBUG]: Color.DIM,
     };
 
     const color = colorMap[level];
-    return `${color}[${text}]${COLORS.reset}`;
+    return `${color}[${text}]${Color.RESET}`;
   }
 
   /**
@@ -270,17 +303,16 @@ export class Logger {
 
     const pairs = orderedPairs
       .map(([key, value]) => {
-        if (key === "durationMs" && typeof value === "number") {
+        if (key === "durationMs" && isNumber(value)) {
           return `${key}=${value}ms`;
         }
-        const formatted =
-          typeof value === "string" ? value : JSON.stringify(value);
+        const formatted = isString(value) ? value : JSON.stringify(value);
         return `${key}=${formatted}`;
       })
       .join(" ");
 
     return this.useColors
-      ? ` ${COLORS.dim}(${pairs})${COLORS.reset}`
+      ? ` ${Color.DIM}(${pairs})${Color.RESET}`
       : ` (${pairs})`;
   }
 
@@ -370,7 +402,7 @@ export function createScopedLogger(logger: Logger, scope: string): Logger {
      */
     get(target, prop: keyof Logger) {
       const value = target[prop];
-      if (typeof value === "function") {
+      if (isFunction(value)) {
         return (message: string, context?: LogContext) => {
           (value as (msg: string, ctx?: LogContext) => void).call(
             target,
