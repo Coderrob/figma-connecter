@@ -20,6 +20,7 @@
 
 import ts from 'typescript';
 
+import { ClassDiscoveryMethod } from '../../../src/core/types';
 import { visitSourceFile } from '../../../src/parsers/webcomponent/ast-visitor';
 import { discoverComponentClass } from '../../../src/parsers/webcomponent/component-discovery';
 
@@ -36,7 +37,7 @@ describe('discoverComponentClass', () => {
     const result = discoverFromSource(source);
 
     expect(result?.classDeclaration.name?.text).toBe('DefaultExported');
-    expect(result?.source.discoveryMethod).toBe('default-export');
+    expect(result?.source.discoveryMethod).toBe(ClassDiscoveryMethod.DefaultExport);
   });
 
   it('should resolve default export assignments', () => {
@@ -48,7 +49,7 @@ describe('discoverComponentClass', () => {
     const result = discoverFromSource(source);
 
     expect(result?.classDeclaration.name?.text).toBe('AssignedExport');
-    expect(result?.source.discoveryMethod).toBe('default-export');
+    expect(result?.source.discoveryMethod).toBe(ClassDiscoveryMethod.DefaultExport);
   });
 
   it('should fall back to customElement decorator', () => {
@@ -61,7 +62,7 @@ describe('discoverComponentClass', () => {
     const result = discoverFromSource(source);
 
     expect(result?.classDeclaration.name?.text).toBe('DecoratedComponent');
-    expect(result?.source.discoveryMethod).toBe('custom-element');
+    expect(result?.source.discoveryMethod).toBe(ClassDiscoveryMethod.CustomElement);
   });
 
   it('should fall back to JSDoc tagname', () => {
@@ -73,7 +74,7 @@ describe('discoverComponentClass', () => {
     const result = discoverFromSource(source);
 
     expect(result?.classDeclaration.name?.text).toBe('JSDocComponent');
-    expect(result?.source.discoveryMethod).toBe('tagname-jsdoc');
+    expect(result?.source.discoveryMethod).toBe(ClassDiscoveryMethod.TagnameJSDoc);
   });
 
   it('should return the first class when no signals are found', () => {
@@ -85,7 +86,7 @@ describe('discoverComponentClass', () => {
     const result = discoverFromSource(source);
 
     expect(result?.classDeclaration.name?.text).toBe('First');
-    expect(result?.source.discoveryMethod).toBe('first-class');
+    expect(result?.source.discoveryMethod).toBe(ClassDiscoveryMethod.FirstClass);
   });
 
   it('should ignore non-call decorators and fall back to first class', () => {
@@ -99,7 +100,7 @@ describe('discoverComponentClass', () => {
     const result = discoverFromSource(source);
 
     expect(result?.classDeclaration.name?.text).toBe('Decorated');
-    expect(result?.source.discoveryMethod).toBe('first-class');
+    expect(result?.source.discoveryMethod).toBe(ClassDiscoveryMethod.FirstClass);
   });
 
   it('should detect customElement decorators on property access expressions', () => {
@@ -112,7 +113,7 @@ describe('discoverComponentClass', () => {
     const result = discoverFromSource(source);
 
     expect(result?.classDeclaration.name?.text).toBe('AccessComponent');
-    expect(result?.source.discoveryMethod).toBe('custom-element');
+    expect(result?.source.discoveryMethod).toBe(ClassDiscoveryMethod.CustomElement);
   });
 
   it('should fall back when export assignments do not match classes', () => {
@@ -124,7 +125,7 @@ describe('discoverComponentClass', () => {
     const result = discoverFromSource(source);
 
     expect(result?.classDeclaration.name?.text).toBe('RealComponent');
-    expect(result?.source.discoveryMethod).toBe('first-class');
+    expect(result?.source.discoveryMethod).toBe(ClassDiscoveryMethod.FirstClass);
   });
 
   it('should return null when no classes are found', () => {
@@ -146,6 +147,6 @@ describe('discoverComponentClass', () => {
     const result = discoverFromSource(source);
 
     expect(result?.classDeclaration.name?.text).toBe('RealComponent');
-    expect(result?.source.discoveryMethod).toBe('first-class');
+    expect(result?.source.discoveryMethod).toBe(ClassDiscoveryMethod.FirstClass);
   });
 });
