@@ -29,6 +29,7 @@ import type {
 
 import fs from "node:fs";
 import path from "node:path";
+import { POSIX_PATH_SEPARATOR } from "../utils";
 
 /** File suffix for component source files. */
 export const COMPONENT_SUFFIX = ".component.ts";
@@ -134,7 +135,7 @@ export function discoverComponentFiles(
    */
   const traverse = (dirPath: string): void => {
     for (const entry of fileSystem.readdirSync(dirPath)) {
-      const entryPath = dirPath.includes("/")
+      const entryPath = dirPath.includes(POSIX_PATH_SEPARATOR)
         ? path.posix.join(dirPath, entry.name)
         : path.join(dirPath, entry.name);
 
