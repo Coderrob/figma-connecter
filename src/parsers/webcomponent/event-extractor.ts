@@ -28,6 +28,8 @@ import { getJSDocTagText } from "../../utils/ts";
 import type { ASTVisitorResult } from "./ast-visitor";
 import { extractFromChain } from "./chain-extractor";
 
+const JSDOC_EVENT_TAG = "event";
+
 /**
  * Result of event extraction containing events and warnings.
  */
@@ -60,7 +62,7 @@ const extractEventsFromJSDoc = (
 ): EventDescriptor[] => {
   const tags = ts
     .getJSDocTags(classDeclaration)
-    .filter((tag) => tag.tagName.text === "event");
+    .filter((tag) => tag.tagName.text === JSDOC_EVENT_TAG);
   return tags.flatMap((tag) => {
     const text = getJSDocTagText(tag);
     if (!text) {
