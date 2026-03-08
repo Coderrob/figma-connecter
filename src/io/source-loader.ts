@@ -88,15 +88,17 @@ const formatDiagnostic = (diagnostic: ts.Diagnostic): string => {
 // ============================================================================
 
 /**
- * Resolves a tsconfig.json path from an explicit path or search root.
+ * Resolves a tsconfig path from an explicit path or search root.
  *
  * @param tsconfigPath - Explicit tsconfig path, if provided.
  * @param searchPath - Path to search from when resolving tsconfig.
+ * @param configFileName - Config file name to search for (defaults to "tsconfig.json").
  * @returns Resolved tsconfig path or undefined when not found.
  */
 export function resolveTsconfigPath(
   tsconfigPath: string | undefined,
   searchPath: string,
+  configFileName: string = "tsconfig.json",
 ): string | undefined {
   if (tsconfigPath) {
     const resolved = path.isAbsolute(tsconfigPath)
@@ -119,7 +121,7 @@ export function resolveTsconfigPath(
    */
   const fileExists = (filename: string): boolean => ts.sys.fileExists(filename);
   const found =
-    ts.findConfigFile(searchRoot, fileExists, "tsconfig.json") ?? undefined;
+    ts.findConfigFile(searchRoot, fileExists, configFileName) ?? undefined;
   return found ? path.normalize(found) : undefined;
 }
 
@@ -147,7 +149,12 @@ export function loadSourceProgram(
   const searchPath =
     options.searchPath ??
     (validFiles[0] ? path.dirname(validFiles[0]) : process.cwd());
-  const configPath = resolveTsconfigPath(options.tsconfigPath, searchPath);
+  const configFileName = options.tsconfigFileName ?? "tsconfig.json";
+  const configPath = resolveTsconfigPath(
+    options.tsconfigPath,
+    searchPath,
+    configFileName,
+  );
 
   let compilerOptions = ts.getDefaultCompilerOptions();
 
@@ -176,7 +183,7 @@ export function loadSourceProgram(
       );
     }
   } else if (options.tsconfigPath) {
-    errors.push(`tsconfig.json not found at: ${options.tsconfigPath}`);
+    errors.push(`${configFileName} not found at: ${options.tsconfigPath}`);
   }
 
   const program = ts.createProgram({
