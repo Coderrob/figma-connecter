@@ -277,11 +277,21 @@ export interface ComponentResult {
 }
 
 /**
+ * Method used to discover a component class.
+ */
+export enum ClassDiscoveryMethod {
+  DefaultExport = 'default-export',
+  CustomElement = 'custom-element',
+  TagnameJSDoc = 'tagname-jsdoc',
+  FirstClass = 'first-class',
+}
+
+/**
  * Metadata about the source of a parsed class.
  */
 export interface ClassSource {
   /** How the class was discovered. */
-  readonly discoveryMethod: 'default-export' | 'custom-element' | 'tagname-jsdoc' | 'first-class';
+  readonly discoveryMethod: ClassDiscoveryMethod;
   /** The file path where the class was found. */
   readonly filePath: string;
 }
