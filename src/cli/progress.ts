@@ -22,11 +22,14 @@
  * @module cli/progress
  */
 
-import type { ProgressIndicator, ProgressIndicatorOptions } from "../types/cli";
-import { ProgressStatus } from "../types/cli";
+import type {
+  IProgressIndicator,
+  IProgressIndicatorOptions,
+} from "@/src/types/cli";
+import { ProgressStatus } from "@/src/types/cli";
 
 /** Animation frames for the spinner. */
-const SPINNER_FRAMES = ["-", "\\", "|", "/"];
+const SPINNER_FRAMES = ["-", String.raw`\`, "|", "/"];
 
 /** Default animation interval in milliseconds. */
 const DEFAULT_INTERVAL_MS = 100;
@@ -36,7 +39,7 @@ const DEFAULT_INTERVAL_MS = 100;
  *
  * @returns A progress indicator that does nothing.
  */
-function createNoOpIndicator(): ProgressIndicator {
+function createNoOpIndicator(): IProgressIndicator {
   return {
     /**
      * Starts the no-op indicator.
@@ -80,8 +83,8 @@ function createNoOpIndicator(): ProgressIndicator {
  * ```
  */
 export function createProgressIndicator(
-  options: ProgressIndicatorOptions = {},
-): ProgressIndicator {
+  options: IProgressIndicatorOptions = {},
+): IProgressIndicator {
   const stream = options.stream ?? process.stdout;
   const enabled = options.enabled ?? stream.isTTY;
 

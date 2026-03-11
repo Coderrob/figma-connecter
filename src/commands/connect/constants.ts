@@ -19,8 +19,8 @@
  *
  * @module commands/connect/constants
  */
-import { formatEmitTargetOptions } from '../../core/emit-targets';
-import { listEmitterTargets } from '../../emitters/factory';
+import { formatEmitTargetOptions } from '@/src/core/emit-targets';
+import { listEmitterTargets } from '@/src/emitters/factory';
 
 export const EMIT_TARGETS = listEmitterTargets();
 export const EMIT_TARGET_OPTIONS = formatEmitTargetOptions(EMIT_TARGETS);

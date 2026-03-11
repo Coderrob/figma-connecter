@@ -6,7 +6,7 @@
  *
  * @module commands/command-builder
  */
-import type { CommandStages } from "../types/cli";
+import type { ICommandStages } from "@/src/types/cli";
 
 /**
  * Fluent builder for constructing a {@link CommandStages} pipeline.
@@ -14,8 +14,8 @@ import type { CommandStages } from "../types/cli";
  * Use this builder to define the validate, execute, report, and optional
  * onError stages of a CLI command in a readable, chainable API.
  *
- * @typeParam Context - The validated context object produced by the validate stage.
- * @typeParam Result  - The result object produced by the execute stage.
+ * @template Context - The validated context object produced by the validate stage.
+ * @template Result - The result object produced by the execute stage.
  *
  * @example
  * ```typescript
@@ -97,15 +97,40 @@ export class CommandBuilder<Context, Result> {
    *
    * @returns A {@link CommandStages} object containing the configured pipeline stages.
    */
-  build(): CommandStages<Context, Result> {
-    const stages: CommandStages<Context, Result> = {
+  build(): ICommandStages<Context, Result> {
+    const stages: ICommandStages<Context, Result> = {
+      /**
+       * Validation stage wrapper.
+       *
+       * @returns {Context} Validated context
+       */
       validate: () => this._validate(),
+      /**
+       * Execution stage wrapper.
+       *
+       * @param {Context} context - Validated context
+       * @returns {Promise<Result>} Execution result
+       */
       execute: (context: Context) =>
         Promise.resolve(this._execute(context) as unknown as Result),
+      /**
+       * Report stage wrapper.
+       *
+       * @param {Context} context - Validated context
+       * @param {Result} result - Execution result
+       * @returns {void}
+       */
       report: (context: Context, result: Result) =>
         this._report(context, result),
       ...(this._onError
         ? {
+            /**
+             * Error handling stage wrapper.
+             *
+             * @param {Context} context - Validated context
+             * @param {unknown} error - Error encountered
+             * @returns {void}
+             */
             onError: (context: Context, error: unknown) =>
               this._onError!(context, error),
           }

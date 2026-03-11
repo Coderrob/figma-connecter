@@ -1,9 +1,9 @@
-import type ts from "typescript";
+import type { Logger } from '@/src/core/logger';
 
-import type { Logger } from "../core/logger";
-import type { Emitter } from "../emitters/types";
-import type { IoAdapter } from "../types/io";
-import type { Parser } from "../parsers/types";
+import type { Emitter } from '@/src/emitters/types';
+import type { Parser } from '@/src/parsers/types';
+import type { IoAdapter } from '@/src/types/io';
+import type ts from "typescript";
 
 /**
  * Shared execution context for the connect pipeline.

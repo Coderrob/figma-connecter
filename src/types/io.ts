@@ -2,7 +2,13 @@
  * IO-related shared types
  */
 
+import type {
+  PipelineContext,
+  PipelineContextSeed,
+} from "@/src/types/pipeline";
 import type fs from "fs";
+
+import type ts from "typescript";
 
 export interface DiscoveredFile {
   readonly filePath: string;
@@ -72,19 +78,19 @@ export enum SectionUpdateStatus {
 }
 
 export interface SourceLoaderOptions {
-  readonly context: import("../types/pipeline").PipelineContextSeed;
+  readonly context: PipelineContextSeed;
   readonly searchPath?: string;
   readonly tsconfigPath?: string;
   readonly tsconfigFileName?: string;
 }
 
 export interface SourceLoadResult {
-  readonly context: import("../types/pipeline").PipelineContext;
-  readonly checker: import("typescript").TypeChecker;
+  readonly context: PipelineContext;
+  readonly checker: ts.TypeChecker;
   readonly configPath?: string;
   readonly errors: readonly string[];
-  readonly options: import("typescript").CompilerOptions;
-  readonly program: import("typescript").Program;
-  readonly sourceFiles: readonly import("typescript").SourceFile[];
-  readonly sourceFileMap: ReadonlyMap<string, import("typescript").SourceFile>;
+  readonly options: ts.CompilerOptions;
+  readonly program: ts.Program;
+  readonly sourceFiles: readonly ts.SourceFile[];
+  readonly sourceFileMap: ReadonlyMap<string, ts.SourceFile>;
 }

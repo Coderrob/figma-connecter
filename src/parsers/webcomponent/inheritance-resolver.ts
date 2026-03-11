@@ -25,122 +25,9 @@ import type {
  *
  * @param checker - Type checker for symbol resolution.
  * @param node - Node to resolve.
+ * @param symbol
+ * @param declaration
  * @returns Resolved symbol or undefined.
- */
-const resolveAliasedSymbol = (
-  checker: ts.TypeChecker,
-  node: ts.Node,
-): ts.Symbol | undefined => {
-  const symbol = checker.getSymbolAtLocation(node);
-  if (!symbol) {
-    return undefined;
-  }
-  if (symbol.flags & ts.SymbolFlags.Alias) {
-    return checker.getAliasedSymbol(symbol);
-  }
-  return symbol;
-};
-
-/**
- * Finds the first class declaration associated with a symbol.
- *
- * @param symbol - Symbol to inspect.
- * @returns Class declaration or null when missing.
- */
-const resolveClassDeclarationFromSymbol = (
-  symbol: ts.Symbol,
-): ts.ClassDeclaration | null => {
-  const declarations = symbol.getDeclarations() ?? [];
-  return declarations.find(ts.isClassDeclaration) ?? null;
-};
-
-/**
- * Checks if a symbol is from an external library or built-in type.
- *
- * @param symbol - Symbol to inspect.
- * @returns True if the symbol is external.
- */
-const isExternalSymbol = (symbol: ts.Symbol): boolean => {
-  const declarations = symbol.getDeclarations() ?? [];
-  if (declarations.length === 0) {
-    return true;
-  }
-  // Check if any declaration is from a .d.ts file (library definition)
-  return declarations.some((decl) => {
-    const sourceFile = decl.getSourceFile();
-    return sourceFile.isDeclarationFile;
-  });
-};
-
-/**
- * Checks if a symbol represents a function or method parameter.
- *
- * @param symbol - Symbol to inspect.
- * @returns True if the symbol is a parameter.
- */
-const isParameterSymbol = (symbol: ts.Symbol): boolean => {
-  const declarations = symbol.getDeclarations() ?? [];
-  return declarations.some((decl) => ts.isParameter(decl));
-};
-
-/**
- * Resolves a class declaration from an expression.
- *
- * @param checker - Type checker for symbol resolution.
- * @param expression - Expression to resolve.
- * @returns Class declaration or null when unresolved.
- */
-const resolveClassDeclarationFromExpression = (
-  checker: ts.TypeChecker,
-  expression: ts.Expression,
-): ts.ClassDeclaration | null => {
-  if (
-    !ts.isIdentifier(expression) &&
-    !ts.isPropertyAccessExpression(expression)
-  ) {
-    return null;
-  }
-
-  const symbol = resolveAliasedSymbol(checker, expression);
-  if (!symbol) {
-    return null;
-  }
-
-  // Skip external/built-in symbols (e.g., HTMLElement) and parameters  (e.g., superClass)
-  if (isExternalSymbol(symbol) || isParameterSymbol(symbol)) {
-    return null;
-  }
-
-  return resolveClassDeclarationFromSymbol(symbol);
-};
-
-/**
- * Retrieves the function body from a variable declaration's function initializer.
- *
- * @param declaration - Variable declaration to inspect.
- * @returns Function body block or null.
- */
-const getFunctionBodyFromVariableDeclaration = (
-  declaration: ts.VariableDeclaration,
-): ts.Block | null => {
-  const { initializer } = declaration;
-  if (!initializer) {
-    return null;
-  }
-  if (ts.isArrowFunction(initializer)) {
-    return ts.isBlock(initializer.body) ? initializer.body : null;
-  }
-  if (ts.isFunctionExpression(initializer)) {
-    return initializer.body ?? null;
-  }
-  return null;
-};
-
-/**
- * Retrieves the function body for a declaration if available.
- *
- * @param declaration - Declaration to inspect.
- * @returns Function body block or null.
  */
 const getFunctionBody = (declaration: ts.Declaration): ts.Block | null => {
   if (
@@ -159,60 +46,38 @@ const getFunctionBody = (declaration: ts.Declaration): ts.Block | null => {
 };
 
 /**
- * Unwraps parenthesized expressions to the inner expression.
+ * Finds the first class declaration associated with a symbol.
  *
- * @param expression - Expression to unwrap.
- * @returns Unwrapped expression.
+ * @param symbol - Symbol to inspect.
+ * @param checker
+ * @param node
+ * @param declaration
+ * @returns Class declaration or null when missing.
  */
-const unwrapExpression = (expression: ts.Expression): ts.Expression => {
-  let current = expression;
-  while (ts.isParenthesizedExpression(current)) {
-    current = current.expression;
-  }
-  return current;
-};
-
-/**
- * Finds the return expression in a block body.
- *
- * @param body - Block body to search.
- * @returns Return expression or null.
- */
-const getReturnExpressionFromBlock = (body: ts.Block): ts.Expression | null => {
-  const returnStatement = body.statements.find(ts.isReturnStatement);
-  return returnStatement?.expression ?? null;
-};
-
-/**
- * Resolves a returned expression from a variable declaration's function initializer.
- *
- * @param declaration - Variable declaration to inspect.
- * @returns Returned expression or null.
- */
-const getReturnExpressionFromVariableDeclaration = (
+const getFunctionBodyFromVariableDeclaration = (
   declaration: ts.VariableDeclaration,
-): ts.Expression | null => {
+): ts.Block | null => {
   const { initializer } = declaration;
   if (!initializer) {
     return null;
   }
   if (ts.isArrowFunction(initializer)) {
-    if (!ts.isBlock(initializer.body)) {
-      return initializer.body;
-    }
-    return getReturnExpressionFromBlock(initializer.body);
+    return ts.isBlock(initializer.body) ? initializer.body : null;
   }
   if (ts.isFunctionExpression(initializer)) {
-    return initializer.body ? getReturnExpressionFromBlock(initializer.body) : null;
+    return initializer.body ?? null;
   }
   return null;
 };
 
 /**
- * Resolves a returned expression from a function or variable declaration.
+ * Checks if a symbol is from an external library or built-in type.
  *
- * @param declaration - Declaration to inspect.
- * @returns Returned expression or null.
+ * @param symbol - Symbol to inspect.
+ * @param checker
+ * @param node
+ * @param body
+ * @returns True if the symbol is external.
  */
 const getReturnExpression = (
   declaration: ts.Declaration,
@@ -239,13 +104,27 @@ const getReturnExpression = (
 };
 
 /**
- * Finds a class-like declaration by name within a function body block.
+ * Checks if a symbol represents a function or method parameter.
  *
- * Searches both class declarations and class-expression variable declarations.
+ * @param symbol - Symbol to inspect.
+ * @param checker
+ * @param node
+ * @returns True if the symbol is a parameter.
+ */
+const getReturnExpressionFromBlock = (body: ts.Block): ts.Expression | null => {
+  const returnStatement = body.statements.find(ts.isReturnStatement);
+  return returnStatement?.expression ?? null;
+};
+
+/**
+ * Resolves a class declaration from an expression.
  *
- * @param body - Function body block to search.
- * @param name - Class name to find.
- * @returns Matching class-like declaration or null.
+ * @param checker - Type checker for symbol resolution.
+ * @param expression - Expression to resolve.
+ * @param declaration
+ * @param symbol
+ * @param node
+ * @returns Class declaration or null when unresolved.
  */
 const findClassByNameInBlock = (
   body: ts.Block,
@@ -270,59 +149,127 @@ const findClassByNameInBlock = (
 };
 
 /**
- * Resolves a mixin call expression to its returned class declaration.
+ * Retrieves the function body from a variable declaration's function initializer.
  *
- * @param checker - Type checker for symbol resolution.
- * @param callExpression - Call expression for a mixin.
- * @returns Class-like declaration or null when unresolved.
+ * @param declaration - Variable declaration to inspect.
+ * @param checker
+ * @param expression
+ * @param symbol
+ * @param node
+ * @returns Function body block or null.
  */
-const resolveMixinClassFromCall = (
-  checker: ts.TypeChecker,
-  callExpression: ts.CallExpression,
-): ts.ClassLikeDeclaration | null => {
-  const symbol = resolveAliasedSymbol(checker, callExpression.expression);
-  if (!symbol) {
+const isExternalSymbol = (symbol: ts.Symbol): boolean => {
+  const declarations = symbol.getDeclarations() ?? [];
+  if (declarations.length === 0) {
+    return true;
+  }
+  // Check if any declaration is from a .d.ts file (library definition)
+  return declarations.some((decl) => {
+    const sourceFile = decl.getSourceFile();
+    return sourceFile.isDeclarationFile;
+  });
+};
+
+/**
+ * Retrieves the function body for a declaration if available.
+ *
+ * @param declaration - Declaration to inspect.
+ * @param checker
+ * @param expression
+ * @param body
+ * @param symbol
+ * @param node
+ * @returns Function body block or null.
+ */
+const getReturnExpressionFromVariableDeclaration = (
+  declaration: ts.VariableDeclaration,
+): ts.Expression | null => {
+  const { initializer } = declaration;
+  if (!initializer) {
     return null;
   }
-
-  const declarations = symbol.getDeclarations() ?? [];
-  for (const declaration of declarations) {
-    const body = getFunctionBody(declaration);
-    const returnExpression = getReturnExpression(declaration);
-
-    if (returnExpression) {
-      const unwrapped = unwrapExpression(returnExpression);
-      if (ts.isClassExpression(unwrapped)) {
-        return unwrapped;
-      }
-      if (ts.isIdentifier(unwrapped) && body) {
-        const match = findClassByNameInBlock(body, unwrapped.text);
-        if (match) {
-          return match;
-        }
-      }
+  if (ts.isArrowFunction(initializer)) {
+    if (!ts.isBlock(initializer.body)) {
+      return initializer.body;
     }
-
-    if (body) {
-      const classDeclarations = body.statements.filter(ts.isClassDeclaration);
-      if (classDeclarations.length > 0) {
-        return classDeclarations[0];
-      }
-    }
+    return getReturnExpressionFromBlock(initializer.body);
   }
-
+  if (ts.isFunctionExpression(initializer)) {
+    return initializer.body ? getReturnExpressionFromBlock(initializer.body) : null;
+  }
   return null;
 };
 
 /**
- * Determines whether a heritage expression should be silently skipped.
+ * Unwraps parenthesized expressions to the inner expression.
  *
- * Returns true for expressions that resolve to external (e.g., HTMLElement)
- * or parameter (e.g., superClass mixin argument) symbols.
+ * @param checker
+ * @param expression - Expression to unwrap.
+ * @param body
+ * @param declaration
+ * @param symbol
+ * @param node
+ * @returns Unwrapped expression.
+ */
+const isParameterSymbol = (symbol: ts.Symbol): boolean => {
+  const declarations = symbol.getDeclarations() ?? [];
+  return declarations.some((decl) => ts.isParameter(decl));
+};
+
+/**
+ * Finds the return expression in a block body.
  *
- * @param checker - Type checker for symbol resolution.
- * @param expression - Expression to evaluate.
- * @returns True if the expression can be safely skipped without a warning.
+ * @param body - Block body to search.
+ * @param checker
+ * @param expression
+ * @param declaration
+ * @param name
+ * @param symbol
+ * @param node
+ * @returns Return expression or null.
+ */
+const getSymbolKey = (
+  checker: ts.TypeChecker,
+  classDecl: ts.ClassLikeDeclaration,
+): string =>
+  // Always use file path + position for uniqueness, especially important for
+  // mixin patterns where multiple classes may have the same name (e.g., InnerMixinClass)
+  `${classDecl.getSourceFile().fileName}:${classDecl.pos}`;
+
+/**
+ * Resolves a returned expression from a variable declaration's function initializer.
+ *
+ * @param declaration - Variable declaration to inspect.
+ * @param checker
+ * @param expression
+ * @param body
+ * @param name
+ * @param symbol
+ * @returns Returned expression or null.
+ */
+const resolveAliasedSymbol = (
+  checker: ts.TypeChecker,
+  node: ts.Node,
+): ts.Symbol | undefined => {
+  const symbol = checker.getSymbolAtLocation(node);
+  if (!symbol) {
+    return undefined;
+  }
+  if (symbol.flags & ts.SymbolFlags.Alias) {
+    return checker.getAliasedSymbol(symbol);
+  }
+  return symbol;
+};
+
+/**
+ * Resolves a returned expression from a function or variable declaration.
+ *
+ * @param declaration - Declaration to inspect.
+ * @param checker
+ * @param expression
+ * @param classDecl
+ * @param symbol
+ * @returns Returned expression or null.
  */
 const isSkippableExpression = (
   checker: ts.TypeChecker,
@@ -339,26 +286,70 @@ const isSkippableExpression = (
 };
 
 /**
- * Builds a stable symbol key for class de-duplication.
+ * Finds a class-like declaration by name within a function body block.
  *
- * @param checker - Type checker for symbol lookup.
- * @param classDecl - Class declaration to key.
- * @returns Unique key for the class declaration.
+ * Searches both class declarations and class-expression variable declarations.
+ *
+ * @param body - Function body block to search.
+ * @param name - Class name to find.
+ * @param declaration
+ * @param expression
+ * @param checker
+ * @param classDecl
+ * @returns Matching class-like declaration or null.
  */
-const getSymbolKey = (
-  checker: ts.TypeChecker,
-  classDecl: ts.ClassLikeDeclaration,
-): string =>
-  // Always use file path + position for uniqueness, especially important for
-  // mixin patterns where multiple classes may have the same name (e.g., InnerMixinClass)
-  `${classDecl.getSourceFile().fileName}:${classDecl.pos}`;
+const resolveClassDeclarationFromSymbol = (
+  symbol: ts.Symbol,
+): ts.ClassDeclaration | null => {
+  const declarations = symbol.getDeclarations() ?? [];
+  return declarations.find(ts.isClassDeclaration) ?? null;
+};
 
 /**
- * Resolves the inheritance chain for a class declaration.
+ * Resolves a mixin call expression to its returned class declaration.
  *
- * @param classDeclaration - Class declaration to resolve.
- * @param context - Inheritance resolution context.
- * @returns Resolved inheritance chain with warnings.
+ * @param checker - Type checker for symbol resolution.
+ * @param callExpression - Call expression for a mixin.
+ * @param expression
+ * @param classDecl
+ * @returns Class-like declaration or null when unresolved.
+ */
+const resolveClassDeclarationFromExpression = (
+  checker: ts.TypeChecker,
+  expression: ts.Expression,
+): ts.ClassDeclaration | null => {
+  if (
+    !ts.isIdentifier(expression) &&
+    !ts.isPropertyAccessExpression(expression)
+  ) {
+    return null;
+  }
+
+  const symbol = resolveAliasedSymbol(checker, expression);
+  if (!symbol) {
+    return null;
+  }
+
+  // Skip external/built-in symbols (e.g., HTMLElement) and parameters  (e.g., superClass)
+  if (isExternalSymbol(symbol) || isParameterSymbol(symbol)) {
+    return null;
+  }
+
+  return resolveClassDeclarationFromSymbol(symbol);
+};
+
+/**
+ * Determines whether a heritage expression should be silently skipped.
+ *
+ * Returns true for expressions that resolve to external (e.g., HTMLElement)
+ * or parameter (e.g., superClass mixin argument) symbols.
+ *
+ * @param checker - Type checker for symbol resolution.
+ * @param expression - Expression to evaluate.
+ * @param callExpression
+ * @param classDeclaration
+ * @param context
+ * @returns True if the expression can be safely skipped without a warning.
  */
 export const resolveInheritanceChain = (
   classDeclaration: ts.ClassDeclaration,
@@ -449,4 +440,71 @@ export const resolveInheritanceChain = (
     warnings,
     unresolved,
   };
+};
+
+/**
+ * Builds a stable symbol key for class de-duplication.
+ *
+ * @param checker - Type checker for symbol lookup.
+ * @param classDecl - Class declaration to key.
+ * @param callExpression
+ * @param classDeclaration
+ * @param context
+ * @param expression
+ * @returns Unique key for the class declaration.
+ */
+const resolveMixinClassFromCall = (
+  checker: ts.TypeChecker,
+  callExpression: ts.CallExpression,
+): ts.ClassLikeDeclaration | null => {
+  const symbol = resolveAliasedSymbol(checker, callExpression.expression);
+  if (!symbol) {
+    return null;
+  }
+
+  const declarations = symbol.getDeclarations() ?? [];
+  for (const declaration of declarations) {
+    const body = getFunctionBody(declaration);
+    const returnExpression = getReturnExpression(declaration);
+
+    if (returnExpression) {
+      const unwrapped = unwrapExpression(returnExpression);
+      if (ts.isClassExpression(unwrapped)) {
+        return unwrapped;
+      }
+      if (ts.isIdentifier(unwrapped) && body) {
+        const match = findClassByNameInBlock(body, unwrapped.text);
+        if (match) {
+          return match;
+        }
+      }
+    }
+
+    if (body) {
+      const classDeclarations = body.statements.filter(ts.isClassDeclaration);
+      if (classDeclarations.length > 0) {
+        return classDeclarations[0];
+      }
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Resolves the inheritance chain for a class declaration.
+ *
+ * @param classDeclaration - Class declaration to resolve.
+ * @param context - Inheritance resolution context.
+ * @param checker
+ * @param callExpression
+ * @param expression
+ * @returns Resolved inheritance chain with warnings.
+ */
+const unwrapExpression = (expression: ts.Expression): ts.Expression => {
+  let current = expression;
+  while (ts.isParenthesizedExpression(current)) {
+    current = current.expression;
+  }
+  return current;
 };

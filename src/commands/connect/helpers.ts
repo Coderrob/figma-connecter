@@ -19,8 +19,8 @@
  *
  * @module commands/connect/helpers
  */
-import type { CommandStages, GlobalCliOptions } from "../../types/cli";
-import { LogLevel } from "../../core/logger";
+import { LogLevel } from "@/src/core/logger";
+import type { ICommandStages, IGlobalCliOptions } from "@/src/types/cli";
 
 // Types live in `src/types/cli`.
 
@@ -30,7 +30,7 @@ import { LogLevel } from "../../core/logger";
  * @param options - The global CLI options.
  * @returns The resolved log level.
  */
-export function resolveLogLevel(options: GlobalCliOptions): LogLevel {
+export function resolveLogLevel(options: IGlobalCliOptions): LogLevel {
   if (options.quiet) {
     return LogLevel.ERROR;
   }
@@ -44,9 +44,11 @@ export function resolveLogLevel(options: GlobalCliOptions): LogLevel {
  * Runs a CLI command through validate -> execute -> report stages.
  *
  * @param command - Command stages to run.
+ * @returns Promise that resolves when command execution completes.
+ * @throws Re-throws any error from command execution after invoking onError.
  */
 export async function runCommandStages<Context, Result>(
-  command: CommandStages<Context, Result>,
+  command: ICommandStages<Context, Result>,
 ): Promise<void> {
   const context = command.validate();
 

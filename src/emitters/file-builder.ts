@@ -23,6 +23,7 @@
  * @module emitters/file-builder
  */
 
+import { GENERATED_SECTION_MARKERS } from '../core/constants';
 import {
   type EmitResult,
   FileChangeStatus,
@@ -30,7 +31,6 @@ import {
   GeneratedSectionName,
   type GeneratedSectionPayload,
 } from '../core/types';
-import { GENERATED_SECTION_MARKERS } from '../core/constants';
 
 import { indent, indentBlock } from './formatting';
 
@@ -60,25 +60,9 @@ export type FilePayloadBuilder = (draft: FilePayloadDraft) => FilePayloadDraft;
  *
  * @param filePath - Target file path.
  * @param action - File action to assign (default: FileChangeStatus.Created).
+ * @param draft
+ * @param {...any} builders
  * @returns Initialized file payload draft.
- */
-export const createFilePayload = (
-  filePath: string,
-  action: FileChangeStatus = FileChangeStatus.Created,
-): FilePayloadDraft => ({
-  filePath,
-  action,
-  contentLines: [],
-  sections: [],
-  warnings: [],
-});
-
-/**
- * Builds a finalized emit result from a draft and builder functions.
- *
- * @param draft - Base payload draft.
- * @param builders - Builder functions to apply in order.
- * @returns Emit result payload.
  */
 export const buildFilePayload = (draft: FilePayloadDraft, ...builders: FilePayloadBuilder[]): EmitResult => {
   const built = builders.reduce((acc, builder) => builder(acc), draft);
@@ -92,17 +76,39 @@ export const buildFilePayload = (draft: FilePayloadDraft, ...builders: FilePaylo
 };
 
 /**
+ * Builds a finalized emit result from a draft and builder functions.
+ *
+ * @param draft - Base payload draft.
+ * @param builders - Builder functions to apply in order.
+ * @param filePath
+ * @param action
+ * @returns Emit result payload.
+ */
+export const createFilePayload = (
+  filePath: string,
+  action: FileChangeStatus = FileChangeStatus.Created,
+): FilePayloadDraft => ({
+  filePath,
+  action,
+  contentLines: [],
+  sections: [],
+  warnings: [],
+});
+
+/**
  * Adds import lines to a payload draft.
  *
  * @param lines - Import lines to append.
+ * @param input
  * @returns File payload builder.
  */
-export const withImports =
-  (lines: readonly string[]): FilePayloadBuilder =>
-  (draft) => ({
-    ...draft,
-    contentLines: draft.contentLines.concat(lines),
+export const withExample = (input: SectionBuilderInput): FilePayloadBuilder => {
+  const { content, markers, name = GeneratedSectionName.Example, depth = 1 } = input;
+  return withSections({
+    lines: wrapGeneratedSection(content, markers, depth),
+    sections: [{ name, content, markers }],
   });
+};
 
 interface SectionBuilderInput {
   /** The generated section content (without markers). */
@@ -128,32 +134,30 @@ interface SectionBlock {
  * @param content - The content to wrap.
  * @param markers - Marker strings used to delimit the section.
  * @param depth - The indentation depth for markers.
+ * @param block
+ * @param lines
  * @returns Array of lines with markers.
  */
-export const wrapGeneratedSection = (
-  content: string,
-  markers: GeneratedSectionMarkers = GENERATED_SECTION_MARKERS,
-  depth = 1,
-): string[] => [`${indent(depth)}${markers.start}`, ...indentBlock(content, depth), `${indent(depth)}${markers.end}`];
+export const withImports =
+  (lines: readonly string[]): FilePayloadBuilder =>
+  /**
+   * <anonymous> TODO: describe
+   * @param draft TODO: describe parameter
+   * @returns TODO: describe return value
+   */
+  (draft) => ({
+    ...draft,
+    contentLines: draft.contentLines.concat(lines),
+  });
 
 /**
  * Adds arbitrary content lines and optional section metadata.
  *
  * @param block - Section block containing lines and optional metadata.
- * @returns File payload builder.
- */
-export const withSections =
-  (block: SectionBlock): FilePayloadBuilder =>
-  (draft) => ({
-    ...draft,
-    contentLines: draft.contentLines.concat(block.lines),
-    sections: block.sections ? draft.sections.concat(block.sections) : draft.sections,
-  });
-
-/**
- * Adds a generated props section to the payload.
- *
- * @param input - Section builder input for props.
+ * @param content
+ * @param markers
+ * @param depth
+ * @param input
  * @returns File payload builder.
  */
 export const withProps = (input: SectionBuilderInput): FilePayloadBuilder => {
@@ -165,28 +169,61 @@ export const withProps = (input: SectionBuilderInput): FilePayloadBuilder => {
 };
 
 /**
+ * Adds a generated props section to the payload.
+ *
+ * @param input - Section builder input for props.
+ * @param content
+ * @param markers
+ * @param depth
+ * @param block
+ * @returns File payload builder.
+ */
+export const withSections =
+  (block: SectionBlock): FilePayloadBuilder =>
+  /**
+   * <anonymous> TODO: describe
+   * @param draft TODO: describe parameter
+   * @returns TODO: describe return value
+   */
+  (draft) => ({
+    ...draft,
+    contentLines: draft.contentLines.concat(block.lines),
+    sections: block.sections ? draft.sections.concat(block.sections) : draft.sections,
+  });
+
+/**
  * Adds a generated example section to the payload.
  *
  * @param input - Section builder input for example.
+ * @param content
+ * @param markers
+ * @param depth
+ * @param warnings
  * @returns File payload builder.
  */
-export const withExample = (input: SectionBuilderInput): FilePayloadBuilder => {
-  const { content, markers, name = GeneratedSectionName.Example, depth = 1 } = input;
-  return withSections({
-    lines: wrapGeneratedSection(content, markers, depth),
-    sections: [{ name, content, markers }],
+export const withWarnings =
+  (warnings: readonly string[] = []): FilePayloadBuilder =>
+  /**
+   * <anonymous> TODO: describe
+   * @param draft TODO: describe parameter
+   * @returns TODO: describe return value
+   */
+  (draft) => ({
+    ...draft,
+    warnings: draft.warnings.concat(warnings),
   });
-};
 
 /**
  * Adds warnings to the payload.
  *
  * @param warnings - Warning messages to append.
+ * @param content
+ * @param markers
+ * @param depth
  * @returns File payload builder.
  */
-export const withWarnings =
-  (warnings: readonly string[] = []): FilePayloadBuilder =>
-  (draft) => ({
-    ...draft,
-    warnings: draft.warnings.concat(warnings),
-  });
+export const wrapGeneratedSection = (
+  content: string,
+  markers: GeneratedSectionMarkers = GENERATED_SECTION_MARKERS,
+  depth = 1,
+): string[] => [`${indent(depth)}${markers.start}`, ...indentBlock(content, depth), `${indent(depth)}${markers.end}`];

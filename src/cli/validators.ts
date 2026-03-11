@@ -23,45 +23,8 @@
  */
 
 import path from "node:path";
-import { nodeIoAdapter } from "../io/adapter";
-import type { GlobalCliOptions } from "../types/cli";
-
-/**
- * Validates global options for incompatible combinations.
- *
- * @param options - The global CLI options to validate.
- * @throws Error if options contain incompatible combinations.
- */
-export function validateGlobalOptions(options: GlobalCliOptions): void {
-  if (options.verbose && options.quiet) {
-    throw new Error("Cannot use --verbose and --quiet together.");
-  }
-}
-
-/**
- * Validates and resolves the path option.
- *
- * @param value - The path value to validate.
- * @param optionName - The option name for error messages.
- * @returns The resolved absolute path.
- * @throws Error if the path is empty or does not exist.
- */
-export function validatePathOption(
-  value: string,
-  optionName = "--path",
-): string {
-  if (!value || value.trim().length === 0) {
-    throw new Error(`Missing required value for ${optionName}.`);
-  }
-
-  const resolved = path.resolve(process.cwd(), value);
-
-  if (!nodeIoAdapter.exists(resolved)) {
-    throw new Error(`Path not found: ${value}`);
-  }
-
-  return resolved;
-}
+import { nodeIoAdapter } from "@/src/io/adapter";
+import type { IGlobalCliOptions } from "@/src/types/cli";
 
 /**
  * Validates and resolves a config file path if provided.
@@ -83,9 +46,53 @@ export function validateConfigPath(value?: string): string | undefined {
 
   const stats = nodeIoAdapter.stat
     ? nodeIoAdapter.stat(resolved)
-    : { isFile: () => true };
+    : {
+        /**
+         * Fallback isFile check that returns true.
+         *
+         * @returns {boolean} Always true
+         */
+        isFile: () => true,
+      };
   if (!stats.isFile()) {
     throw new Error(`Config path is not a file: ${value}`);
+  }
+
+  return resolved;
+}
+
+/**
+ * Validates global options for incompatible combinations.
+ *
+ * @param options - The global CLI options to validate.
+ * @throws Error if options contain incompatible combinations.
+ */
+export function validateGlobalOptions(options: IGlobalCliOptions): void {
+  if (options.verbose && options.quiet) {
+    throw new Error("Cannot use --verbose and --quiet together.");
+  }
+}
+
+/**
+ * Validates and resolves the path option.
+ *
+ * @param value - The config path to validate.
+ * @param optionName - The option name for error messages.
+ * @returns The resolved absolute path.
+ * @throws Error if the path is empty or does not exist.
+ */
+export function validatePathOption(
+  value: string,
+  optionName = "--path",
+): string {
+  if (!value || value.trim().length === 0) {
+    throw new Error(`Missing required value for ${optionName}.`);
+  }
+
+  const resolved = path.resolve(process.cwd(), value);
+
+  if (!nodeIoAdapter.exists(resolved)) {
+    throw new Error(`Path not found: ${value}`);
   }
 
   return resolved;

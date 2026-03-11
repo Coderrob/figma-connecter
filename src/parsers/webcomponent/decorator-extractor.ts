@@ -39,235 +39,11 @@ export interface PropertyExtractionContext {
  * Determines whether a decorator is a `@property` decorator.
  *
  * @param decorator - Decorator node to inspect.
+ * @param node
+ * @param sourceFile
+ * @param classNode
+ * @param context
  * @returns True when the decorator targets `property`.
- */
-const isPropertyDecorator = (decorator: ts.Decorator): decorator is ts.Decorator => {
-  const { expression } = decorator;
-  if (!ts.isCallExpression(expression)) {
-    return false;
-  }
-  const callee = expression.expression;
-  if (ts.isIdentifier(callee)) {
-    return callee.text === 'property';
-  }
-  if (ts.isPropertyAccessExpression(callee)) {
-    return callee.name.text === 'property';
-  }
-  return false;
-};
-
-/**
- * Resolves a property name from a declaration node.
- *
- * @param node - Declaration node to inspect.
- * @returns Property name or null when unresolved.
- */
-const getPropertyName = (node: ts.NamedDeclaration): string | null => {
-  const { name } = node;
-  if (!name) {
-    return null;
-  }
-  if (ts.isIdentifier(name) || ts.isStringLiteral(name)) {
-    return name.text;
-  }
-  if (ts.isComputedPropertyName(name)) {
-    const literal = getLiteralValue(name.expression);
-    if (typeof literal === 'string') {
-      return literal;
-    }
-  }
-  return null;
-};
-
-/**
- * Extracts a default value from a property initializer.
- *
- * @param node - Property declaration node.
- * @param sourceFile - Source file containing the node.
- * @returns Parsed default value or null when absent.
- */
-const getDefaultValue = (node: ts.PropertyDeclaration, sourceFile: ts.SourceFile): string | number | boolean | null => {
-  const { initializer } = node;
-  if (!initializer) {
-    return null;
-  }
-  const literal = getLiteralValue(initializer);
-  if (literal !== null) {
-    return literal;
-  }
-  return initializer.getText(sourceFile);
-};
-
-/**
- * Parses decorator options from a `@property` decorator call.
- *
- * @param decorator - Decorator to parse.
- * @param sourceFile - Source file containing the decorator.
- * @returns Parsed options for type, attribute, and reflect.
- */
-const parseDecoratorOptions = (
-  decorator: ts.Decorator,
-  sourceFile: ts.SourceFile,
-): {
-  typeName?: string;
-  attribute?: string | null;
-  reflect?: boolean;
-} => {
-  const options = getDecoratorOptions(decorator);
-  if (!options) {
-    return {};
-  }
-
-  return options.properties.reduce<{
-    typeName?: string;
-    attribute?: string | null;
-    reflect?: boolean;
-  }>((acc, property) => {
-    if (!ts.isPropertyAssignment(property) || !ts.isIdentifier(property.name)) {
-      return acc;
-    }
-    const key = property.name.text;
-
-    if (key === 'type') {
-      if (ts.isIdentifier(property.initializer)) {
-        acc.typeName = property.initializer.text;
-      } else if (ts.isPropertyAccessExpression(property.initializer)) {
-        acc.typeName = property.initializer.name.text;
-      }
-    } else if (key === 'attribute') {
-      const literal = getLiteralValue(property.initializer);
-      if (literal === false) {
-        acc.attribute = null;
-      } else if (literal === true) {
-        acc.attribute = undefined;
-      } else if (literal !== null) {
-        acc.attribute = String(literal);
-      } else {
-        acc.attribute = property.initializer.getText(sourceFile);
-      }
-    } else if (key === 'reflect') {
-      const literal = getLiteralValue(property.initializer);
-      if (typeof literal === 'boolean') {
-        acc.reflect = literal;
-      }
-    }
-
-    return acc;
-  }, {});
-};
-
-/**
- * Extracts enum values from a literal union type node.
- *
- * @param typeNode - Type node to inspect.
- * @returns Array of literal values or undefined when not a literal union.
- */
-const getEnumValuesFromTypeNode = (typeNode?: ts.TypeNode): string[] | undefined => {
-  if (!typeNode || !ts.isUnionTypeNode(typeNode)) {
-    return undefined;
-  }
-  const values = typeNode.types
-    .filter(ts.isLiteralTypeNode)
-    .map((literal) => (ts.isStringLiteral(literal.literal) ? literal.literal.text : null))
-    .filter((value): value is string => Boolean(value));
-
-  return values.length > 0 ? values : undefined;
-};
-
-/**
- * Extracts enum values from a resolved union type.
- *
- * @param type - Resolved type from the checker.
- * @returns Array of literal values or undefined when not a literal union.
- */
-const getEnumValuesFromType = (type: ts.Type | undefined): string[] | undefined => {
-  if (!type || !(type.flags & ts.TypeFlags.Union)) {
-    return undefined;
-  }
-  const union = type as ts.UnionType;
-  const values = union.types
-    .filter((member) => member.flags & ts.TypeFlags.StringLiteral)
-    .map((member) => (member as ts.StringLiteralType).value);
-  return values.length > 0 ? values : undefined;
-};
-
-/**
- * Resolves a TypeScript type string for a class member.
- *
- * @param node - Member node to inspect.
- * @param checker - Type checker for type resolution.
- * @param sourceFile - Source file containing the member.
- * @returns The resolved type string.
- */
-const getTsType = (node: ts.Node, checker: ts.TypeChecker, sourceFile: ts.SourceFile): string => {
-  if (ts.isPropertyDeclaration(node) || ts.isGetAccessorDeclaration(node)) {
-    if (node.type) {
-      return node.type.getText(sourceFile);
-    }
-  }
-  const type = checker.getTypeAtLocation(node);
-  return checker.typeToString(type);
-};
-
-/**
- * Maps TypeScript type information to a Figma property type.
- *
- * @param typeName - Decorator-provided type name, if any.
- * @param enumValues - Enum values derived from union types.
- * @param tsType - Resolved TypeScript type string.
- * @param propertyName - The property name for pattern-based heuristics.
- * @returns The mapped Figma property type.
- */
-const resolveFigmaType = (
-  typeName: string | undefined,
-  enumValues: string[] | undefined,
-  tsType: string,
-  propertyName: string,
-): FigmaPropertyType => {
-  // Pattern-based heuristics: treat HTML tag name properties as strings, not enums
-  // These are implementation details, not design-system variants
-  const isTagNameProperty = propertyName.toLowerCase().endsWith('tagname');
-  if (isTagNameProperty && enumValues && enumValues.length > 0) {
-    return FigmaPropertyType.String;
-  }
-
-  // Check for enum values from union types (design-system properties)
-  if (enumValues && enumValues.length > 0) {
-    return FigmaPropertyType.Enum;
-  }
-
-  // Explicit decorator type declarations
-  if (typeName === 'String') {
-    return FigmaPropertyType.String;
-  }
-  if (typeName === 'Number') {
-    return FigmaPropertyType.Number;
-  }
-  if (typeName === 'Boolean') {
-    return FigmaPropertyType.Boolean;
-  }
-
-  // Inferred TypeScript types
-  const normalized = tsType.toLowerCase();
-  if (normalized === 'string') {
-    return FigmaPropertyType.String;
-  }
-  if (normalized === 'number') {
-    return FigmaPropertyType.Number;
-  }
-  if (normalized === 'boolean') {
-    return FigmaPropertyType.Boolean;
-  }
-
-  return FigmaPropertyType.Unknown;
-};
-
-/**
- * Extracts property descriptors from a single class declaration.
- *
- * @param classNode - Class node to inspect.
- * @param context - Property extraction context.
- * @returns Extracted property descriptors and warnings.
  */
 const extractPropertyDecoratorsFromClass = (
   classNode: ts.ClassLikeDeclaration,
@@ -336,11 +112,14 @@ const extractPropertyDecoratorsFromClass = (
 };
 
 /**
- * Extracts property decorators across an inheritance chain.
+ * Resolves a property name from a declaration node.
  *
- * @param classChain - Ordered class chain to inspect.
- * @param context - Property extraction context.
- * @returns Extracted property descriptors and warnings.
+ * @param node - Declaration node to inspect.
+ * @param decorator
+ * @param typeNode
+ * @param type
+ * @param sourceFile
+ * @returns Property name or null when unresolved.
  */
 export const extractPropertyDecorators = (
   classChain: readonly ts.ClassLikeDeclaration[],
@@ -370,4 +149,267 @@ export const extractPropertyDecorators = (
     items: extracted.items,
     warnings: extracted.warnings,
   };
+};
+
+/**
+ * Extracts a default value from a property initializer.
+ *
+ * @param node - Property declaration node.
+ * @param sourceFile - Source file containing the node.
+ * @param decorator
+ * @param typeNode
+ * @param type
+ * @returns Parsed default value or null when absent.
+ */
+const getDefaultValue = (node: ts.PropertyDeclaration, sourceFile: ts.SourceFile): string | number | boolean | null => {
+  const { initializer } = node;
+  if (!initializer) {
+    return null;
+  }
+  const literal = getLiteralValue(initializer);
+  if (literal !== null) {
+    return literal;
+  }
+  return initializer.getText(sourceFile);
+};
+
+/**
+ * Parses decorator options from a `@property` decorator call.
+ *
+ * @param decorator - Decorator to parse.
+ * @param sourceFile - Source file containing the decorator.
+ * @param typeNode
+ * @param node
+ * @param type
+ * @returns Parsed options for type, attribute, and reflect.
+ */
+const getEnumValuesFromType = (type: ts.Type | undefined): string[] | undefined => {
+  if (!type || !(type.flags & ts.TypeFlags.Union)) {
+    return undefined;
+  }
+  const union = type as ts.UnionType;
+  const values = union.types
+    .filter((member) => member.flags & ts.TypeFlags.StringLiteral)
+    .map((member) => (member as ts.StringLiteralType).value);
+  return values.length > 0 ? values : undefined;
+};
+
+/**
+ * Extracts enum values from a literal union type node.
+ *
+ * @param typeNode - Type node to inspect.
+ * @param decorator
+ * @param sourceFile
+ * @param type
+ * @param node
+ * @returns Array of literal values or undefined when not a literal union.
+ */
+const getEnumValuesFromTypeNode = (typeNode?: ts.TypeNode): string[] | undefined => {
+  if (!typeNode || !ts.isUnionTypeNode(typeNode)) {
+    return undefined;
+  }
+  const values = typeNode.types
+    .filter(ts.isLiteralTypeNode)
+    .map((literal) => (ts.isStringLiteral(literal.literal) ? literal.literal.text : null))
+    .filter((value): value is string => Boolean(value));
+
+  return values.length > 0 ? values : undefined;
+};
+
+/**
+ * Extracts enum values from a resolved union type.
+ *
+ * @param type - Resolved type from the checker.
+ * @param decorator
+ * @param sourceFile
+ * @param classNode
+ * @param context
+ * @param node
+ * @returns Array of literal values or undefined when not a literal union.
+ */
+const getPropertyName = (node: ts.NamedDeclaration): string | null => {
+  const { name } = node;
+  if (!name) {
+    return null;
+  }
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name)) {
+    return name.text;
+  }
+  if (ts.isComputedPropertyName(name)) {
+    const literal = getLiteralValue(name.expression);
+    if (typeof literal === 'string') {
+      return literal;
+    }
+  }
+  return null;
+};
+
+/**
+ * Resolves a TypeScript type string for a class member.
+ *
+ * @param node - Member node to inspect.
+ * @param checker - Type checker for type resolution.
+ * @param decorator
+ * @param sourceFile - Source file containing the member.
+ * @param classChain
+ * @param context
+ * @returns The resolved type string.
+ */
+const getTsType = (node: ts.Node, checker: ts.TypeChecker, sourceFile: ts.SourceFile): string => {
+  if (ts.isPropertyDeclaration(node) || ts.isGetAccessorDeclaration(node)) {
+    if (node.type) {
+      return node.type.getText(sourceFile);
+    }
+  }
+  const type = checker.getTypeAtLocation(node);
+  return checker.typeToString(type);
+};
+
+/**
+ * Maps TypeScript type information to a Figma property type.
+ *
+ * @param typeName - Decorator-provided type name, if any.
+ * @param enumValues - Enum values derived from union types.
+ * @param tsType - Resolved TypeScript type string.
+ * @param propertyName - The property name for pattern-based heuristics.
+ * @param node
+ * @param checker
+ * @param decorator
+ * @param sourceFile
+ * @returns The mapped Figma property type.
+ */
+const isPropertyDecorator = (decorator: ts.Decorator): decorator is ts.Decorator => {
+  const { expression } = decorator;
+  if (!ts.isCallExpression(expression)) {
+    return false;
+  }
+  const callee = expression.expression;
+  if (ts.isIdentifier(callee)) {
+    return callee.text === 'property';
+  }
+  if (ts.isPropertyAccessExpression(callee)) {
+    return callee.name.text === 'property';
+  }
+  return false;
+};
+
+/**
+ * Extracts property descriptors from a single class declaration.
+ *
+ * @param classNode - Class node to inspect.
+ * @param context - Property extraction context.
+ * @param typeName
+ * @param enumValues
+ * @param tsType
+ * @param propertyName
+ * @param node
+ * @param checker
+ * @param decorator
+ * @param sourceFile
+ * @returns Extracted property descriptors and warnings.
+ */
+const parseDecoratorOptions = (
+  decorator: ts.Decorator,
+  sourceFile: ts.SourceFile,
+): {
+  typeName?: string;
+  attribute?: string | null;
+  reflect?: boolean;
+} => {
+  const options = getDecoratorOptions(decorator);
+  if (!options) {
+    return {};
+  }
+
+  return options.properties.reduce<{
+    typeName?: string;
+    attribute?: string | null;
+    reflect?: boolean;
+  }>((acc, property) => {
+    if (!ts.isPropertyAssignment(property) || !ts.isIdentifier(property.name)) {
+      return acc;
+    }
+    const key = property.name.text;
+
+    if (key === 'type') {
+      if (ts.isIdentifier(property.initializer)) {
+        acc.typeName = property.initializer.text;
+      } else if (ts.isPropertyAccessExpression(property.initializer)) {
+        acc.typeName = property.initializer.name.text;
+      }
+    } else if (key === 'attribute') {
+      const literal = getLiteralValue(property.initializer);
+      if (!(literal)) {
+        acc.attribute = null;
+      } else if (literal) {
+        acc.attribute = undefined;
+      } else if (literal !== null) {
+        acc.attribute = String(literal);
+      } else {
+        acc.attribute = property.initializer.getText(sourceFile);
+      }
+    } else if (key === 'reflect') {
+      const literal = getLiteralValue(property.initializer);
+      if (typeof literal === 'boolean') {
+        acc.reflect = literal;
+      }
+    }
+
+    return acc;
+  }, {});
+};
+
+/**
+ * Extracts property decorators across an inheritance chain.
+ *
+ * @param classChain - Ordered class chain to inspect.
+ * @param context - Property extraction context.
+ * @param typeName
+ * @param enumValues
+ * @param tsType
+ * @param propertyName
+ * @returns Extracted property descriptors and warnings.
+ */
+const resolveFigmaType = (
+  typeName: string | undefined,
+  enumValues: string[] | undefined,
+  tsType: string,
+  propertyName: string,
+): FigmaPropertyType => {
+  // Pattern-based heuristics: treat HTML tag name properties as strings, not enums
+  // These are implementation details, not design-system variants
+  const isTagNameProperty = propertyName.toLowerCase().endsWith('tagname');
+  if (isTagNameProperty && enumValues && enumValues.length > 0) {
+    return FigmaPropertyType.String;
+  }
+
+  // Check for enum values from union types (design-system properties)
+  if (enumValues?.length > 0) {
+    return FigmaPropertyType.Enum;
+  }
+
+  // Explicit decorator type declarations
+  if (typeName === 'String') {
+    return FigmaPropertyType.String;
+  }
+  if (typeName === 'Number') {
+    return FigmaPropertyType.Number;
+  }
+  if (typeName === 'Boolean') {
+    return FigmaPropertyType.Boolean;
+  }
+
+  // Inferred TypeScript types
+  const normalized = tsType.toLowerCase();
+  if (normalized === 'string') {
+    return FigmaPropertyType.String;
+  }
+  if (normalized === 'number') {
+    return FigmaPropertyType.Number;
+  }
+  if (normalized === 'boolean') {
+    return FigmaPropertyType.Boolean;
+  }
+
+  return FigmaPropertyType.Unknown;
 };

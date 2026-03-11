@@ -22,16 +22,12 @@
  * @module parsers/webcomponent/parser
  */
 
-import { createResult, mergeDiagnostics, type Result } from "../../core/result";
-import type {
-  ClassSource,
-  ComponentModel,
-  TagNameResult,
-} from "../../core/types";
-import type { WebComponentParseResult } from "../../types/parsers-webcomponent";
-import { mapComponentModel } from "../../mappers/component-model";
-import type { ParseContext, Parser } from "../types";
-import { ParserTarget } from "../types";
+import { createResult, mergeDiagnostics } from "@/src/core/result";
+import type { ComponentModel } from "@/src/core/types";
+import { mapComponentModel } from "@/src/mappers/component-model";
+import type { ParseContext, Parser } from "@/src/parsers/types";
+import { ParserTarget } from "@/src/parsers/types";
+import type { WebComponentParseResult } from "@/src/types/parsers-webcomponent";
 
 import { visitSourceFile } from "./ast-visitor";
 import { discoverComponentClass } from "./component-discovery";
@@ -48,9 +44,9 @@ import { resolveTagName } from "./tagname-resolver";
  * @param parseContext - Parse context for the current source file.
  * @returns Parse result with component model, warnings, and errors.
  */
-export const parseWebComponent = (
+export function parseWebComponent(
   parseContext: ParseContext,
-): WebComponentParseResult => {
+): WebComponentParseResult {
   // Single AST traversal for all extractors
   const astData = visitSourceFile(parseContext.sourceFile);
 
@@ -120,7 +116,7 @@ export const parseWebComponent = (
       source: tagNameResolution.source,
     },
   };
-};
+}
 
 /**
  * Parser strategy for Web Components.

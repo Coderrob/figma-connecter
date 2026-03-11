@@ -43,15 +43,6 @@ export const normalizePath = (value: string): string => {
 };
 
 /**
- * Returns the POSIX basename of a normalized path.
- *
- * @param value - The input path.
- * @returns The last segment of the normalized path.
- */
-export const normalizedBasename = (value: string): string =>
-  path.posix.basename(normalizePath(value));
-
-/**
  * Builds the output file path for a Code Connect file.
  * Places the file in a `code-connect` subdirectory under the component directory.
  *
@@ -67,6 +58,15 @@ export const normalizedBasename = (value: string): string =>
  */
 export const buildCodeConnectFilePath = (componentDir: string, fileName: string): string =>
   path.posix.join(componentDir.replace(/\\/g, '/'), 'code-connect', fileName);
+
+/**
+ * Returns the POSIX basename of a normalized path.
+ *
+ * @param value - The input path.
+ * @returns The last segment of the normalized path.
+ */
+export const normalizedBasename = (value: string): string =>
+  path.posix.basename(normalizePath(value));
 
 /**
  * Resolves the relative dist/react import path from the code-connect directory.

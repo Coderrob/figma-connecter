@@ -22,4 +22,6 @@
  * @module cli/context
  */
 
-import type { Logger } from "../core/logger";
+// Re-exports from ../core are disabled due to ESLint rule preventing
+// parent directory re-exports to avoid circular dependencies.
+// Types should be imported directly from ../types/cli instead.

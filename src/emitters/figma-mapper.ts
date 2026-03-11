@@ -43,6 +43,7 @@ export interface FigmaPropMapping {
  * Handles string, number, boolean, enum, and unknown types.
  *
  * @param prop - The property descriptor to map.
+ * @param model
  * @returns The Figma mapping expression lines and optional warning.
  *
  * @example
@@ -53,6 +54,23 @@ export interface FigmaPropMapping {
  * mapPropToFigma({ name: 'variant', type: 'enum', enumValues: ['primary', 'secondary'] });
  * // { lines: ["figma.enum('Variant', {", "'Primary': \"primary\",", ...] }
  * ```
+ */
+export const getComponentBaseName = (model: ComponentModel): string => {
+  const fileName = normalizedBasename(model.filePath);
+  const pattern = /^(.*)\.component\.[tj]sx?$/i;
+  const match = pattern.exec(fileName);
+  if (match?.[1]) {
+    return match[1];
+  }
+  return normalizedBasename(model.componentDir);
+};
+
+/**
+ * Sorts items by their name field using localeCompare.
+ *
+ * @param items - Items with name fields to sort.
+ * @param prop
+ * @returns Sorted array copy.
  */
 export const mapPropToFigma = (prop: PropertyDescriptor): FigmaPropMapping => {
   const label = toTitleCase(prop.name);
@@ -92,27 +110,12 @@ export const mapPropToFigma = (prop: PropertyDescriptor): FigmaPropMapping => {
 };
 
 /**
- * Sorts items by their name field using localeCompare.
- *
- * @param items - Items with name fields to sort.
- * @returns Sorted array copy.
- */
-export const sortByName = <T extends { name: string }>(items: readonly T[]): T[] =>
-  [...items].sort((a, b) => a.name.localeCompare(b.name));
-
-/**
  * Extracts the base component name from a ComponentModel.
  * Uses the filename pattern `*.component.ts` or falls back to directory name.
  *
  * @param model - The component model.
+ * @param items
  * @returns The base name (e.g., 'button' from 'button.component.ts').
  */
-export const getComponentBaseName = (model: ComponentModel): string => {
-  const fileName = normalizedBasename(model.filePath);
-  const pattern = /^(.*)\.component\.[tj]sx?$/i;
-  const match = pattern.exec(fileName);
-  if (match?.[1]) {
-    return match[1];
-  }
-  return normalizedBasename(model.componentDir);
-};
+export const sortByName = <T extends { name: string }>(items: readonly T[]): T[] =>
+  [...items].sort((a, b) => a.name.localeCompare(b.name));

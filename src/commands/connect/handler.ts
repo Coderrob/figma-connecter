@@ -25,11 +25,6 @@ import path from "node:path";
 
 import { Command } from "commander";
 
-import type {
-  CommandContext,
-  CommandStages,
-  GlobalCliOptions,
-} from "../../types/cli";
 import { getGlobalOptions } from "../../cli/options";
 import { createProgressIndicator } from "../../cli/progress";
 import {
@@ -48,11 +43,16 @@ import type {
   GenerationReport,
 } from "../../core/types";
 import { runConnectPipeline } from "../../pipeline";
+import type {
+  CommandContext,
+  CommandStages,
+  GlobalCliOptions,
+} from "../../types/cli";
 
+import { ProgressStatus } from "../../types/cli";
+import CommandBuilder from "../command-builder";
 import { EMIT_TARGETS } from "./constants";
 import { resolveLogLevel, runCommandStages } from "./helpers";
-import CommandBuilder from "../command-builder";
-import { ProgressStatus } from "../../types/cli";
 import type { ConnectCommandOptions } from "./types";
 
 type PipelineReport = GenerationReport;
@@ -78,7 +78,32 @@ type ConnectCommandContext = ConnectCommandBaseContext & {
  *
  * @param options - Parsed command options.
  * @param command - Commander command instance.
+ * @param context
  * @returns Command stage handlers.
+ */
+function buildConnectOptions(
+  context: ConnectCommandBaseContext,
+): ConnectOptions {
+  const { options, inputPath, configPath, emitTargets, dryRun } = context;
+  return {
+    inputPath,
+    recursive: options.recursive,
+    dryRun,
+    emitTargets,
+    strict: options.strict,
+    tsconfigPath: configPath,
+    continueOnError: options.continueOnError,
+    baseImportPath: options.baseImportPath,
+    force: options.force ?? DEFAULT_CONNECT_OPTIONS.force,
+  };
+}
+
+/**
+ * Executes the connect command logic with logging and progress reporting.
+ *
+ * @param options - Parsed command options.
+ * @param command - Commander command instance.
+ * @returns Nothing.
  */
 const createConnectCommand = (
   options: ConnectCommandOptions,
@@ -120,20 +145,6 @@ const createConnectCommand = (
     .build();
 
 /**
- * Executes the connect command logic with logging and progress reporting.
- *
- * @param options - Parsed command options.
- * @param command - Commander command instance.
- * @returns Nothing.
- */
-export async function runConnectCommand(
-  options: ConnectCommandOptions,
-  command: Command,
-): Promise<void> {
-  await runCommandStages(createConnectCommand(options, command));
-}
-
-/**
  * Resolves and validates inputs for the connect command.
  *
  * @param options - Parsed command options.
@@ -166,7 +177,7 @@ function createConnectContext(
     configPath,
     continueOnError: options.continueOnError,
     baseImportPath: options.baseImportPath,
-    force: options.force === true,
+    force: options.force,
   });
 
   if (dryRun) {
@@ -193,62 +204,11 @@ function createConnectContext(
  *
  * @param options - Command-specific options.
  * @param globalOptions - Global CLI options.
+ * @param command
+ * @param logger
+ * @param report
+ * @param dryRun
  * @returns The resolved dryRun boolean value.
- */
-function resolveDryRun(
-  options: ConnectCommandOptions,
-  globalOptions: GlobalCliOptions,
-): boolean {
-  return (
-    options.dryRun ?? globalOptions.dryRun ?? DEFAULT_CONNECT_OPTIONS.dryRun
-  );
-}
-
-/**
- * Builds the connect options payload for the pipeline.
- *
- * @param context - Resolved connect command context.
- * @returns Connect pipeline options.
- */
-function buildConnectOptions(
-  context: ConnectCommandBaseContext,
-): ConnectOptions {
-  const { options, inputPath, configPath, emitTargets, dryRun } = context;
-  return {
-    inputPath,
-    recursive: options.recursive,
-    dryRun,
-    emitTargets,
-    strict: options.strict,
-    tsconfigPath: configPath,
-    continueOnError: options.continueOnError,
-    baseImportPath: options.baseImportPath,
-    force: options.force ?? DEFAULT_CONNECT_OPTIONS.force,
-  };
-}
-
-/**
- * Logs the summary block for a generation report.
- *
- * @param logger - Logger instance for output.
- * @param report - Generation report to summarize.
- * @returns Nothing.
- */
-function logReportSummary(logger: Logger, report: PipelineReport): void {
-  logger.info("");
-  logger.info("=== Generation Summary ===");
-  formatReportSummary(report)
-    .split("\n")
-    .forEach((line) => logger.info(line));
-}
-
-/**
- * Logs dry-run details for each component when enabled.
- *
- * @param logger - Logger instance for output.
- * @param report - Generation report to inspect.
- * @param dryRun - Whether dry-run mode is enabled.
- * @returns Nothing.
  */
 function logDryRunDetails(
   logger: Logger,
@@ -275,7 +235,7 @@ function logDryRunDetails(
       `${name}: created ${created}, updated ${updated}, unchanged ${unchanged}`,
     );
 
-    if (component.fileChanges && component.fileChanges.length > 0) {
+    if (component.fileChanges?.length > 0) {
       for (const change of component.fileChanges) {
         const relative =
           path.relative(process.cwd(), change.filePath) || change.filePath;
@@ -286,11 +246,15 @@ function logDryRunDetails(
 }
 
 /**
- * Logs warnings and errors from the report.
+ * Builds the connect options payload for the pipeline.
  *
- * @param logger - Logger instance for output.
- * @param report - Generation report to inspect.
- * @returns Nothing.
+ * @param context - Resolved connect command context.
+ * @param options
+ * @param globalOptions
+ * @param command
+ * @param logger
+ * @param report
+ * @returns Connect pipeline options.
  */
 function logReportDiagnostics(logger: Logger, report: PipelineReport): void {
   if (hasWarnings(report)) {
@@ -301,4 +265,59 @@ function logReportDiagnostics(logger: Logger, report: PipelineReport): void {
     logger.error(`Errors: ${report.errors.length}`);
     report.errors.forEach((error) => logger.error(`  - ${error}`));
   }
+}
+
+/**
+ * Logs the summary block for a generation report.
+ *
+ * @param logger - Logger instance for output.
+ * @param report - Generation report to summarize.
+ * @param options
+ * @param globalOptions
+ * @param command
+ * @returns Nothing.
+ */
+function logReportSummary(logger: Logger, report: PipelineReport): void {
+  logger.info("");
+  logger.info("=== Generation Summary ===");
+  formatReportSummary(report)
+    .split("\n")
+    .forEach((line) => logger.info(line));
+}
+
+/**
+ * Logs dry-run details for each component when enabled.
+ *
+ * @param logger - Logger instance for output.
+ * @param report - Generation report to inspect.
+ * @param dryRun - Whether dry-run mode is enabled.
+ * @param options
+ * @param globalOptions
+ * @param command
+ * @returns Nothing.
+ */
+function resolveDryRun(
+  options: ConnectCommandOptions,
+  globalOptions: GlobalCliOptions,
+): boolean {
+  return (
+    options.dryRun ?? globalOptions.dryRun ?? DEFAULT_CONNECT_OPTIONS.dryRun
+  );
+}
+
+/**
+ * Logs warnings and errors from the report.
+ *
+ * @param logger - Logger instance for output.
+ * @param report - Generation report to inspect.
+ * @param options
+ * @param globalOptions
+ * @param command
+ * @returns Nothing.
+ */
+export async function runConnectCommand(
+  options: ConnectCommandOptions,
+  command: Command,
+): Promise<void> {
+  await runCommandStages(createConnectCommand(options, command));
 }

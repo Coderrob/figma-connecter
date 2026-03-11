@@ -25,10 +25,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import ts from "typescript";
+import type { PipelineContext } from '@/src/types/pipeline';
 
-import type { PipelineContext, PipelineContextSeed } from "../types/pipeline";
-import type { SourceLoaderOptions, SourceLoadResult } from "../types/io";
+import type { SourceLoaderOptions, SourceLoadResult } from '@/src/types/io';
+import ts from "typescript";
 
 // ============================================================================
 // Constants
@@ -49,7 +49,27 @@ const UNIX_WRITE_PERMISSION_MASK = 0o222;
  *
  * @param filePath - Path to validate.
  * @param errors - Error collection to append to.
+ * @param diagnostic
  * @returns True when the file is readable.
+ */
+const formatDiagnostic = (diagnostic: ts.Diagnostic): string => {
+  const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
+  if (diagnostic.file && diagnostic.start !== undefined) {
+    const location = diagnostic.file.getLineAndCharacterOfPosition(
+      diagnostic.start,
+    );
+    return `${diagnostic.file.fileName}:${location.line + 1}:${location.character + 1} - ${message}`;
+  }
+  return message;
+};
+
+/**
+ * Formats a TypeScript diagnostic into a human-readable string.
+ *
+ * @param diagnostic - Diagnostic to format.
+ * @param filePath
+ * @param errors
+ * @returns Formatted diagnostic string.
  */
 const isReadableFile = (filePath: string, errors: string[]): boolean => {
   if (!fs.existsSync(filePath)) {
@@ -76,23 +96,6 @@ const isReadableFile = (filePath: string, errors: string[]): boolean => {
   }
 };
 
-/**
- * Formats a TypeScript diagnostic into a human-readable string.
- *
- * @param diagnostic - Diagnostic to format.
- * @returns Formatted diagnostic string.
- */
-const formatDiagnostic = (diagnostic: ts.Diagnostic): string => {
-  const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
-  if (diagnostic.file && diagnostic.start !== undefined) {
-    const location = diagnostic.file.getLineAndCharacterOfPosition(
-      diagnostic.start,
-    );
-    return `${diagnostic.file.fileName}:${location.line + 1}:${location.character + 1} - ${message}`;
-  }
-  return message;
-};
-
 // ============================================================================
 // Public API
 // ============================================================================
@@ -103,7 +106,118 @@ const formatDiagnostic = (diagnostic: ts.Diagnostic): string => {
  * @param tsconfigPath - Explicit tsconfig path, if provided.
  * @param searchPath - Path to search from when resolving tsconfig.
  * @param configFileName - Config file name to search for (defaults to "tsconfig.json").
+ * @param componentFiles
+ * @param options
  * @returns Resolved tsconfig path or undefined when not found.
+ */
+export function loadSourceProgram(
+  componentFiles: readonly string[],
+  options: SourceLoaderOptions,
+): SourceLoadResult {
+  const errors: string[] = [];
+  const rootNames: string[] = [];
+  for (const filePath of componentFiles) {
+    rootNames.push(path.resolve(filePath));
+  }
+  const validFiles: string[] = [];
+  for (const filePath of rootNames) {
+    if (isReadableFile(filePath, errors)) {
+      validFiles.push(filePath);
+    }
+  }
+
+  if (rootNames.length === 0) {
+    errors.push("No component files provided.");
+  }
+
+  const searchPath =
+    options.searchPath ??
+    (validFiles[0] ? path.dirname(validFiles[0]) : process.cwd());
+  const configFileName = options.tsconfigFileName ?? "tsconfig.json";
+  const configPath = resolveTsconfigPath(
+    options.tsconfigPath,
+    searchPath,
+    configFileName,
+  );
+
+  let compilerOptions = ts.getDefaultCompilerOptions();
+
+  if (configPath) {
+    const normalizedConfigPath = configPath.replaceAll(String.raw`\`, "/");
+    /**
+     * Reads a file from the file system.
+     *
+     * @param {string} filePath - Path to the file to read.
+     * @returns {string | undefined} File contents as a string, or undefined if the file cannot be read.
+     */
+    const readFile = (filePath: string): string | undefined =>
+      ts.sys.readFile(filePath);
+    const configFile = ts.readConfigFile(normalizedConfigPath, readFile);
+    if (configFile.error) {
+      errors.push(formatDiagnostic(configFile.error));
+    } else {
+      const parsed = ts.parseJsonConfigFileContent(
+        configFile.config,
+        ts.sys,
+        path.dirname(normalizedConfigPath),
+      );
+      compilerOptions = parsed.options;
+      for (const diagnostic of parsed.errors) {
+        errors.push(formatDiagnostic(diagnostic));
+      }
+    }
+  } else if (options.tsconfigPath) {
+    errors.push(`${configFileName} not found at: ${options.tsconfigPath}`);
+  }
+
+  const program = ts.createProgram({
+    options: compilerOptions,
+    rootNames: validFiles,
+  });
+  const checker = program.getTypeChecker();
+
+  const sourceFiles: ts.SourceFile[] = [];
+  for (const filePath of validFiles) {
+    const sourceFile = program.getSourceFile(filePath);
+    if (!sourceFile) {
+      errors.push(`TypeScript could not load source file: ${filePath}`);
+      continue;
+    }
+    sourceFiles.push(sourceFile);
+  }
+
+  const sourceFileMap = new Map<string, ts.SourceFile>();
+  for (const sourceFile of sourceFiles) {
+    sourceFileMap.set(path.resolve(sourceFile.fileName), sourceFile);
+  }
+
+  const context: PipelineContext = {
+    ...options.context,
+    checker,
+    sourceFileMap,
+  };
+
+  return {
+    context,
+    checker,
+    configPath,
+    errors,
+    options: compilerOptions,
+    program,
+    sourceFiles,
+    sourceFileMap,
+  };
+}
+
+/**
+ * Loads a TypeScript Program from the provided component files.
+ *
+ * @param componentFiles - Component file paths.
+ * @param options - Loader options.
+ * @param tsconfigPath
+ * @param searchPath
+ * @param configFileName
+ * @returns Source load result with program, checker, and context.
  */
 export function resolveTsconfigPath(
   tsconfigPath: string | undefined,
@@ -133,103 +247,4 @@ export function resolveTsconfigPath(
   const found =
     ts.findConfigFile(searchRoot, fileExists, configFileName) ?? undefined;
   return found ? path.normalize(found) : undefined;
-}
-
-/**
- * Loads a TypeScript Program from the provided component files.
- *
- * @param componentFiles - Component file paths.
- * @param options - Loader options.
- * @returns Source load result with program, checker, and context.
- */
-export function loadSourceProgram(
-  componentFiles: readonly string[],
-  options: SourceLoaderOptions,
-): SourceLoadResult {
-  const errors: string[] = [];
-  const rootNames = componentFiles.map((filePath) => path.resolve(filePath));
-  const validFiles = rootNames.filter((filePath) =>
-    isReadableFile(filePath, errors),
-  );
-
-  if (rootNames.length === 0) {
-    errors.push("No component files provided.");
-  }
-
-  const searchPath =
-    options.searchPath ??
-    (validFiles[0] ? path.dirname(validFiles[0]) : process.cwd());
-  const configFileName = options.tsconfigFileName ?? "tsconfig.json";
-  const configPath = resolveTsconfigPath(
-    options.tsconfigPath,
-    searchPath,
-    configFileName,
-  );
-
-  let compilerOptions = ts.getDefaultCompilerOptions();
-
-  if (configPath) {
-    /**
-     * Reads a file from the file system.
-     *
-     * @param path - Path to the file to read.
-     * @returns File contents as a string, or undefined if the file cannot be read.
-     */
-    const normalizedConfigPath = configPath.replace(/\\/g, "/");
-    const readFile = (filePath: string): string | undefined =>
-      ts.sys.readFile(filePath);
-    const configFile = ts.readConfigFile(normalizedConfigPath, readFile);
-    if (configFile.error) {
-      errors.push(formatDiagnostic(configFile.error));
-    } else {
-      const parsed = ts.parseJsonConfigFileContent(
-        configFile.config,
-        ts.sys,
-        path.dirname(normalizedConfigPath),
-      );
-      compilerOptions = parsed.options;
-      parsed.errors.forEach((diagnostic) =>
-        errors.push(formatDiagnostic(diagnostic)),
-      );
-    }
-  } else if (options.tsconfigPath) {
-    errors.push(`${configFileName} not found at: ${options.tsconfigPath}`);
-  }
-
-  const program = ts.createProgram({
-    options: compilerOptions,
-    rootNames: validFiles,
-  });
-  const checker = program.getTypeChecker();
-
-  const sourceFiles = validFiles.flatMap((filePath) => {
-    const sourceFile = program.getSourceFile(filePath);
-    if (!sourceFile) {
-      errors.push(`TypeScript could not load source file: ${filePath}`);
-      return [];
-    }
-    return [sourceFile];
-  });
-
-  const sourceFileMap = new Map<string, ts.SourceFile>();
-  for (const sourceFile of sourceFiles) {
-    sourceFileMap.set(path.resolve(sourceFile.fileName), sourceFile);
-  }
-
-  const context: PipelineContext = {
-    ...options.context,
-    checker,
-    sourceFileMap,
-  };
-
-  return {
-    context,
-    checker,
-    configPath,
-    errors,
-    options: compilerOptions,
-    program,
-    sourceFiles,
-    sourceFileMap,
-  };
 }

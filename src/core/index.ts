@@ -60,7 +60,7 @@ export {
   hasDiagnostics,
   hasErrors,
   hasWarnings,
-  map as mapResult,
+  map,
   mergeDiagnostics,
   mergeErrors,
   mergeWarnings,

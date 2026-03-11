@@ -1,8 +1,4 @@
-import type {
-  DiscoveredFile,
-  FileDiscoveryOptions,
-  FileDiscoveryFileSystem,
-} from "../types/io";
+import fs from "node:fs";
 /**
  * Copyright (c) 2026 Robert Lindley
  *
@@ -27,8 +23,12 @@ import type {
  * @module io/file-discovery
  */
 
-import fs from "node:fs";
 import path from "node:path";
+import type {
+  DiscoveredFile,
+  FileDiscoveryOptions,
+  FileDiscoveryFileSystem,
+} from "../types/io";
 import { POSIX_PATH_SEPARATOR } from "../utils";
 
 /** File suffix for component source files. */
@@ -64,17 +64,9 @@ const defaultFileSystem: FileDiscoveryFileSystem = {
  * Determines if a file path matches the component pattern.
  *
  * @param filePath - File path to check.
+ * @param inputPath
+ * @param options
  * @returns True when the path ends with the component suffix.
- */
-export const isComponentFile = (filePath: string): boolean =>
-  filePath.toLowerCase().endsWith(COMPONENT_SUFFIX);
-
-/**
- * Discovers component files from a file or directory path.
- *
- * @param inputPath - File or directory path to scan.
- * @param options - Discovery options.
- * @returns Array of discovered component metadata.
  */
 export function discoverComponentFiles(
   inputPath: string,
@@ -163,3 +155,14 @@ export function discoverComponentFiles(
 
   return results.sort((a, b) => a.filePath.localeCompare(b.filePath));
 }
+
+/**
+ * Discovers component files from a file or directory path.
+ *
+ * @param inputPath - File or directory path to scan.
+ * @param options - Discovery options.
+ * @param filePath
+ * @returns Array of discovered component metadata.
+ */
+export const isComponentFile = (filePath: string): boolean =>
+  filePath.toLowerCase().endsWith(COMPONENT_SUFFIX);

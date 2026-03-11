@@ -23,12 +23,12 @@
  */
 
 import path from "node:path";
-import { nodeIoAdapter } from "../io/adapter";
-
 import { Command } from "commander";
 
 import { registerCommands } from "../commands/registry";
+
 import { DEFAULT_CONNECT_OPTIONS } from "../core/constants";
+import { nodeIoAdapter } from "../io/adapter";
 
 /** Commander Command instance type. */
 type CommandInstance = InstanceType<typeof Command>;
@@ -41,59 +41,8 @@ interface PackageJson {
 
 /**
  * Reads package.json from the package root.
+ * @param program
  * @returns Package metadata.
- */
-function getPackageMetadata(): PackageJson {
-  try {
-    // When built, this file is at dist/src/cli/program.js
-    // package.json is at the package root (../../.. from dist/src/cli/)
-    const packageJsonPath = path.resolve(__dirname, "../../../package.json");
-    const content = nodeIoAdapter.readFile(packageJsonPath);
-    return JSON.parse(content) as PackageJson;
-  } catch {
-    return { description: "Figma Connecter management tool", version: "1.0.0" };
-  }
-}
-
-const { description = "Figma Connecter management tool", version = "1.0.0" } =
-  getPackageMetadata();
-
-/**
- * Creates and configures the main CLI program.
- *
- * Sets up the program with name, description, version, global options,
- * and help formatting. Commands are registered from the command registry.
- *
- * @returns The configured Commander program instance.
- */
-export function createProgram(): CommandInstance {
-  const program = new Command();
-
-  program.name("figma-connecter").description(description).version(version);
-
-  addGlobalOptions(program);
-  applyHelpFormatting(program);
-  registerCommands(program);
-
-  return program;
-}
-
-/**
- * Main entry point for the CLI.
- *
- * Parses command-line arguments and executes the appropriate command.
- *
- * @param argv - Command-line arguments. Defaults to process.argv.
- */
-export async function run(argv: string[] = process.argv): Promise<void> {
-  const program = createProgram();
-  await program.parseAsync(argv);
-}
-
-/**
- * Adds global options shared across all commands.
- *
- * @param program - The Commander program instance.
  */
 export function addGlobalOptions(program: CommandInstance): void {
   program
@@ -107,12 +56,17 @@ export function addGlobalOptions(program: CommandInstance): void {
     .option("-c, --config <path>", "Path to a config file");
 }
 
+const { description = "Figma Connecter management tool", version = "1.0.0" } =
+  getPackageMetadata();
+
 /**
- * Applies consistent help formatting for better readability.
+ * Creates and configures the main CLI program.
  *
- * Configures option display formatting and adds usage examples.
+ * Sets up the program with name, description, version, global options,
+ * and help formatting. Commands are registered from the command registry.
  *
- * @param program - The Commander program instance.
+ * @param program
+ * @returns The configured Commander program instance.
  */
 export function applyHelpFormatting(program: CommandInstance): void {
   program.configureHelp({
@@ -141,4 +95,56 @@ export function applyHelpFormatting(program: CommandInstance): void {
       "  figma-connecter connect --path ./packages/components/src/components --emit webcomponent",
     ].join("\n"),
   );
+}
+
+/**
+ * Main entry point for the CLI.
+ *
+ * Parses command-line arguments and executes the appropriate command.
+ *
+ * @param argv - Command-line arguments. Defaults to process.argv.
+ * @returns TODO: describe return value
+ */
+export function createProgram(): CommandInstance {
+  const program = new Command();
+
+  program.name("figma-connecter").description(description).version(version);
+
+  addGlobalOptions(program);
+  applyHelpFormatting(program);
+  registerCommands(program);
+
+  return program;
+}
+
+/**
+ * Adds global options shared across all commands.
+ *
+ * @param program - The Commander program instance.
+ * @param argv
+ * @returns TODO: describe return value
+ */
+function getPackageMetadata(): PackageJson {
+  try {
+    // When built, this file is at dist/src/cli/program.js
+    // package.json is at the package root (../../.. from dist/src/cli/)
+    const packageJsonPath = path.resolve(__dirname, "../../../package.json");
+    const content = nodeIoAdapter.readFile(packageJsonPath);
+    return JSON.parse(content) as PackageJson;
+  } catch {
+    return { description: "Figma Connecter management tool", version: "1.0.0" };
+  }
+}
+
+/**
+ * Applies consistent help formatting for better readability.
+ *
+ * Configures option display formatting and adds usage examples.
+ *
+ * @param program - The Commander program instance.
+ * @param argv
+ */
+export async function run(argv: string[] = process.argv): Promise<void> {
+  const program = createProgram();
+  await program.parseAsync(argv);
 }

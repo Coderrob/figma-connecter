@@ -2,14 +2,17 @@
  * Plugin-related shared types
  */
 
-export interface PluginOptions {
+import type { EmitterPluginOptions } from "@/src/emitters/factory";
+import type { ParserPluginOptions } from "@/src/parsers/factory";
+
+export interface IPluginOptions {
   /** Emitter plugins to register */
-  readonly emitters?: readonly import("../emitters/factory").EmitterPluginOptions[];
+  readonly emitters?: readonly EmitterPluginOptions[];
   /** Parser plugins to register */
-  readonly parsers?: readonly import("../parsers/factory").ParserPluginOptions[];
+  readonly parsers?: readonly ParserPluginOptions[];
 }
 
-export interface PluginInfo {
+export interface IPluginInfo {
   readonly emitters: ReadonlyMap<
     string,
     { displayName: string; description: string }
@@ -19,3 +22,6 @@ export interface PluginInfo {
     { displayName: string; description: string }
   >;
 }
+
+export type PluginOptions = IPluginOptions;
+export type PluginInfo = IPluginInfo;

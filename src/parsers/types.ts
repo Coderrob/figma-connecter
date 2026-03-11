@@ -22,10 +22,10 @@
  * @module parsers/types
  */
 
-import ts from 'typescript';
+import type { Result } from '@/src/core/result';
 
-import type { Result } from '../core/result';
-import type { ComponentModel } from '../core/types';
+import type { ComponentModel } from '@/src/core/types';
+import ts from 'typescript';
 
 /**
  * Supported parser targets.

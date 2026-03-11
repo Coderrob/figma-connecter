@@ -55,77 +55,9 @@ const deriveReactHandler = (eventName: string, comment?: string): string => {
  * Extracts events from JSDoc `@event` tags on a class.
  *
  * @param classDeclaration - Class node to inspect.
+ * @param astData
+ * @param context
  * @returns Extracted event descriptors.
- */
-const extractEventsFromJSDoc = (
-  classDeclaration: ts.ClassLikeDeclaration,
-): EventDescriptor[] => {
-  const tags = ts
-    .getJSDocTags(classDeclaration)
-    .filter((tag) => tag.tagName.text === JSDOC_EVENT_TAG);
-  return tags.flatMap((tag) => {
-    const text = getJSDocTagText(tag);
-    if (!text) {
-      return [];
-    }
-    const nameMatch = text.match(/^([A-Za-z0-9-:_]+)/);
-    const eventName = nameMatch?.[1];
-    if (!eventName) {
-      return [];
-    }
-    return [
-      {
-        name: eventName,
-        reactHandler: deriveReactHandler(eventName, text),
-        detailType: null,
-      },
-    ];
-  });
-};
-
-/**
- * Extracts events from dispatchEvent calls using pre-collected AST data.
- *
- * @param classDeclaration - Class node to inspect.
- * @param astData - Pre-collected AST data.
- * @returns Extracted event descriptors.
- */
-const extractEventsFromDispatch = (
-  classDeclaration: ts.ClassLikeDeclaration,
-  astData: ASTVisitorResult,
-): EventDescriptor[] => {
-  // Use pre-collected dispatchEvent calls
-  const events = astData.dispatchEventCalls
-    .filter((call) => call.containingClass === classDeclaration)
-    .map((call) => ({
-      name: call.eventName,
-      reactHandler: deriveReactHandler(call.eventName),
-      detailType: null,
-    }));
-
-  if (events.length === 0) {
-    return [];
-  }
-
-  const unique = mergeByKey(events, {
-    /**
-     * Provides the merge key for an event descriptor.
-     *
-     * @param event - Event descriptor to key.
-     * @returns Event name for deduplication.
-     */
-    getKey: (event) => event.name,
-  });
-
-  return Array.from(unique.values());
-};
-
-/**
- * Extracts event descriptors from a class declaration.
- *
- * @param classDeclaration - Class node to inspect.
- * @param context - Event extraction context.
- * @returns Extracted events and warnings.
  */
 export const extractEvents = (
   classDeclaration: ts.ClassLikeDeclaration,
@@ -153,11 +85,13 @@ export const extractEvents = (
 };
 
 /**
- * Extracts event descriptors across an inheritance chain.
+ * Extracts events from dispatchEvent calls using pre-collected AST data.
  *
- * @param classChain - Ordered class chain to inspect.
- * @param context - Event extraction context.
- * @returns Extracted events and warnings for the chain.
+ * @param classDeclaration - Class node to inspect.
+ * @param astData - Pre-collected AST data.
+ * @param classChain
+ * @param context
+ * @returns Extracted event descriptors.
  */
 export const extractEventsFromChain = (
   classChain: readonly ts.ClassLikeDeclaration[],
@@ -194,4 +128,76 @@ export const extractEventsFromChain = (
     items: extracted.items,
     warnings: extracted.warnings,
   };
+};
+
+/**
+ * Extracts event descriptors from a class declaration.
+ *
+ * @param classDeclaration - Class node to inspect.
+ * @param context - Event extraction context.
+ * @param astData
+ * @returns Extracted events and warnings.
+ */
+const extractEventsFromDispatch = (
+  classDeclaration: ts.ClassLikeDeclaration,
+  astData: ASTVisitorResult,
+): EventDescriptor[] => {
+  // Use pre-collected dispatchEvent calls
+  const events = astData.dispatchEventCalls
+    .filter((call) => call.containingClass === classDeclaration)
+    .map((call) => ({
+      name: call.eventName,
+      reactHandler: deriveReactHandler(call.eventName),
+      detailType: null,
+    }));
+
+  if (events.length === 0) {
+    return [];
+  }
+
+  const unique = mergeByKey(events, {
+    /**
+     * Provides the merge key for an event descriptor.
+     *
+     * @param event - Event descriptor to key.
+     * @returns Event name for deduplication.
+     */
+    getKey: (event) => event.name,
+  });
+
+  return Array.from(unique.values());
+};
+
+/**
+ * Extracts event descriptors across an inheritance chain.
+ *
+ * @param classChain - Ordered class chain to inspect.
+ * @param context - Event extraction context.
+ * @param classDeclaration
+ * @returns Extracted events and warnings for the chain.
+ */
+const extractEventsFromJSDoc = (
+  classDeclaration: ts.ClassLikeDeclaration,
+): EventDescriptor[] => {
+  const tags = ts
+    .getJSDocTags(classDeclaration)
+    .filter((tag) => tag.tagName.text === JSDOC_EVENT_TAG);
+  return tags.flatMap((tag) => {
+    const text = getJSDocTagText(tag);
+    if (!text) {
+      return [];
+    }
+    const nameMatch = text.match(/^([A-Za-z0-9-:_]+)/);
+    const eventName = nameMatch?.[1];
+    if (!eventName) {
+      return [];
+    }
+    return [
+      {
+        name: eventName,
+        reactHandler: deriveReactHandler(eventName, text),
+        detailType: null,
+      },
+    ];
+  });
 };

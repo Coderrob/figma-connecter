@@ -22,10 +22,14 @@
  * @module mappers/component-model
  */
 
-import type { ComponentModel, EventDescriptor, PropertyDescriptor } from '../core/types';
-import { normalizedBasename, normalizePath } from '../utils/paths';
+import type {
+  ComponentModel,
+  EventDescriptor,
+  PropertyDescriptor,
+} from "@/src/core/types";
+import { normalizedBasename, normalizePath } from "@/src/utils/paths";
 
-import { mapPropertiesToAttributes } from './attribute-mapper';
+import { mapPropertiesToAttributes } from "./attribute-mapper";
 
 /**
  * Input payload for normalizing a component model.
@@ -45,15 +49,15 @@ export interface ComponentModelInput {
  * @param componentDir - Component directory path.
  * @returns Normalized import path fragment.
  */
-export const deriveImportPath = (componentDir: string): string => {
-  const marker = '/packages/components/src/';
+export function deriveImportPath(componentDir: string): string {
+  const marker = "/packages/components/src/";
   const normalized = normalizePath(componentDir);
   const index = normalized.lastIndexOf(marker);
   if (index >= 0) {
     return normalized.slice(index + marker.length);
   }
   return normalizedBasename(componentDir);
-};
+}
 
 /**
  * Normalizes a component model for downstream emitters.
@@ -61,8 +65,8 @@ export const deriveImportPath = (componentDir: string): string => {
  * @param input - Raw parser output to normalize.
  * @returns Normalized ComponentModel.
  */
-export const mapComponentModel = (input: ComponentModelInput): ComponentModel => {
-  const className = input.className?.trim() || 'UnknownComponent';
+export function mapComponentModel(input: ComponentModelInput): ComponentModel {
+  const className = input.className?.trim() || "UnknownComponent";
   const props = input.props ?? [];
   const events = input.events ?? [];
 
@@ -76,4 +80,4 @@ export const mapComponentModel = (input: ComponentModelInput): ComponentModel =>
     events,
     importPath: deriveImportPath(input.componentDir),
   };
-};
+}

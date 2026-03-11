@@ -21,22 +21,35 @@
  *
  * @module commands/registry
  */
-import { Command } from 'commander';
+import { Command } from "commander";
 
-import { connectCommand } from './connect';
+import { connectCommand } from "./connect";
 
 type CommandInstance = InstanceType<typeof Command>;
 
 type CommandFactory = () => CommandInstance;
 
-const COMMAND_REGISTRY: ReadonlyMap<string, CommandFactory> = new Map([[connectCommand.name(), () => connectCommand]]);
+/**
+ * Returns the singleton connect command instance.
+ *
+ * @returns Connect command instance.
+ */
+function getConnectCommand(): CommandInstance {
+  return connectCommand;
+}
+
+const COMMAND_REGISTRY: ReadonlyMap<string, CommandFactory> = new Map([
+  [connectCommand.name(), getConnectCommand],
+]);
 
 /**
  * Returns the list of registered command names.
  *
  * @returns Array of command names in registry order.
  */
-export const listCommandNames = (): string[] => [...COMMAND_REGISTRY.keys()];
+export function listCommandNames(): string[] {
+  return [...COMMAND_REGISTRY.keys()];
+}
 
 /**
  * Registers all commands with the Commander program instance.
@@ -45,7 +58,8 @@ export const listCommandNames = (): string[] => [...COMMAND_REGISTRY.keys()];
  * @returns Nothing.
  */
 export function registerCommands(program: CommandInstance): void {
-  Array.from(COMMAND_REGISTRY.values())
-    .map((factory) => factory())
-    .forEach((command) => program.addCommand(command));
+  for (const factory of COMMAND_REGISTRY.values()) {
+    const command = factory();
+    program.addCommand(command);
+  }
 }

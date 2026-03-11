@@ -25,15 +25,85 @@
 
 import type { AttributeDescriptor, EventDescriptor, PropertyDescriptor } from '../core/types';
 
-import { formatPropAccessor, formatPropKey, indent } from './formatting';
 import { mapPropToFigma, sortByName } from './figma-mapper';
+import { formatPropAccessor, formatPropKey, indent } from './formatting';
 
 /**
  * Builds the props section of a Figma connect call.
  *
  * @param props - The property descriptors to include.
+ * @param events
  * @param depth - The indentation depth.
+ * @param tagName
+ * @param attributes
  * @returns Object with lines and any warnings encountered.
+ */
+export const buildEventsSection = (events: readonly EventDescriptor[], depth = 1): string[] => {
+  if (events.length === 0) {
+    return [`${indent(depth)}events: {},`];
+  }
+
+  const sorted = sortByName(events);
+  const eventLines = sorted.map((event) => {
+    const key = formatPropKey(event.name);
+    return `${indent(depth + 1)}${key}: '${event.reactHandler}',`;
+  });
+
+  return [`${indent(depth)}events: {`, ...eventLines, `${indent(depth)}},`];
+};
+
+/**
+ * Result of building a web component example template.
+ */
+export interface ExampleTemplate {
+  /** Example function string for figma.connect. */
+  readonly example: string;
+  /** Whether the example references props. */
+  readonly usesProps: boolean;
+}
+
+/**
+ * Builds the HTML example template for a web component.
+ * Uses lit-html template syntax with property bindings.
+ *
+ * @param tagName - The custom element tag name.
+ * @param attributes - The attributes to bind in the template.
+ * @param props
+ * @param depth
+ * @returns The example function string and whether it uses props.
+ */
+export const buildExampleTemplate = (tagName: string, attributes: readonly AttributeDescriptor[]): ExampleTemplate => {
+  if (attributes.length === 0) {
+    return {
+      example: `() => html\`<${tagName}></${tagName}>\``,
+      usesProps: false,
+    };
+  }
+
+  const sorted = sortByName(attributes);
+  const bindings = sorted.map((attribute) => {
+    const attrType = attribute.type as string;
+    const binding =
+      attrType === 'boolean'
+        ? `?${attribute.name}=\${${formatPropAccessor(attribute.propertyName)}}`
+        : `${attribute.name}="\${${formatPropAccessor(attribute.propertyName)}}"`;
+    return `${indent(1)}${binding}`;
+  });
+
+  const lines = [`<${tagName}`, ...bindings, `></${tagName}>`];
+  return {
+    example: `props => html\`${lines.join('\n')}\``,
+    usesProps: true,
+  };
+};
+
+/**
+ * Builds the example section for React connect files.
+ *
+ * @param className - Component class name.
+ * @param props
+ * @param depth
+ * @returns Formatted example section string.
  */
 export const buildPropsSection = (
   props: readonly PropertyDescriptor[],
@@ -87,74 +157,12 @@ export const buildPropsSection = (
 };
 
 /**
- * Result of building a web component example template.
- */
-export interface ExampleTemplate {
-  /** Example function string for figma.connect. */
-  readonly example: string;
-  /** Whether the example references props. */
-  readonly usesProps: boolean;
-}
-
-/**
- * Builds the HTML example template for a web component.
- * Uses lit-html template syntax with property bindings.
- *
- * @param tagName - The custom element tag name.
- * @param attributes - The attributes to bind in the template.
- * @returns The example function string and whether it uses props.
- */
-export const buildExampleTemplate = (tagName: string, attributes: readonly AttributeDescriptor[]): ExampleTemplate => {
-  if (attributes.length === 0) {
-    return {
-      example: `() => html\`<${tagName}></${tagName}>\``,
-      usesProps: false,
-    };
-  }
-
-  const sorted = sortByName(attributes);
-  const bindings = sorted.map((attribute) => {
-    const attrType = attribute.type as string;
-    const binding =
-      attrType === 'boolean'
-        ? `?${attribute.name}=\${${formatPropAccessor(attribute.propertyName)}}`
-        : `${attribute.name}="\${${formatPropAccessor(attribute.propertyName)}}"`;
-    return `${indent(1)}${binding}`;
-  });
-
-  const lines = [`<${tagName}`, ...bindings, `></${tagName}>`];
-  return {
-    example: `props => html\`${lines.join('\n')}\``,
-    usesProps: true,
-  };
-};
-
-/**
- * Builds the example section for React connect files.
- *
- * @param className - Component class name.
- * @returns Formatted example section string.
- */
-export const buildReactExampleSection = (className: string): string =>
-  ['example: props => {', `${indent(1)}return <${className} {...props} />;`, '},'].join('\n');
-
-/**
  * Builds an events section mapping event names to handlers.
  *
  * @param events - Event descriptors to include.
  * @param depth - Indentation depth for the section.
+ * @param className
  * @returns Lines for the events section.
  */
-export const buildEventsSection = (events: readonly EventDescriptor[], depth = 1): string[] => {
-  if (events.length === 0) {
-    return [`${indent(depth)}events: {},`];
-  }
-
-  const sorted = sortByName(events);
-  const eventLines = sorted.map((event) => {
-    const key = formatPropKey(event.name);
-    return `${indent(depth + 1)}${key}: '${event.reactHandler}',`;
-  });
-
-  return [`${indent(depth)}events: {`, ...eventLines, `${indent(depth)}},`];
-};
+export const buildReactExampleSection = (className: string): string =>
+  ['example: props => {', `${indent(1)}return <${className} {...props} />;`, '},'].join('\n');

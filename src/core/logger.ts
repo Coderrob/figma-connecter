@@ -298,16 +298,17 @@ export class Logger {
       return "";
     }
 
-    const pairs = orderedPairs
-      .map(([key, value]) => {
-        if (key === LogContextKey.DurationMs && typeof value === "number") {
-          return `${key}=${value}${DURATION_UNIT_SUFFIX}`;
-        }
-        const formatted =
-          typeof value === "string" ? value : JSON.stringify(value);
-        return `${key}=${formatted}`;
-      })
-      .join(" ");
+    const segments: string[] = [];
+    for (const [key, value] of orderedPairs) {
+      if (key === "durationMs" && typeof value === "number") {
+        segments.push(`${key}=${value}${DURATION_UNIT_SUFFIX}`);
+        continue;
+      }
+      const formatted =
+        typeof value === "string" ? value : JSON.stringify(value);
+      segments.push(`${key}=${formatted}`);
+    }
+    const pairs = segments.join(" ");
 
     return this.useColors
       ? ` ${COLORS.dim}(${pairs})${COLORS.reset}`
@@ -393,16 +394,25 @@ export function createScopedLogger(logger: Logger, scope: string): Logger {
      * @param prop - Property being accessed.
      * @returns Wrapped logger method or property value.
      */
-    get(target, prop: keyof Logger) {
+    get: function getScopedLoggerProperty(target, prop: keyof Logger) {
       const value = target[prop];
       if (typeof value === "function") {
-        return (message: string, context?: LogContext) => {
+        /**
+         * Prefixes log messages with the scoped label.
+         *
+         * @param message - Log message text.
+         * @param context - Optional log context.
+         * @returns Nothing.
+         */
+        function scopedLogMethod(message: string, context?: LogContext): void {
           (value as (msg: string, ctx?: LogContext) => void).call(
             target,
             `[${scope}] ${message}`,
             context,
           );
-        };
+        }
+
+        return scopedLogMethod;
       }
       return value;
     },

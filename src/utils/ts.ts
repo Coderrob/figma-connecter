@@ -28,7 +28,27 @@ import ts from 'typescript';
  * Extracts the first JSDoc summary for a node.
  *
  * @param node - AST node to inspect.
+ * @param decorator
  * @returns Summary text or null when missing.
+ */
+export const getDecoratorOptions = (decorator: ts.Decorator): ts.ObjectLiteralExpression | null => {
+  const { expression } = decorator;
+  if (!ts.isCallExpression(expression)) {
+    return null;
+  }
+  const [options] = expression.arguments;
+  if (!options || !ts.isObjectLiteralExpression(options)) {
+    return null;
+  }
+  return options;
+};
+
+/**
+ * Extracts text from a JSDoc tag.
+ *
+ * @param tag - JSDoc tag to read.
+ * @param node
+ * @returns Tag text content.
  */
 export const getJSDocSummary = (node: ts.Node): string | null => {
   const docs = ts.getJSDocCommentsAndTags(node).filter(ts.isJSDoc);
@@ -49,10 +69,11 @@ export const getJSDocSummary = (node: ts.Node): string | null => {
 };
 
 /**
- * Extracts text from a JSDoc tag.
+ * Retrieves the options object for a decorator call expression.
  *
- * @param tag - JSDoc tag to read.
- * @returns Tag text content.
+ * @param decorator - Decorator node to inspect.
+ * @param tag
+ * @returns Object literal options or null when unavailable.
  */
 export const getJSDocTagText = (tag: ts.JSDocTag): string => {
   if (!tag.comment) {
@@ -65,24 +86,6 @@ export const getJSDocTagText = (tag: ts.JSDocTag): string => {
     .map((part) => part.text)
     .join('')
     .trim();
-};
-
-/**
- * Retrieves the options object for a decorator call expression.
- *
- * @param decorator - Decorator node to inspect.
- * @returns Object literal options or null when unavailable.
- */
-export const getDecoratorOptions = (decorator: ts.Decorator): ts.ObjectLiteralExpression | null => {
-  const { expression } = decorator;
-  if (!ts.isCallExpression(expression)) {
-    return null;
-  }
-  const [options] = expression.arguments;
-  if (!options || !ts.isObjectLiteralExpression(options)) {
-    return null;
-  }
-  return options;
 };
 
 /**

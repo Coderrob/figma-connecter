@@ -32,6 +32,7 @@
  * Handles camelCase, kebab-case, and snake_case inputs.
  *
  * @param value - The string to convert.
+ * @param depth
  * @returns The title-cased string (e.g., 'primary' → 'Primary').
  *
  * @example
@@ -39,6 +40,61 @@
  * toTitleCase('primary'); // 'Primary'
  * toTitleCase('dark-mode'); // 'Dark Mode'
  * ```
+ */
+export const formatPropAccessor = (value: string): string =>
+  isValidIdentifier(value) ? `props.${value}` : `props['${value}']`;
+
+/**
+ * Creates indentation string for the given depth.
+ *
+ * @param content
+ * @param depth - The indentation level (0 = no indent).
+ * @param value
+ * @returns A string of spaces for indentation.
+ */
+export const formatPropKey = (value: string): string => (isValidIdentifier(value) ? value : `'${value}'`);
+
+/**
+ * Indents each line of a content block.
+ *
+ * @param content - The content to indent.
+ * @param depth - The indentation level.
+ * @param value
+ * @returns Array of indented lines.
+ */
+export const indent = (depth: number): string => '  '.repeat(depth);
+
+// ============================================================================
+// Identifier Handling
+// ============================================================================
+
+/**
+ * Checks if a string is a valid JavaScript identifier.
+ *
+ * @param value - The string to check.
+ * @param content
+ * @param depth
+ * @returns True if the string is a valid identifier.
+ */
+export const indentBlock = (content: string, depth: number): string[] => {
+  const prefix = indent(depth);
+  return content.split('\n').map((line) => `${prefix}${line}`);
+};
+
+/**
+ * Formats a property key for object literal syntax.
+ * Returns the key as-is if it's a valid identifier, otherwise quotes it.
+ *
+ * @param value - The property key.
+ * @returns The formatted key (e.g., 'disabled' or "'data-value'").
+ */
+export const isValidIdentifier = (value: string): boolean => /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
+
+/**
+ * Formats a property accessor for template literals.
+ *
+ * @param value - The property name.
+ * @returns The accessor expression (e.g., 'props.disabled' or "props['data-value']").
  */
 export const toTitleCase = (value: string): string =>
   value
@@ -49,53 +105,3 @@ export const toTitleCase = (value: string): string =>
     .filter(Boolean)
     .map((token) => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
     .join(' ');
-
-/**
- * Creates indentation string for the given depth.
- *
- * @param depth - The indentation level (0 = no indent).
- * @returns A string of spaces for indentation.
- */
-export const indent = (depth: number): string => '  '.repeat(depth);
-
-/**
- * Indents each line of a content block.
- *
- * @param content - The content to indent.
- * @param depth - The indentation level.
- * @returns Array of indented lines.
- */
-export const indentBlock = (content: string, depth: number): string[] => {
-  const prefix = indent(depth);
-  return content.split('\n').map((line) => `${prefix}${line}`);
-};
-
-// ============================================================================
-// Identifier Handling
-// ============================================================================
-
-/**
- * Checks if a string is a valid JavaScript identifier.
- *
- * @param value - The string to check.
- * @returns True if the string is a valid identifier.
- */
-export const isValidIdentifier = (value: string): boolean => /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
-
-/**
- * Formats a property key for object literal syntax.
- * Returns the key as-is if it's a valid identifier, otherwise quotes it.
- *
- * @param value - The property key.
- * @returns The formatted key (e.g., 'disabled' or "'data-value'").
- */
-export const formatPropKey = (value: string): string => (isValidIdentifier(value) ? value : `'${value}'`);
-
-/**
- * Formats a property accessor for template literals.
- *
- * @param value - The property name.
- * @returns The accessor expression (e.g., 'props.disabled' or "props['data-value']").
- */
-export const formatPropAccessor = (value: string): string =>
-  isValidIdentifier(value) ? `props.${value}` : `props['${value}']`;

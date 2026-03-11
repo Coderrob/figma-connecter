@@ -22,9 +22,9 @@
  * @module cli/options
  */
 
-import { Command } from "commander";
+import type { IGlobalCliOptions } from "@/src/types/cli";
 
-import type { GlobalCliOptions } from "../types/cli";
+import { Command } from "commander";
 
 /** Commander Command instance type. */
 type CommandInstance = InstanceType<typeof Command>;
@@ -38,7 +38,7 @@ type CommandInstance = InstanceType<typeof Command>;
  * @param command - The Command instance to retrieve options from.
  * @returns The resolved global CLI options.
  */
-export function getGlobalOptions(command?: CommandInstance): GlobalCliOptions {
+export function getGlobalOptions(command?: CommandInstance): IGlobalCliOptions {
   const localOptions = command?.opts?.() ?? {};
   const parentOptions = command?.parent?.opts?.() ?? {};
 
@@ -49,7 +49,7 @@ export function getGlobalOptions(command?: CommandInstance): GlobalCliOptions {
    * @returns The resolved option value.
    */
   const pickOption = (
-    key: keyof GlobalCliOptions,
+    key: keyof IGlobalCliOptions,
   ): string | boolean | undefined => {
     if (localOptions[key] !== undefined) {
       return localOptions[key] as string | boolean | undefined;

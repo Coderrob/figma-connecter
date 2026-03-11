@@ -65,30 +65,94 @@ export const DEFAULT_SECTION_MARKERS: SectionMarkers = {
  * Detects the line ending used in a file's content.
  *
  * @param content - File contents to inspect.
+ * @param section
+ * @param lineEnding
  * @returns The detected line ending string.
  */
-const detectLineEnding = (content: string): string =>
-  content.includes(CRLF) ? CRLF : LF;
+const appendSection = (
+  content: string,
+  section: string,
+  lineEnding: string,
+): string => {
+  if (!content) {
+    return section;
+  }
+
+  const needsLineEnding = !content.endsWith(lineEnding);
+  const separator = needsLineEnding ? lineEnding : "";
+
+  return `${content}${separator}${section}${lineEnding}`;
+};
 
 /**
  * Normalizes all line endings to the specified line ending.
  *
  * @param content - File contents to normalize.
+ * @param generatedSection
+ * @param indent
  * @param lineEnding - Line ending to apply.
+ * @param fromIndex
+ * @param markers
  * @returns Normalized content with consistent line endings.
  */
-const normalizeLineEndings = (content: string, lineEnding: string): string =>
-  content.replace(/\r\n|\r|\n/g, lineEnding);
+export function buildGeneratedSection(
+  generatedSection: string,
+  markers: SectionMarkers = DEFAULT_SECTION_MARKERS,
+  indent = "",
+  lineEnding = LF,
+): string {
+  const normalized = normalizeLineEndings(
+    generatedSection,
+    lineEnding,
+  ).trimEnd();
+  const lines = normalized ? normalized.split(lineEnding) : [];
+  const indentedLines = lines.map((line) => `${indent}${line}`);
+
+  return (
+    [
+      `${indent}${markers.start}`,
+      ...indentedLines,
+      `${indent}${markers.end}`,
+    ].join(lineEnding) + lineEnding
+  );
+}
 
 /**
  * Finds the previous line break before a given index.
  *
  * @param content - File contents to search.
  * @param fromIndex - Index to search backward from.
+ * @param lineEnding
+ * @param markers
  * @returns Index of the previous line break or -1.
  */
-const lastLineBreak = (content: string, fromIndex: number): number =>
-  content.lastIndexOf(LF, fromIndex);
+export function applyGeneratedSectionUpdates(
+  content: string,
+  sections: readonly GeneratedSectionPayload[],
+): string | null {
+  if (sections.length === 0) {
+    return null;
+  }
+
+  const resolved = resolveSections(sections);
+  const allMarkersPresent = resolved.every((section) =>
+    hasGeneratedSection(content, section.markers),
+  );
+
+  if (!allMarkersPresent) {
+    return null;
+  }
+
+  let updated = content;
+  for (const section of resolved) {
+    updated = replaceGeneratedSection(
+      updated,
+      section.content,
+      section.markers,
+    ).content;
+  }
+  return updated;
+}
 
 /**
  * Finds the next line break after a given index.
@@ -96,26 +160,45 @@ const lastLineBreak = (content: string, fromIndex: number): number =>
  * @param content - File contents to search.
  * @param fromIndex - Index to search forward from.
  * @param includeLineBreak - Whether to include the line break in the returned index.
+ * @param lineEnding
+ * @param markers
  * @returns Index of the next line break or -1.
  */
-const nextLineBreak = (
-  content: string,
-  fromIndex: number,
-  includeLineBreak = false,
-): number => {
-  const index = content.indexOf(LF, fromIndex);
-  if (index === -1) {
-    return -1;
-  }
-  return includeLineBreak ? index + 1 : index;
-};
+const detectLineEnding = (content: string): string =>
+  content.includes(CRLF) ? CRLF : LF;
 
 /**
  * Locates a generated section in the content and returns its indices.
  *
  * @param content - File contents to search.
  * @param markers - Section markers to locate.
+ * @param fromIndex
+ * @param includeLineBreak
+ * @param lineEnding
  * @returns The section range if found, otherwise null.
+ */
+export function extractGeneratedSection(
+  content: string,
+  markers: SectionMarkers = DEFAULT_SECTION_MARKERS,
+): string | null {
+  const range = findSectionRange(content, markers);
+  if (!range) {
+    return null;
+  }
+
+  return content.slice(range.innerStart, range.innerEnd).trimEnd();
+}
+
+/**
+ * Appends a generated section to the end of the content.
+ *
+ * @param content - Existing file contents.
+ * @param section - Generated section block to append.
+ * @param lineEnding - Line ending to use for appended content.
+ * @param fromIndex
+ * @param includeLineBreak
+ * @param markers
+ * @returns Updated content with the section appended.
  */
 const findSectionRange = (
   content: string,
@@ -152,29 +235,6 @@ const findSectionRange = (
   };
 };
 
-/**
- * Appends a generated section to the end of the content.
- *
- * @param content - Existing file contents.
- * @param section - Generated section block to append.
- * @param lineEnding - Line ending to use for appended content.
- * @returns Updated content with the section appended.
- */
-const appendSection = (
-  content: string,
-  section: string,
-  lineEnding: string,
-): string => {
-  if (!content) {
-    return section;
-  }
-
-  const needsLineEnding = !content.endsWith(lineEnding);
-  const separator = needsLineEnding ? lineEnding : "";
-
-  return `${content}${separator}${section}${lineEnding}`;
-};
-
 interface ResolvedSection {
   readonly name?: GeneratedSectionName;
   readonly content: string;
@@ -185,34 +245,33 @@ interface ResolvedSection {
  * Resolves section markers for a payload, defaulting when absent.
  *
  * @param section - Generated section payload.
+ * @param content
+ * @param fromIndex
+ * @param includeLineBreak
+ * @param lineEnding
+ * @param markers
  * @returns Resolved marker pair for the section.
  */
-const resolveSectionMarkers = (
-  section: GeneratedSectionPayload,
-): SectionMarkers => {
-  if (section.markers) {
-    return section.markers;
-  }
-  if (section.name) {
-    return buildGeneratedSectionMarkers(section.name);
-  }
-  return DEFAULT_SECTION_MARKERS;
-};
+export function hasGeneratedSection(
+  content: string,
+  markers: SectionMarkers = DEFAULT_SECTION_MARKERS,
+): boolean {
+  return content.includes(markers.start) && content.includes(markers.end);
+}
 
 /**
  * Normalizes section payloads into resolved sections with markers.
  *
  * @param sections - Payloads to normalize.
+ * @param section
+ * @param content
+ * @param fromIndex
+ * @param includeLineBreak
+ * @param lineEnding
  * @returns Resolved section metadata.
  */
-const resolveSections = (
-  sections: readonly GeneratedSectionPayload[],
-): ResolvedSection[] =>
-  sections.map((section) => ({
-    content: section.content,
-    markers: resolveSectionMarkers(section),
-    name: section.name,
-  }));
+const lastLineBreak = (content: string, fromIndex: number): number =>
+  content.lastIndexOf(LF, fromIndex);
 
 // ============================================================================
 // Public API
@@ -223,14 +282,24 @@ const resolveSections = (
  *
  * @param content - File contents to inspect.
  * @param markers - Section markers to search for.
+ * @param sections
+ * @param section
+ * @param fromIndex
+ * @param includeLineBreak
+ * @param lineEnding
  * @returns True when both start and end markers are present.
  */
-export function hasGeneratedSection(
+const nextLineBreak = (
   content: string,
-  markers: SectionMarkers = DEFAULT_SECTION_MARKERS,
-): boolean {
-  return content.includes(markers.start) && content.includes(markers.end);
-}
+  fromIndex: number,
+  includeLineBreak = false,
+): number => {
+  const index = content.indexOf(LF, fromIndex);
+  if (index === -1) {
+    return -1;
+  }
+  return includeLineBreak ? index + 1 : index;
+};
 
 /**
  * Extracts the generated section contents from a file.
@@ -238,58 +307,27 @@ export function hasGeneratedSection(
  *
  * @param content - File contents to inspect.
  * @param markers - Section markers to locate.
+ * @param sections
+ * @param section
+ * @param fromIndex
+ * @param includeLineBreak
+ * @param lineEnding
  * @returns The section content or null when missing.
  */
-export function extractGeneratedSection(
-  content: string,
-  markers: SectionMarkers = DEFAULT_SECTION_MARKERS,
-): string | null {
-  const range = findSectionRange(content, markers);
-  if (!range) {
-    return null;
-  }
-
-  return content.slice(range.innerStart, range.innerEnd).trimEnd();
-}
+const normalizeLineEndings = (content: string, lineEnding: string): string =>
+  content.replace(/\r\n|\r|\n/g, lineEnding);
 
 /**
  * Builds a generated section block with markers and indentation.
  *
  * @param generatedSection - Raw content for the generated section.
+ * @param content
  * @param markers - Section markers to use.
  * @param indent - Indentation to apply to each line.
  * @param lineEnding - Line ending to use for joins.
+ * @param sections
+ * @param section
  * @returns Generated section block with markers.
- */
-export function buildGeneratedSection(
-  generatedSection: string,
-  markers: SectionMarkers = DEFAULT_SECTION_MARKERS,
-  indent = "",
-  lineEnding = LF,
-): string {
-  const normalized = normalizeLineEndings(
-    generatedSection,
-    lineEnding,
-  ).trimEnd();
-  const lines = normalized ? normalized.split(lineEnding) : [];
-  const indentedLines = lines.map((line) => `${indent}${line}`);
-
-  return (
-    [
-      `${indent}${markers.start}`,
-      ...indentedLines,
-      `${indent}${markers.end}`,
-    ].join(lineEnding) + lineEnding
-  );
-}
-
-/**
- * Replaces or inserts the generated section within a file.
- *
- * @param content - File contents to update.
- * @param generatedSection - Raw section content to insert.
- * @param markers - Section markers to use.
- * @returns Updated content and update status.
  */
 export function replaceGeneratedSection(
   content: string,
@@ -337,37 +375,42 @@ export function replaceGeneratedSection(
 }
 
 /**
+ * Replaces or inserts the generated section within a file.
+ *
+ * @param content - File contents to update.
+ * @param generatedSection - Raw section content to insert.
+ * @param markers - Section markers to use.
+ * @param sections
+ * @param section
+ * @returns Updated content and update status.
+ */
+const resolveSectionMarkers = (
+  section: GeneratedSectionPayload,
+): SectionMarkers => {
+  if (section.markers) {
+    return section.markers;
+  }
+  if (section.name) {
+    return buildGeneratedSectionMarkers(section.name);
+  }
+  return DEFAULT_SECTION_MARKERS;
+};
+
+/**
  * Applies multiple generated section updates within a file.
  * Returns null if markers are not present.
  *
  * @param content - File contents to update.
  * @param sections - Generated sections to apply.
+ * @param generatedSection
+ * @param markers
  * @returns Updated content or null when markers are not found.
  */
-export function applyGeneratedSectionUpdates(
-  content: string,
+const resolveSections = (
   sections: readonly GeneratedSectionPayload[],
-): string | null {
-  if (sections.length === 0) {
-    return null;
-  }
-
-  const resolved = resolveSections(sections);
-  const allMarkersPresent = resolved.every((section) =>
-    hasGeneratedSection(content, section.markers),
-  );
-
-  if (!allMarkersPresent) {
-    return null;
-  }
-
-  let updated = content;
-  for (const section of resolved) {
-    updated = replaceGeneratedSection(
-      updated,
-      section.content,
-      section.markers,
-    ).content;
-  }
-  return updated;
-}
+): ResolvedSection[] =>
+  sections.map((section) => ({
+    content: section.content,
+    markers: resolveSectionMarkers(section),
+    name: section.name,
+  }));

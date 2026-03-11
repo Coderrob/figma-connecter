@@ -17,15 +17,14 @@
 import {
   buildGeneratedSectionMarkers,
   FIGMA_PACKAGE_HTML,
-} from "../../core/constants";
+} from '@/src/core/constants';
 import {
   type EmitResult,
   EmitterTarget,
   FileChangeStatus,
   GeneratedSectionName,
-} from "../../core/types";
-import { buildCodeConnectFilePath } from "../../utils/paths";
-import type { Emitter, EmitterContext } from "../types";
+} from '@/src/core/types';
+import type { Emitter, EmitterContext } from '@/src/emitters/types';
 import {
   buildExampleTemplate,
   buildFilePayload,
@@ -38,7 +37,8 @@ import {
   withProps,
   withSections,
   withWarnings,
-} from "../utils";
+} from '@/src/emitters/utils';
+import { buildCodeConnectFilePath } from '@/src/utils/paths';
 
 import { buildImportsLine } from "./helpers";
 

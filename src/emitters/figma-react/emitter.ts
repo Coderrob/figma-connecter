@@ -17,15 +17,14 @@
 import {
   buildGeneratedSectionMarkers,
   FIGMA_PACKAGE_REACT,
-} from "../../core/constants";
+} from '@/src/core/constants';
 import {
   type EmitResult,
   EmitterTarget,
   FileChangeStatus,
   GeneratedSectionName,
-} from "../../core/types";
-import { buildCodeConnectFilePath, resolveDistReactImportPath } from "../../utils/paths";
-import type { Emitter, EmitterContext } from "../types";
+} from '@/src/core/types';
+import type { Emitter, EmitterContext } from '@/src/emitters/types';
 import {
   buildFilePayload,
   buildPropsSection,
@@ -37,7 +36,8 @@ import {
   withProps,
   withSections,
   withWarnings,
-} from "../utils";
+} from '@/src/emitters/utils';
+import { buildCodeConnectFilePath, resolveDistReactImportPath } from '@/src/utils/paths';
 
 /**
  * Emitter for generating Figma Code Connect files for React components.

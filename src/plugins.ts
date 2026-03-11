@@ -29,6 +29,7 @@ import {
   registerEmitterPlugin as registerEmitterPluginImpl,
   registerParserPlugin as registerParserPluginImpl,
 } from "./internal-plugin-registry";
+import type { IPluginInfo, IPluginOptions } from "./types/plugins";
 
 // Re-export plugin interfaces and functions
 export {
@@ -45,12 +46,41 @@ export {
 } from "./parsers/factory";
 
 /**
- * Unified plugin registration options.
- * Allows registering multiple emitters and parsers in a single call.
+ * Gets information about all registered plugins.
+ * Useful for debugging and displaying available extensions.
+ *
+ * @returns Plugin information.
  */
-import type { PluginOptions } from "./types/plugins";
+export function getPluginInfo(): IPluginInfo {
+  const emitterMetadata = getAllEmitterMetadata();
+  const parserMetadata = getAllParserMetadata();
+  const emitters = new Map<EmitterTarget, PluginRegistryEntry>();
+  const parsers = new Map<ParserTarget, PluginRegistryEntry>();
+
+  for (const [target, meta] of Array.from(emitterMetadata)) {
+    emitters.set(target, {
+      displayName: meta.displayName,
+      description: meta.description,
+    });
+  }
+
+  for (const [target, meta] of Array.from(parserMetadata)) {
+    parsers.set(target, {
+      displayName: meta.displayName,
+      description: meta.description,
+    });
+  }
+
+  return {
+    emitters,
+    parsers,
+  };
+}
 
 /**
+ * Unified plugin registration options.
+ * Allows registering multiple emitters and parsers in a single call.
+ *
  * Registers one or more plugins in a single call.
  * Provides a convenient interface for plugin packages that bundle
  * both emitters and parsers.
@@ -58,7 +88,7 @@ import type { PluginOptions } from "./types/plugins";
  * @param options - Plugin configuration.
  * @throws Error if any target is already registered.
  */
-export const registerPlugin = (options: PluginOptions): void => {
+export function registerPlugin(options: IPluginOptions): void {
   if (options.emitters) {
     for (const emitter of options.emitters) {
       registerEmitterPluginImpl(emitter);
@@ -70,35 +100,4 @@ export const registerPlugin = (options: PluginOptions): void => {
       registerParserPluginImpl(parser);
     }
   }
-};
-
-/**
- * Plugin information for display purposes.
- */
-import type { PluginInfo } from "./types/plugins";
-
-/**
- * Gets information about all registered plugins.
- * Useful for debugging and displaying available extensions.
- *
- * @returns Plugin information.
- */
-export const getPluginInfo = (): PluginInfo => {
-  const emitterMetadata = getAllEmitterMetadata();
-  const parserMetadata = getAllParserMetadata();
-
-  return {
-    emitters: new Map(
-      Array.from(emitterMetadata, ([target, meta]) => [
-        target,
-        { displayName: meta.displayName, description: meta.description },
-      ]),
-    ),
-    parsers: new Map(
-      Array.from(parserMetadata, ([target, meta]) => [
-        target,
-        { displayName: meta.displayName, description: meta.description },
-      ]),
-    ),
-  };
-};
+}

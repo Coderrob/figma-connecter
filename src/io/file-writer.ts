@@ -23,17 +23,16 @@
  * @module io/file-writer
  */
 
-import { nodeIoAdapter } from "./adapter";
-import type { IoAdapter } from "../types/io";
-import {
-  DEFAULT_SECTION_MARKERS,
-  replaceGeneratedSection,
-} from "./section-updater";
 import {
   WriteStatus,
   type FileWriteOptions,
   type FileWriteResult,
-} from "../types/io";
+} from '@/src/types/io';
+import { nodeIoAdapter } from "./adapter";
+import {
+  DEFAULT_SECTION_MARKERS,
+  replaceGeneratedSection,
+} from "./section-updater";
 
 /**
  * Writes a file to disk, updating generated sections if configured.

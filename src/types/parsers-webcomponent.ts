@@ -1,12 +1,12 @@
-import type ts from "typescript";
-import type { Result } from "../core/result";
+import type { Result } from "@/src/core/result";
 import type {
   ExtractionResult,
   ComponentModel,
   ClassSource,
   TagNameResult,
   EventDescriptor,
-} from "../core/types";
+} from "@/src/core/types";
+import type ts from "typescript";
 
 export interface TagNameResolution {
   readonly tagName: string;

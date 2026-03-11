@@ -15,35 +15,36 @@
  */
 
 import path from "node:path";
-import { nodeIoAdapter } from "../../io/adapter";
-
 import ts from "typescript";
 
 import { TagNameSource } from "../../core/types";
-import { toKebabCase } from "../../utils/strings";
-import { getJSDocTagText, getLiteralValue } from "../../utils/ts";
 
-import type { ASTVisitorResult } from "./ast-visitor";
+import { nodeIoAdapter } from "../../io/adapter";
 import type {
   TagNameResolution,
   TagNameResolverOptions,
 } from "../../types/parsers-webcomponent";
+import { toKebabCase } from "../../utils/strings";
+
+import { getJSDocTagText, getLiteralValue } from "../../utils/ts";
+import type { ASTVisitorResult } from "./ast-visitor";
 
 /**
  * Reads a file if it exists on disk.
  *
  * @param filePath - Absolute or relative file path.
+ * @param contents
+ * @param componentDir
+ * @param value
  * @returns File contents or null when missing/unreadable.
  */
-const readFileIfExists = (filePath: string): string | null => {
-  try {
-    if (!nodeIoAdapter.exists(filePath)) {
-      return null;
-    }
-    return nodeIoAdapter.readFile(filePath);
-  } catch {
-    return null;
+const applyNamespace = (componentDir: string, value: string): string => {
+  const namespace = resolveNamespaceFromConstants(componentDir);
+  const normalized = toKebabCase(value);
+  if (!namespace) {
+    return normalized;
   }
+  return `${namespace.prefix}${namespace.separator}${normalized}`;
 };
 
 /**
@@ -67,7 +68,224 @@ const createSourceFile = (filePath: string, contents: string): ts.SourceFile =>
  *
  * @param classDeclaration - Class declaration to inspect.
  * @param astData - Optional pre-collected AST data from unified visitor.
+ * @param filePath
  * @returns Tag name or null when missing.
+ */
+const readFileIfExists = (filePath: string): string | null => {
+  try {
+    if (!nodeIoAdapter.exists(filePath)) {
+      return null;
+    }
+    return nodeIoAdapter.readFile(filePath);
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Resolves tag namespace settings from tag-name constants.
+ *
+ * @param filePath
+ * @param exportName
+ * @param componentDir - Component directory for lookup.
+ * @param classDeclaration
+ * @param astData
+ * @param visited
+ * @returns Namespace prefix/Separator or null when unavailable.
+ */
+function resolveExportedValue(
+  filePath: string,
+  exportName: string,
+  componentDir: string,
+  visited: Set<string>,
+): string | null {
+  const resolvedPath = path.resolve(filePath);
+  if (visited.has(resolvedPath)) {
+    return null;
+  }
+  visited.add(resolvedPath);
+
+  const contents = readFileIfExists(resolvedPath);
+  if (!contents) {
+    return null;
+  }
+
+  const sourceFile = createSourceFile(resolvedPath, contents);
+
+  const localMatch = sourceFile.statements
+    .filter(ts.isVariableStatement)
+    .flatMap((statement) => statement.declarationList.declarations)
+    .find(
+      /**
+       * <anonymous> TODO: describe
+       * @param declaration TODO: describe parameter
+       * @returns TODO: describe return value
+       */
+      (declaration) =>
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === exportName,
+    );
+
+  if (localMatch?.initializer) {
+    return resolveTagNameInitializer(localMatch.initializer, componentDir);
+  }
+
+  const exportDeclarations = sourceFile.statements.filter(
+    ts.isExportDeclaration,
+  );
+  for (const exportDecl of exportDeclarations) {
+    const { moduleSpecifier } = exportDecl;
+    const { exportClause } = exportDecl;
+
+    if (!moduleSpecifier && exportClause && ts.isNamedExports(exportClause)) {
+      const match = exportClause.elements.find(
+        /**
+         * <anonymous> TODO: describe
+         * @param element TODO: describe parameter
+         * @returns TODO: describe return value
+         */
+        (element) => element.name.text === exportName,
+      );
+      if (match) {
+        const localName = match.propertyName?.text ?? match.name.text;
+        const resolved = resolveIdentifierNameValue(
+          sourceFile,
+          localName,
+          componentDir,
+          visited,
+        );
+        if (resolved) {
+          return resolved;
+        }
+      }
+      continue;
+    }
+
+    if (!moduleSpecifier || !ts.isStringLiteral(moduleSpecifier)) {
+      continue;
+    }
+
+    const targetPath = resolveModulePath(
+      path.dirname(resolvedPath),
+      moduleSpecifier.text,
+      componentDir,
+    );
+    if (!targetPath) {
+      continue;
+    }
+
+    if (!exportClause) {
+      const resolved = resolveExportedValue(
+        targetPath,
+        exportName,
+        componentDir,
+        visited,
+      );
+      if (resolved) {
+        return resolved;
+      }
+      continue;
+    }
+
+    if (ts.isNamedExports(exportClause)) {
+      const match = exportClause.elements.find(
+        /**
+         * <anonymous> TODO: describe
+         * @param element TODO: describe parameter
+         * @returns TODO: describe return value
+         */
+        (element) => element.name.text === exportName,
+      );
+      if (!match) {
+        continue;
+      }
+      const forwardedName = match.propertyName?.text ?? match.name.text;
+      const resolved = resolveExportedValue(
+        targetPath,
+        forwardedName,
+        componentDir,
+        visited,
+      );
+      if (resolved) {
+        return resolved;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Applies namespace prefixing to a tag name value.
+ *
+ * @param sourceFile
+ * @param identifier
+ * @param identifierName
+ * @param componentDir - Component directory for namespace lookup.
+ * @param value - Raw tag name value.
+ * @param visited
+ * @param classDeclaration
+ * @param astData
+ * @param className
+ * @returns Namespaced tag name.
+ */
+const resolveFromFilename = (
+  componentFilePath: string,
+  componentDir: string,
+): string => {
+  const fileBase = path
+    .basename(componentFilePath)
+    .replace(/\.component\.(t|j)sx?$/, "")
+    .replace(/\.(t|j)sx?$/, "");
+  const derived = toKebabCase(fileBase);
+  return applyNamespace(componentDir, derived);
+};
+
+/**
+ * Resolves a tag name from an initializer expression.
+ *
+ * @param initializer - Expression to evaluate.
+ * @param sourceFile
+ * @param identifier
+ * @param identifierName
+ * @param componentDir - Component directory for namespace lookup.
+ * @param visited
+ * @param classDeclaration
+ * @param astData
+ * @returns Tag name or null when unsupported.
+ */
+const resolveFromIndexFile = (
+  componentDir: string,
+  className?: string,
+): { tagName: string | null; warnings: string[] } => {
+  const indexPath = path.join(componentDir, "index.ts");
+  const contents = readFileIfExists(indexPath);
+  if (!contents) {
+    return { tagName: null, warnings: [] };
+  }
+
+  const sourceFile = createSourceFile(indexPath, contents);
+  const { tagName, warning } = resolveTagNameFromRegister(
+    sourceFile,
+    componentDir,
+    className,
+  );
+
+  return { tagName, warnings: warning ? [warning] : [] };
+};
+
+/**
+ * Resolves an identifier value within a source file.
+ *
+ * @param sourceFile - Source file to search.
+ * @param identifier - Identifier to resolve.
+ * @param initializer
+ * @param identifierName
+ * @param componentDir - Component directory for namespace lookup.
+ * @param visited
+ * @param classDeclaration
+ * @param astData
+ * @returns Tag name or null when unresolved.
  */
 const resolveFromJSDoc = (
   classDeclaration?: ts.ClassDeclaration,
@@ -90,112 +308,12 @@ const resolveFromJSDoc = (
 };
 
 /**
- * Resolves tag namespace settings from tag-name constants.
- *
- * @param componentDir - Component directory for lookup.
- * @returns Namespace prefix/Separator or null when unavailable.
- */
-const resolveNamespaceFromConstants = (
-  componentDir: string,
-): { prefix: string; separator: string } | null => {
-  const constantsPath = path.resolve(
-    componentDir,
-    "../../utils/tag-name/constants.ts",
-  );
-  const contents = readFileIfExists(constantsPath);
-  if (!contents) {
-    return null;
-  }
-
-  const prefixMatch = contents.match(/PREFIX:\s*['"]([^'"]+)['"]/);
-  const separatorMatch = contents.match(/SEPARATOR:\s*['"]([^'"]+)['"]/);
-  if (!prefixMatch || !separatorMatch) {
-    return null;
-  }
-
-  return {
-    prefix: prefixMatch[1],
-    separator: separatorMatch[1],
-  };
-};
-
-/**
- * Applies namespace prefixing to a tag name value.
- *
- * @param componentDir - Component directory for namespace lookup.
- * @param value - Raw tag name value.
- * @returns Namespaced tag name.
- */
-const applyNamespace = (componentDir: string, value: string): string => {
-  const namespace = resolveNamespaceFromConstants(componentDir);
-  const normalized = toKebabCase(value);
-  if (!namespace) {
-    return normalized;
-  }
-  return `${namespace.prefix}${namespace.separator}${normalized}`;
-};
-
-/**
- * Resolves a tag name from an initializer expression.
- *
- * @param initializer - Expression to evaluate.
- * @param componentDir - Component directory for namespace lookup.
- * @returns Tag name or null when unsupported.
- */
-const resolveTagNameInitializer = (
-  initializer: ts.Expression,
-  componentDir: string,
-): string | null => {
-  const literal = getLiteralValue(initializer);
-  if (typeof literal === "string") {
-    return literal;
-  }
-
-  if (ts.isCallExpression(initializer)) {
-    const callee = initializer.expression;
-    const calleeName = ts.isIdentifier(callee)
-      ? callee.text
-      : ts.isPropertyAccessExpression(callee)
-        ? callee.name.text
-        : "";
-
-    if (calleeName === "constructTagName") {
-      const [arg] = initializer.arguments;
-      const argLiteral = getLiteralValue(arg);
-      if (typeof argLiteral === "string") {
-        return applyNamespace(componentDir, argLiteral);
-      }
-    }
-  }
-
-  return null;
-};
-
-/**
- * Resolves an identifier value within a source file.
- *
- * @param sourceFile - Source file to search.
- * @param identifier - Identifier to resolve.
- * @param componentDir - Component directory for namespace lookup.
- * @returns Tag name or null when unresolved.
- */
-const resolveIdentifierValue = (
-  sourceFile: ts.SourceFile,
-  identifier: ts.Identifier,
-  componentDir: string,
-): string | null =>
-  resolveIdentifierNameValue(
-    sourceFile,
-    identifier.text,
-    componentDir,
-    new Set<string>(),
-  );
-
-/**
  * Resolves an identifier value by name within a source file.
  *
  * @param sourceFile - Source file to search.
  * @param identifierName - Identifier name to resolve.
+ * @param initializer
+ * @param identifier
  * @param componentDir - Component directory for namespace lookup.
  * @param visited - Set of visited file paths to prevent cycles.
  * @returns Tag name or null when unresolved.
@@ -210,12 +328,17 @@ function resolveIdentifierNameValue(
     .filter(ts.isVariableStatement)
     .flatMap((statement) => statement.declarationList.declarations)
     .find(
+      /**
+       * <anonymous> TODO: describe
+       * @param declaration TODO: describe parameter
+       * @returns TODO: describe return value
+       */
       (declaration) =>
         ts.isIdentifier(declaration.name) &&
         declaration.name.text === identifierName,
     );
 
-  if (localMatch && localMatch.initializer) {
+  if (localMatch?.initializer) {
     return resolveTagNameInitializer(localMatch.initializer, componentDir);
   }
 
@@ -232,6 +355,11 @@ function resolveIdentifierNameValue(
         return false;
       }
       const matched = clause.namedBindings.elements.find(
+        /**
+         * <anonymous> TODO: describe
+         * @param element TODO: describe parameter
+         * @returns TODO: describe return value
+         */
         (element) => element.name.text === identifierName,
       );
       if (matched) {
@@ -269,8 +397,39 @@ function resolveIdentifierNameValue(
  *
  * @param baseDir - Directory containing the import.
  * @param modulePath - Module specifier to resolve.
+ * @param filePath
+ * @param exportName
+ * @param initializer
+ * @param sourceFile
+ * @param identifier
  * @param componentDir - Component directory for constants resolution.
+ * @param visited
  * @returns Resolved file path or null when missing.
+ */
+const resolveIdentifierValue = (
+  sourceFile: ts.SourceFile,
+  identifier: ts.Identifier,
+  componentDir: string,
+): string | null =>
+  resolveIdentifierNameValue(
+    sourceFile,
+    identifier.text,
+    componentDir,
+    new Set<string>(),
+  );
+
+/**
+ * Resolves an exported constant value from another module.
+ *
+ * @param filePath - File path to inspect.
+ * @param exportName - Exported symbol name to resolve.
+ * @param baseDir
+ * @param modulePath
+ * @param initializer
+ * @param componentDir - Component directory for namespace lookup.
+ * @param visited - Set of visited file paths to prevent cycles.
+ * @param className
+ * @returns Tag name or null when unresolved.
  */
 function resolveModulePath(
   baseDir: string,
@@ -328,128 +487,104 @@ function resolveModulePath(
 }
 
 /**
- * Resolves an exported constant value from another module.
+ * Resolves a tag name from register() calls in an index file.
  *
- * @param filePath - File path to inspect.
- * @param exportName - Exported symbol name to resolve.
+ * @param sourceFile - Source file to inspect.
+ * @param baseDir
+ * @param modulePath
+ * @param componentFilePath
+ * @param initializer
  * @param componentDir - Component directory for namespace lookup.
- * @param visited - Set of visited file paths to prevent cycles.
- * @returns Tag name or null when unresolved.
+ * @param className - Optional class name to prioritize.
+ * @returns Tag name and optional warning.
  */
-function resolveExportedValue(
-  filePath: string,
-  exportName: string,
+const resolveNamespaceFromConstants = (
   componentDir: string,
-  visited: Set<string>,
-): string | null {
-  const resolvedPath = path.resolve(filePath);
-  if (visited.has(resolvedPath)) {
-    return null;
-  }
-  visited.add(resolvedPath);
-
-  const contents = readFileIfExists(resolvedPath);
+): { prefix: string; separator: string } | null => {
+  const constantsPath = path.resolve(
+    componentDir,
+    "../../utils/tag-name/constants.ts",
+  );
+  const contents = readFileIfExists(constantsPath);
   if (!contents) {
     return null;
   }
 
-  const sourceFile = createSourceFile(resolvedPath, contents);
-
-  const localMatch = sourceFile.statements
-    .filter(ts.isVariableStatement)
-    .flatMap((statement) => statement.declarationList.declarations)
-    .find(
-      (declaration) =>
-        ts.isIdentifier(declaration.name) &&
-        declaration.name.text === exportName,
-    );
-
-  if (localMatch?.initializer) {
-    return resolveTagNameInitializer(localMatch.initializer, componentDir);
+  const prefixMatch = contents.match(/PREFIX:\s*['"]([^'"]+)['"]/);
+  const separatorMatch = contents.match(/SEPARATOR:\s*['"]([^'"]+)['"]/);
+  if (!prefixMatch || !separatorMatch) {
+    return null;
   }
 
-  const exportDeclarations = sourceFile.statements.filter(
-    ts.isExportDeclaration,
-  );
-  for (const exportDecl of exportDeclarations) {
-    const { moduleSpecifier } = exportDecl;
-    const { exportClause } = exportDecl;
-
-    if (!moduleSpecifier && exportClause && ts.isNamedExports(exportClause)) {
-      const match = exportClause.elements.find(
-        (element) => element.name.text === exportName,
-      );
-      if (match) {
-        const localName = match.propertyName?.text ?? match.name.text;
-        const resolved = resolveIdentifierNameValue(
-          sourceFile,
-          localName,
-          componentDir,
-          visited,
-        );
-        if (resolved) {
-          return resolved;
-        }
-      }
-      continue;
-    }
-
-    if (!moduleSpecifier || !ts.isStringLiteral(moduleSpecifier)) {
-      continue;
-    }
-
-    const targetPath = resolveModulePath(
-      path.dirname(resolvedPath),
-      moduleSpecifier.text,
-      componentDir,
-    );
-    if (!targetPath) {
-      continue;
-    }
-
-    if (!exportClause) {
-      const resolved = resolveExportedValue(
-        targetPath,
-        exportName,
-        componentDir,
-        visited,
-      );
-      if (resolved) {
-        return resolved;
-      }
-      continue;
-    }
-
-    if (ts.isNamedExports(exportClause)) {
-      const match = exportClause.elements.find(
-        (element) => element.name.text === exportName,
-      );
-      if (!match) {
-        continue;
-      }
-      const forwardedName = match.propertyName?.text ?? match.name.text;
-      const resolved = resolveExportedValue(
-        targetPath,
-        forwardedName,
-        componentDir,
-        visited,
-      );
-      if (resolved) {
-        return resolved;
-      }
-    }
-  }
-
-  return null;
-}
+  return {
+    prefix: prefixMatch[1],
+    separator: separatorMatch[1],
+  };
+};
 
 /**
- * Resolves a tag name from register() calls in an index file.
+ * Resolves a tag name from a component index.ts file.
  *
- * @param sourceFile - Source file to inspect.
- * @param componentDir - Component directory for namespace lookup.
+ * @param sourceFile
+ * @param baseDir
+ * @param modulePath
+ * @param initializer
+ * @param componentDir - Component directory to search.
  * @param className - Optional class name to prioritize.
- * @returns Tag name and optional warning.
+ * @param options
+ * @returns Tag name and collected warnings.
+ */
+export const resolveTagName = (
+  options: TagNameResolverOptions,
+): TagNameResolution => {
+  const warnings: string[] = [];
+
+  const jsdocTagName = resolveFromJSDoc(
+    options.classDeclaration,
+    options.astData,
+  );
+  if (jsdocTagName) {
+    return {
+      tagName: jsdocTagName,
+      source: TagNameSource.JSDoc,
+      warnings,
+    };
+  }
+
+  const indexResult = resolveFromIndexFile(
+    options.componentDir,
+    options.className,
+  );
+  if (indexResult.tagName) {
+    return {
+      tagName: indexResult.tagName,
+      source: TagNameSource.IndexTs,
+      warnings: warnings.concat(indexResult.warnings),
+    };
+  }
+
+  warnings.push(...indexResult.warnings);
+
+  return {
+    tagName: resolveFromFilename(
+      options.componentFilePath,
+      options.componentDir,
+    ),
+    source: TagNameSource.Filename,
+    warnings,
+  };
+};
+
+/**
+ * Resolves a tag name from the component file name.
+ *
+ * @param componentFilePath - Component file path to derive from.
+ * @param sourceFile
+ * @param initializer
+ * @param componentDir - Component directory for namespace lookup.
+ * @param className
+ * @param options
+ * @returns Derived tag name.
  */
 const resolveTagNameFromRegister = (
   sourceFile: ts.SourceFile,
@@ -521,94 +656,40 @@ const resolveTagNameFromRegister = (
 };
 
 /**
- * Resolves a tag name from a component index.ts file.
- *
- * @param componentDir - Component directory to search.
- * @param className - Optional class name to prioritize.
- * @returns Tag name and collected warnings.
- */
-const resolveFromIndexFile = (
-  componentDir: string,
-  className?: string,
-): { tagName: string | null; warnings: string[] } => {
-  const indexPath = path.join(componentDir, "index.ts");
-  const contents = readFileIfExists(indexPath);
-  if (!contents) {
-    return { tagName: null, warnings: [] };
-  }
-
-  const sourceFile = createSourceFile(indexPath, contents);
-  const { tagName, warning } = resolveTagNameFromRegister(
-    sourceFile,
-    componentDir,
-    className,
-  );
-
-  return { tagName, warnings: warning ? [warning] : [] };
-};
-
-/**
- * Resolves a tag name from the component file name.
- *
- * @param componentFilePath - Component file path to derive from.
- * @param componentDir - Component directory for namespace lookup.
- * @returns Derived tag name.
- */
-const resolveFromFilename = (
-  componentFilePath: string,
-  componentDir: string,
-): string => {
-  const fileBase = path
-    .basename(componentFilePath)
-    .replace(/\.component\.(t|j)sx?$/, "")
-    .replace(/\.(t|j)sx?$/, "");
-  const derived = toKebabCase(fileBase);
-  return applyNamespace(componentDir, derived);
-};
-
-/**
  * Resolves a component tag name using available discovery strategies.
  *
  * @param options - Resolution options including component paths and class info.
+ * @param sourceFile
+ * @param initializer
+ * @param componentDir
+ * @param className
  * @returns Resolved tag name, source, and warnings.
  */
-export const resolveTagName = (
-  options: TagNameResolverOptions,
-): TagNameResolution => {
-  const warnings: string[] = [];
-
-  const jsdocTagName = resolveFromJSDoc(
-    options.classDeclaration,
-    options.astData,
-  );
-  if (jsdocTagName) {
-    return {
-      tagName: jsdocTagName,
-      source: TagNameSource.JSDoc,
-      warnings,
-    };
+const resolveTagNameInitializer = (
+  initializer: ts.Expression,
+  componentDir: string,
+): string | null => {
+  const literal = getLiteralValue(initializer);
+  if (typeof literal === "string") {
+    return literal;
   }
 
-  const indexResult = resolveFromIndexFile(
-    options.componentDir,
-    options.className,
-  );
-  if (indexResult.tagName) {
-    return {
-      tagName: indexResult.tagName,
-      source: TagNameSource.IndexTs,
-      warnings: warnings.concat(indexResult.warnings),
-    };
+  if (ts.isCallExpression(initializer)) {
+    const callee = initializer.expression;
+    const calleeName = ts.isIdentifier(callee)
+      ? callee.text
+      : ts.isPropertyAccessExpression(callee)
+        ? callee.name.text
+        : "";
+
+    if (calleeName === "constructTagName") {
+      const [arg] = initializer.arguments;
+      const argLiteral = getLiteralValue(arg);
+      if (typeof argLiteral === "string") {
+        return applyNamespace(componentDir, argLiteral);
+      }
+    }
   }
 
-  warnings.push(...indexResult.warnings);
-
-  return {
-    tagName: resolveFromFilename(
-      options.componentFilePath,
-      options.componentDir,
-    ),
-    source: TagNameSource.Filename,
-    warnings,
-  };
+  return null;
 };
