@@ -25,11 +25,10 @@
 import ts from "typescript";
 
 /**
- * Extracts the first JSDoc summary for a node.
+ * Retrieves the options object for a decorator call expression.
  *
- * @param node - AST node to inspect.
- * @param decorator
- * @returns Summary text or null when missing.
+ * @param decorator - Decorator node to inspect.
+ * @returns Object literal options or null when unavailable.
  */
 export const getDecoratorOptions = (
   decorator: ts.Decorator,
@@ -46,11 +45,10 @@ export const getDecoratorOptions = (
 };
 
 /**
- * Extracts text from a JSDoc tag.
+ * Extracts the first JSDoc summary for a node.
  *
- * @param tag - JSDoc tag to read.
- * @param node
- * @returns Tag text content.
+ * @param node - AST node to inspect.
+ * @returns Summary text or null when missing.
  */
 export const getJSDocSummary = (node: ts.Node): string | null => {
   const docs = ts.getJSDocCommentsAndTags(node).filter(ts.isJSDoc);
@@ -71,11 +69,10 @@ export const getJSDocSummary = (node: ts.Node): string | null => {
 };
 
 /**
- * Retrieves the options object for a decorator call expression.
+ * Extracts text from a JSDoc tag.
  *
- * @param decorator - Decorator node to inspect.
- * @param tag
- * @returns Object literal options or null when unavailable.
+ * @param tag - JSDoc tag to read.
+ * @returns Tag text content.
  */
 export const getJSDocTagText = (tag: ts.JSDocTag): string => {
   if (!tag.comment) {
