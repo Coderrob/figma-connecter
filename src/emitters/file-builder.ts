@@ -23,16 +23,16 @@
  * @module emitters/file-builder
  */
 
-import { GENERATED_SECTION_MARKERS } from '../core/constants';
+import { GENERATED_SECTION_MARKERS } from "../core/constants";
 import {
   type EmitResult,
   FileChangeStatus,
   type GeneratedSectionMarkers,
   GeneratedSectionName,
   type GeneratedSectionPayload,
-} from '../core/types';
+} from "../core/types";
 
-import { indent, indentBlock } from './formatting';
+import { indent, indentBlock } from "./formatting";
 
 /**
  * Draft state for building an emitter file payload.
@@ -64,12 +64,15 @@ export type FilePayloadBuilder = (draft: FilePayloadDraft) => FilePayloadDraft;
  * @param {...any} builders
  * @returns Initialized file payload draft.
  */
-export const buildFilePayload = (draft: FilePayloadDraft, ...builders: FilePayloadBuilder[]): EmitResult => {
+export const buildFilePayload = (
+  draft: FilePayloadDraft,
+  ...builders: FilePayloadBuilder[]
+): EmitResult => {
   const built = builders.reduce((acc, builder) => builder(acc), draft);
   return {
     filePath: built.filePath,
     action: built.action,
-    content: built.contentLines.join('\n'),
+    content: built.contentLines.join("\n"),
     sections: built.sections.length > 0 ? built.sections : undefined,
     warnings: built.warnings,
   };
@@ -103,7 +106,12 @@ export const createFilePayload = (
  * @returns File payload builder.
  */
 export const withExample = (input: SectionBuilderInput): FilePayloadBuilder => {
-  const { content, markers, name = GeneratedSectionName.Example, depth = 1 } = input;
+  const {
+    content,
+    markers,
+    name = GeneratedSectionName.Example,
+    depth = 1,
+  } = input;
   return withSections({
     lines: wrapGeneratedSection(content, markers, depth),
     sections: [{ name, content, markers }],
@@ -161,7 +169,12 @@ export const withImports =
  * @returns File payload builder.
  */
 export const withProps = (input: SectionBuilderInput): FilePayloadBuilder => {
-  const { content, markers, name = GeneratedSectionName.Props, depth = 1 } = input;
+  const {
+    content,
+    markers,
+    name = GeneratedSectionName.Props,
+    depth = 1,
+  } = input;
   return withSections({
     lines: wrapGeneratedSection(content, markers, depth),
     sections: [{ name, content, markers }],
@@ -188,7 +201,9 @@ export const withSections =
   (draft) => ({
     ...draft,
     contentLines: draft.contentLines.concat(block.lines),
-    sections: block.sections ? draft.sections.concat(block.sections) : draft.sections,
+    sections: block.sections
+      ? draft.sections.concat(block.sections)
+      : draft.sections,
   });
 
 /**
@@ -226,4 +241,8 @@ export const wrapGeneratedSection = (
   content: string,
   markers: GeneratedSectionMarkers = GENERATED_SECTION_MARKERS,
   depth = 1,
-): string[] => [`${indent(depth)}${markers.start}`, ...indentBlock(content, depth), `${indent(depth)}${markers.end}`];
+): string[] => [
+  `${indent(depth)}${markers.start}`,
+  ...indentBlock(content, depth),
+  `${indent(depth)}${markers.end}`,
+];

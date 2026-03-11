@@ -93,7 +93,9 @@ const getReturnExpression = (
     ts.isFunctionDeclaration(declaration) ||
     ts.isFunctionExpression(declaration)
   ) {
-    return declaration.body ? getReturnExpressionFromBlock(declaration.body) : null;
+    return declaration.body
+      ? getReturnExpressionFromBlock(declaration.body)
+      : null;
   }
 
   if (ts.isVariableDeclaration(declaration)) {
@@ -195,7 +197,9 @@ const getReturnExpressionFromVariableDeclaration = (
     return getReturnExpressionFromBlock(initializer.body);
   }
   if (ts.isFunctionExpression(initializer)) {
-    return initializer.body ? getReturnExpressionFromBlock(initializer.body) : null;
+    return initializer.body
+      ? getReturnExpressionFromBlock(initializer.body)
+      : null;
   }
   return null;
 };

@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-import ts from 'typescript';
+import ts from "typescript";
 
-import type { PropertyDescriptor, ExtractionResult } from '../../core/types';
-import { FigmaPropertyType, PropertyVisibility } from '../../core/types';
-import { toKebabCase } from '../../utils/strings';
-import { getDecoratorOptions, getJSDocSummary, getLiteralValue } from '../../utils/ts';
+import type { PropertyDescriptor, ExtractionResult } from "../../core/types";
+import { FigmaPropertyType, PropertyVisibility } from "../../core/types";
+import { toKebabCase } from "../../utils/strings";
+import {
+  getDecoratorOptions,
+  getJSDocSummary,
+  getLiteralValue,
+} from "../../utils/ts";
 
-import { extractFromChain } from './chain-extractor';
+import { extractFromChain } from "./chain-extractor";
 
 /**
  * Result of property extraction containing properties and warnings.
@@ -55,7 +59,10 @@ const extractPropertyDecoratorsFromClass = (
   const { checker } = context;
 
   for (const member of classNode.members) {
-    if (!ts.isPropertyDeclaration(member) && !ts.isGetAccessorDeclaration(member)) {
+    if (
+      !ts.isPropertyDeclaration(member) &&
+      !ts.isGetAccessorDeclaration(member)
+    ) {
       continue;
     }
     if (ts.isPrivateIdentifier(member.name)) {
@@ -65,12 +72,16 @@ const extractPropertyDecoratorsFromClass = (
     if (modifierFlags & ts.ModifierFlags.Private) {
       continue;
     }
-    const hasProtectedProperty = Boolean(modifierFlags & ts.ModifierFlags.Protected);
+    const hasProtectedProperty = Boolean(
+      modifierFlags & ts.ModifierFlags.Protected,
+    );
     const visibility: PropertyVisibility = hasProtectedProperty
       ? PropertyVisibility.Protected
       : PropertyVisibility.Public;
 
-    const decorators = ts.canHaveDecorators(member) ? (ts.getDecorators(member) ?? []) : [];
+    const decorators = ts.canHaveDecorators(member)
+      ? (ts.getDecorators(member) ?? [])
+      : [];
     const propertyDecorator = decorators.find(isPropertyDecorator);
     if (!propertyDecorator) {
       continue;
@@ -78,17 +89,32 @@ const extractPropertyDecoratorsFromClass = (
 
     const propertyName = getPropertyName(member);
     if (!propertyName) {
-      warnings.push(`Unable to resolve property name for member: ${member.getText(sourceFile)}`);
+      warnings.push(
+        `Unable to resolve property name for member: ${member.getText(sourceFile)}`,
+      );
       continue;
     }
 
-    const { typeName, attribute, reflect } = parseDecoratorOptions(propertyDecorator, sourceFile);
-    const enumValuesFromNode = getEnumValuesFromTypeNode(ts.isPropertyDeclaration(member) ? member.type : undefined);
-    const enumValuesFromType = enumValuesFromNode ?? getEnumValuesFromType(checker.getTypeAtLocation(member));
+    const { typeName, attribute, reflect } = parseDecoratorOptions(
+      propertyDecorator,
+      sourceFile,
+    );
+    const enumValuesFromNode = getEnumValuesFromTypeNode(
+      ts.isPropertyDeclaration(member) ? member.type : undefined,
+    );
+    const enumValuesFromType =
+      enumValuesFromNode ??
+      getEnumValuesFromType(checker.getTypeAtLocation(member));
     const tsType = getTsType(member, checker, sourceFile);
-    const figmaType = resolveFigmaType(typeName, enumValuesFromType, tsType, propertyName);
+    const figmaType = resolveFigmaType(
+      typeName,
+      enumValuesFromType,
+      tsType,
+      propertyName,
+    );
 
-    const resolvedAttribute = attribute === null ? null : (attribute ?? toKebabCase(propertyName));
+    const resolvedAttribute =
+      attribute === null ? null : (attribute ?? toKebabCase(propertyName));
 
     const descriptor: PropertyDescriptor = {
       name: propertyName,
@@ -96,10 +122,14 @@ const extractPropertyDecoratorsFromClass = (
       type: figmaType,
       tsType,
       reflect: reflect ?? false,
-      defaultValue: ts.isPropertyDeclaration(member) ? getDefaultValue(member, sourceFile) : null,
+      defaultValue: ts.isPropertyDeclaration(member)
+        ? getDefaultValue(member, sourceFile)
+        : null,
       doc: getJSDocSummary(member),
       visibility,
-      ...(figmaType === FigmaPropertyType.Enum && enumValuesFromType ? { enumValues: enumValuesFromType } : {}),
+      ...(figmaType === FigmaPropertyType.Enum && enumValuesFromType
+        ? { enumValues: enumValuesFromType }
+        : {}),
     };
 
     descriptors.push(descriptor);
@@ -133,7 +163,10 @@ export const extractPropertyDecorators = (
      * @returns Extracted items and warnings for the class node.
      */
     extract: (classNode) => {
-      const { items, warnings } = extractPropertyDecoratorsFromClass(classNode, context);
+      const { items, warnings } = extractPropertyDecoratorsFromClass(
+        classNode,
+        context,
+      );
       return { items, warnings };
     },
     /**
@@ -161,7 +194,10 @@ export const extractPropertyDecorators = (
  * @param type
  * @returns Parsed default value or null when absent.
  */
-const getDefaultValue = (node: ts.PropertyDeclaration, sourceFile: ts.SourceFile): string | number | boolean | null => {
+const getDefaultValue = (
+  node: ts.PropertyDeclaration,
+  sourceFile: ts.SourceFile,
+): string | number | boolean | null => {
   const { initializer } = node;
   if (!initializer) {
     return null;
@@ -183,7 +219,9 @@ const getDefaultValue = (node: ts.PropertyDeclaration, sourceFile: ts.SourceFile
  * @param type
  * @returns Parsed options for type, attribute, and reflect.
  */
-const getEnumValuesFromType = (type: ts.Type | undefined): string[] | undefined => {
+const getEnumValuesFromType = (
+  type: ts.Type | undefined,
+): string[] | undefined => {
   if (!type || !(type.flags & ts.TypeFlags.Union)) {
     return undefined;
   }
@@ -204,13 +242,17 @@ const getEnumValuesFromType = (type: ts.Type | undefined): string[] | undefined 
  * @param node
  * @returns Array of literal values or undefined when not a literal union.
  */
-const getEnumValuesFromTypeNode = (typeNode?: ts.TypeNode): string[] | undefined => {
+const getEnumValuesFromTypeNode = (
+  typeNode?: ts.TypeNode,
+): string[] | undefined => {
   if (!typeNode || !ts.isUnionTypeNode(typeNode)) {
     return undefined;
   }
   const values = typeNode.types
     .filter(ts.isLiteralTypeNode)
-    .map((literal) => (ts.isStringLiteral(literal.literal) ? literal.literal.text : null))
+    .map((literal) =>
+      ts.isStringLiteral(literal.literal) ? literal.literal.text : null,
+    )
     .filter((value): value is string => Boolean(value));
 
   return values.length > 0 ? values : undefined;
@@ -237,7 +279,7 @@ const getPropertyName = (node: ts.NamedDeclaration): string | null => {
   }
   if (ts.isComputedPropertyName(name)) {
     const literal = getLiteralValue(name.expression);
-    if (typeof literal === 'string') {
+    if (typeof literal === "string") {
       return literal;
     }
   }
@@ -255,7 +297,11 @@ const getPropertyName = (node: ts.NamedDeclaration): string | null => {
  * @param context
  * @returns The resolved type string.
  */
-const getTsType = (node: ts.Node, checker: ts.TypeChecker, sourceFile: ts.SourceFile): string => {
+const getTsType = (
+  node: ts.Node,
+  checker: ts.TypeChecker,
+  sourceFile: ts.SourceFile,
+): string => {
   if (ts.isPropertyDeclaration(node) || ts.isGetAccessorDeclaration(node)) {
     if (node.type) {
       return node.type.getText(sourceFile);
@@ -278,17 +324,19 @@ const getTsType = (node: ts.Node, checker: ts.TypeChecker, sourceFile: ts.Source
  * @param sourceFile
  * @returns The mapped Figma property type.
  */
-const isPropertyDecorator = (decorator: ts.Decorator): decorator is ts.Decorator => {
+const isPropertyDecorator = (
+  decorator: ts.Decorator,
+): decorator is ts.Decorator => {
   const { expression } = decorator;
   if (!ts.isCallExpression(expression)) {
     return false;
   }
   const callee = expression.expression;
   if (ts.isIdentifier(callee)) {
-    return callee.text === 'property';
+    return callee.text === "property";
   }
   if (ts.isPropertyAccessExpression(callee)) {
-    return callee.name.text === 'property';
+    return callee.name.text === "property";
   }
   return false;
 };
@@ -331,15 +379,15 @@ const parseDecoratorOptions = (
     }
     const key = property.name.text;
 
-    if (key === 'type') {
+    if (key === "type") {
       if (ts.isIdentifier(property.initializer)) {
         acc.typeName = property.initializer.text;
       } else if (ts.isPropertyAccessExpression(property.initializer)) {
         acc.typeName = property.initializer.name.text;
       }
-    } else if (key === 'attribute') {
+    } else if (key === "attribute") {
       const literal = getLiteralValue(property.initializer);
-      if (!(literal)) {
+      if (!literal) {
         acc.attribute = null;
       } else if (literal) {
         acc.attribute = undefined;
@@ -348,9 +396,9 @@ const parseDecoratorOptions = (
       } else {
         acc.attribute = property.initializer.getText(sourceFile);
       }
-    } else if (key === 'reflect') {
+    } else if (key === "reflect") {
       const literal = getLiteralValue(property.initializer);
-      if (typeof literal === 'boolean') {
+      if (typeof literal === "boolean") {
         acc.reflect = literal;
       }
     }
@@ -378,7 +426,7 @@ const resolveFigmaType = (
 ): FigmaPropertyType => {
   // Pattern-based heuristics: treat HTML tag name properties as strings, not enums
   // These are implementation details, not design-system variants
-  const isTagNameProperty = propertyName.toLowerCase().endsWith('tagname');
+  const isTagNameProperty = propertyName.toLowerCase().endsWith("tagname");
   if (isTagNameProperty && enumValues && enumValues.length > 0) {
     return FigmaPropertyType.String;
   }
@@ -389,25 +437,25 @@ const resolveFigmaType = (
   }
 
   // Explicit decorator type declarations
-  if (typeName === 'String') {
+  if (typeName === "String") {
     return FigmaPropertyType.String;
   }
-  if (typeName === 'Number') {
+  if (typeName === "Number") {
     return FigmaPropertyType.Number;
   }
-  if (typeName === 'Boolean') {
+  if (typeName === "Boolean") {
     return FigmaPropertyType.Boolean;
   }
 
   // Inferred TypeScript types
   const normalized = tsType.toLowerCase();
-  if (normalized === 'string') {
+  if (normalized === "string") {
     return FigmaPropertyType.String;
   }
-  if (normalized === 'number') {
+  if (normalized === "number") {
     return FigmaPropertyType.Number;
   }
-  if (normalized === 'boolean') {
+  if (normalized === "boolean") {
     return FigmaPropertyType.Boolean;
   }
 

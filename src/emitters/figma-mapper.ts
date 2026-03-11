@@ -23,10 +23,10 @@
  * @module emitters/figma-mapper
  */
 
-import type { ComponentModel, PropertyDescriptor } from '../core/types';
-import { normalizedBasename } from '../utils/paths';
+import type { ComponentModel, PropertyDescriptor } from "../core/types";
+import { normalizedBasename } from "../utils/paths";
 
-import { toTitleCase } from './formatting';
+import { toTitleCase } from "./formatting";
 
 /**
  * Result of mapping a property to Figma syntax.
@@ -77,7 +77,7 @@ export const mapPropToFigma = (prop: PropertyDescriptor): FigmaPropMapping => {
 
   // Handle enum types with values
   const propType = prop.type as string;
-  if (propType === 'enum' && prop.enumValues && prop.enumValues.length > 0) {
+  if (propType === "enum" && prop.enumValues && prop.enumValues.length > 0) {
     const sorted = [...prop.enumValues].sort((a, b) => a.localeCompare(b));
     const lines = [
       `figma.enum('${label}', {`,
@@ -85,7 +85,7 @@ export const mapPropToFigma = (prop: PropertyDescriptor): FigmaPropMapping => {
         const key = toTitleCase(value);
         return `'${key}': ${JSON.stringify(value)},`;
       }),
-      '})',
+      "})",
     ];
     return { lines };
   }
@@ -117,5 +117,6 @@ export const mapPropToFigma = (prop: PropertyDescriptor): FigmaPropMapping => {
  * @param items
  * @returns The base name (e.g., 'button' from 'button.component.ts').
  */
-export const sortByName = <T extends { name: string }>(items: readonly T[]): T[] =>
-  [...items].sort((a, b) => a.name.localeCompare(b.name));
+export const sortByName = <T extends { name: string }>(
+  items: readonly T[],
+): T[] => [...items].sort((a, b) => a.name.localeCompare(b.name));

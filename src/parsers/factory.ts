@@ -28,10 +28,10 @@
  * @module parsers/factory
  */
 
-import { RegistryFactory } from '../core/registry-factory';
+import { RegistryFactory } from "../core/registry-factory";
 
-import { type Parser, ParserTarget } from './types';
-import { WebComponentParser } from './webcomponent';
+import { type Parser, ParserTarget } from "./types";
+import { WebComponentParser } from "./webcomponent";
 
 /**
  * Metadata describing a parser's capabilities and configuration.
@@ -60,13 +60,18 @@ export interface ParserPluginOptions {
  * @param target
  * @returns Web Component parser.
  */
-export const createDefaultParser = (): Parser => parserFactory.createDefaultInstance();
+export const createDefaultParser = (): Parser =>
+  parserFactory.createDefaultInstance();
 
 /**
  * Parser factory implementation extending generic registry factory.
  */
-class ParserFactoryImpl extends RegistryFactory<ParserTarget, Parser, ParserMetadata> {
-  protected readonly factoryTypeName = 'Parser';
+class ParserFactoryImpl extends RegistryFactory<
+  ParserTarget,
+  Parser,
+  ParserMetadata
+> {
+  protected readonly factoryTypeName = "Parser";
 }
 
 /**
@@ -78,9 +83,10 @@ const parserFactory = new ParserFactoryImpl([
     {
       factory: createWebComponentParser,
       metadata: {
-        displayName: 'Web Component',
-        description: 'Parses LitElement-based Web Components with @property decorators',
-        filePatterns: ['*.component.ts', '*.element.ts'],
+        displayName: "Web Component",
+        description:
+          "Parses LitElement-based Web Components with @property decorators",
+        filePatterns: ["*.component.ts", "*.element.ts"],
       },
     },
   ],
@@ -110,7 +116,8 @@ const parserFactory = new ParserFactoryImpl([
  * ```
  * @returns TODO: describe return value
  */
-export const createParser = (target: ParserTarget): Parser => parserFactory.createInstance(target);
+export const createParser = (target: ParserTarget): Parser =>
+  parserFactory.createInstance(target);
 
 /**
  * Checks if a parser target is registered.
@@ -128,8 +135,10 @@ const createWebComponentParser = (): Parser => new WebComponentParser();
  * @param target
  * @returns Array of registered parser targets.
  */
-export const getAllParserMetadata = (): ReadonlyMap<ParserTarget, ParserMetadata> =>
-  parserFactory.getAllMetadata();
+export const getAllParserMetadata = (): ReadonlyMap<
+  ParserTarget,
+  ParserMetadata
+> => parserFactory.getAllMetadata();
 
 /**
  * Gets metadata for a specific parser target.
@@ -138,7 +147,8 @@ export const getAllParserMetadata = (): ReadonlyMap<ParserTarget, ParserMetadata
  * @param options
  * @returns Metadata for the target.
  */
-export const getDefaultParserTarget = (): ParserTarget => parserFactory.getDefaultTarget();
+export const getDefaultParserTarget = (): ParserTarget =>
+  parserFactory.getDefaultTarget();
 
 /**
  * Gets metadata for all registered parsers.
@@ -147,7 +157,8 @@ export const getDefaultParserTarget = (): ParserTarget => parserFactory.getDefau
  * @param target
  * @returns Map of targets to their metadata.
  */
-export const getParserMetadata = (target: ParserTarget): ParserMetadata => parserFactory.getMetadata(target);
+export const getParserMetadata = (target: ParserTarget): ParserMetadata =>
+  parserFactory.getMetadata(target);
 
 /**
  * Returns the default parser target.
@@ -156,7 +167,8 @@ export const getParserMetadata = (target: ParserTarget): ParserMetadata => parse
  * @param options
  * @returns The first registered parser target.
  */
-export const hasParserPlugin = (target: ParserTarget): boolean => parserFactory.hasPlugin(target);
+export const hasParserPlugin = (target: ParserTarget): boolean =>
+  parserFactory.hasPlugin(target);
 
 /**
  * Creates a parser instance for the requested target.
@@ -165,7 +177,8 @@ export const hasParserPlugin = (target: ParserTarget): boolean => parserFactory.
  * @param options
  * @returns Parser instance for the target.
  */
-export const listParserTargets = (): ParserTarget[] => parserFactory.listTargets();
+export const listParserTargets = (): ParserTarget[] =>
+  parserFactory.listTargets();
 
 /**
  * Creates the default parser instance.

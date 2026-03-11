@@ -61,7 +61,10 @@ export interface AggregateResult<T> {
  * @param diagnostics
  * @returns New result object.
  */
-export function addDiagnostics<T>(result: Result<T>, diagnostics: Diagnostics): Result<T> {
+export function addDiagnostics<T>(
+  result: Result<T>,
+  diagnostics: Diagnostics,
+): Result<T> {
   return mergeDiagnostics(result, diagnostics);
 }
 
@@ -90,7 +93,10 @@ export function addError<T>(result: Result<T>, error: string): Result<T> {
  * @param warning
  * @returns Result with merged errors.
  */
-export function addErrors<T>(result: Result<T>, errors: readonly string[]): Result<T> {
+export function addErrors<T>(
+  result: Result<T>,
+  errors: readonly string[],
+): Result<T> {
   return mergeErrors(result, errors);
 }
 
@@ -120,7 +126,10 @@ export function addWarning<T>(result: Result<T>, warning: string): Result<T> {
  * @param errors
  * @returns Result with warning appended.
  */
-export function addWarnings<T>(result: Result<T>, warnings: readonly string[]): Result<T> {
+export function addWarnings<T>(
+  result: Result<T>,
+  warnings: readonly string[],
+): Result<T> {
   return mergeWarnings(result, warnings);
 }
 
@@ -134,9 +143,9 @@ export function addWarnings<T>(result: Result<T>, warnings: readonly string[]): 
  * @param errors
  * @returns Result with warnings appended.
  */
-export function applyDiagnostics<T extends { warnings: readonly string[]; errors: readonly string[] }>(
-  result: Result<T>,
-): T {
+export function applyDiagnostics<
+  T extends { warnings: readonly string[]; errors: readonly string[] },
+>(result: Result<T>): T {
   if (result.warnings.length === 0 && result.errors.length === 0) {
     return result.value;
   }
@@ -159,7 +168,10 @@ export function applyDiagnostics<T extends { warnings: readonly string[]; errors
  * @param errors
  * @returns Result with error appended.
  */
-export function chain<T, U>(result: Result<T>, mapper: (value: T) => Result<U>): Result<U> {
+export function chain<T, U>(
+  result: Result<T>,
+  mapper: (value: T) => Result<U>,
+): Result<U> {
   const next = mapper(result.value);
   return {
     value: next.value,
@@ -177,7 +189,11 @@ export function chain<T, U>(result: Result<T>, mapper: (value: T) => Result<U>):
  * @param {...any} diagnostics
  * @returns Result with errors appended.
  */
-export function createResult<T>(value: T, warnings: readonly string[] = [], errors: readonly string[] = []): Result<T> {
+export function createResult<T>(
+  value: T,
+  warnings: readonly string[] = [],
+  errors: readonly string[] = [],
+): Result<T> {
   return {
     value,
     warnings: [...warnings],
@@ -194,7 +210,9 @@ export function createResult<T>(value: T, warnings: readonly string[] = [], erro
  * @param warnings
  * @returns Result with merged diagnostics.
  */
-export function aggregateResults<T>(items: readonly Result<T>[]): AggregateResult<T> {
+export function aggregateResults<T>(
+  items: readonly Result<T>[],
+): AggregateResult<T> {
   const warnings = items.flatMap((item) => item.warnings);
   const errors = items.flatMap((item) => item.errors);
   return {
@@ -214,7 +232,10 @@ export function aggregateResults<T>(items: readonly Result<T>[]): AggregateResul
  * @param warnings
  * @returns Result with merged diagnostics.
  */
-export function mergeErrors<T>(result: Result<T>, errors: readonly string[]): Result<T> {
+export function mergeErrors<T>(
+  result: Result<T>,
+  errors: readonly string[],
+): Result<T> {
   if (errors.length === 0) {
     return result;
   }
@@ -234,9 +255,9 @@ export function mergeErrors<T>(result: Result<T>, errors: readonly string[]): Re
  * @param warnings
  * @returns True when warnings exist.
  */
-export function applyAggregateDiagnostics<T extends { warnings: readonly string[]; errors: readonly string[] }>(
-  aggregate: AggregateResult<T>,
-): T[] {
+export function applyAggregateDiagnostics<
+  T extends { warnings: readonly string[]; errors: readonly string[] },
+>(aggregate: AggregateResult<T>): T[] {
   return aggregate.items.map((item) => applyDiagnostics(item));
 }
 
@@ -249,7 +270,10 @@ export function applyAggregateDiagnostics<T extends { warnings: readonly string[
  * @param items
  * @returns True when errors exist.
  */
-export function mergeWarnings<T>(result: Result<T>, warnings: readonly string[]): Result<T> {
+export function mergeWarnings<T>(
+  result: Result<T>,
+  warnings: readonly string[],
+): Result<T> {
   if (warnings.length === 0) {
     return result;
   }
@@ -268,7 +292,10 @@ export function mergeWarnings<T>(result: Result<T>, warnings: readonly string[])
  * @param aggregate
  * @returns True when warnings or errors exist.
  */
-export function createResultWithDiagnostics<T>(value: T, diagnostics: Diagnostics): Result<T> {
+export function createResultWithDiagnostics<T>(
+  value: T,
+  diagnostics: Diagnostics,
+): Result<T> {
   return addDiagnostics(createResult(value), diagnostics);
 }
 
@@ -280,7 +307,10 @@ export function createResultWithDiagnostics<T>(value: T, diagnostics: Diagnostic
  * @param diagnostics
  * @returns Value with diagnostics merged in.
  */
-export function mergeDiagnostics<T>(result: Result<T>, ...diagnostics: readonly Diagnostics[]): Result<T> {
+export function mergeDiagnostics<T>(
+  result: Result<T>,
+  ...diagnostics: readonly Diagnostics[]
+): Result<T> {
   if (diagnostics.length === 0) {
     return result;
   }
@@ -347,7 +377,10 @@ export function hasWarnings(diagnostics: Diagnostics): boolean {
  * @param mapper
  * @returns Array of values with diagnostics applied.
  */
-export function map<T, U>(result: Result<T>, mapper: (value: T) => U): Result<U> {
+export function map<T, U>(
+  result: Result<T>,
+  mapper: (value: T) => U,
+): Result<U> {
   return {
     value: mapper(result.value),
     warnings: result.warnings,

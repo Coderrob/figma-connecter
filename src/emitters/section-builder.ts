@@ -23,10 +23,14 @@
  * @module emitters/section-builder
  */
 
-import type { AttributeDescriptor, EventDescriptor, PropertyDescriptor } from '../core/types';
+import type {
+  AttributeDescriptor,
+  EventDescriptor,
+  PropertyDescriptor,
+} from "../core/types";
 
-import { mapPropToFigma, sortByName } from './figma-mapper';
-import { formatPropAccessor, formatPropKey, indent } from './formatting';
+import { mapPropToFigma, sortByName } from "./figma-mapper";
+import { formatPropAccessor, formatPropKey, indent } from "./formatting";
 
 /**
  * Builds the props section of a Figma connect call.
@@ -38,7 +42,10 @@ import { formatPropAccessor, formatPropKey, indent } from './formatting';
  * @param attributes
  * @returns Object with lines and any warnings encountered.
  */
-export const buildEventsSection = (events: readonly EventDescriptor[], depth = 1): string[] => {
+export const buildEventsSection = (
+  events: readonly EventDescriptor[],
+  depth = 1,
+): string[] => {
   if (events.length === 0) {
     return [`${indent(depth)}events: {},`];
   }
@@ -72,7 +79,10 @@ export interface ExampleTemplate {
  * @param depth
  * @returns The example function string and whether it uses props.
  */
-export const buildExampleTemplate = (tagName: string, attributes: readonly AttributeDescriptor[]): ExampleTemplate => {
+export const buildExampleTemplate = (
+  tagName: string,
+  attributes: readonly AttributeDescriptor[],
+): ExampleTemplate => {
   if (attributes.length === 0) {
     return {
       example: `() => html\`<${tagName}></${tagName}>\``,
@@ -84,7 +94,7 @@ export const buildExampleTemplate = (tagName: string, attributes: readonly Attri
   const bindings = sorted.map((attribute) => {
     const attrType = attribute.type as string;
     const binding =
-      attrType === 'boolean'
+      attrType === "boolean"
         ? `?${attribute.name}=\${${formatPropAccessor(attribute.propertyName)}}`
         : `${attribute.name}="\${${formatPropAccessor(attribute.propertyName)}}"`;
     return `${indent(1)}${binding}`;
@@ -92,7 +102,7 @@ export const buildExampleTemplate = (tagName: string, attributes: readonly Attri
 
   const lines = [`<${tagName}`, ...bindings, `></${tagName}>`];
   return {
-    example: `props => html\`${lines.join('\n')}\``,
+    example: `props => html\`${lines.join("\n")}\``,
     usesProps: true,
   };
 };
@@ -126,17 +136,23 @@ export const buildPropsSection = (
   const aggregated = sorted.reduce((acc, prop) => {
     const figmaMapping = mapPropToFigma(prop);
     const propKey = formatPropKey(prop.name);
-    const warnings = figmaMapping.warning ? acc.warnings.concat(figmaMapping.warning) : acc.warnings;
+    const warnings = figmaMapping.warning
+      ? acc.warnings.concat(figmaMapping.warning)
+      : acc.warnings;
 
     if (figmaMapping.lines.length === 1) {
       return {
         warnings,
-        lines: acc.lines.concat(`${indent(depth + 1)}${propKey}: ${figmaMapping.lines[0]},`),
+        lines: acc.lines.concat(
+          `${indent(depth + 1)}${propKey}: ${figmaMapping.lines[0]},`,
+        ),
       };
     }
 
     // Multi-line (enum) handling
-    const innerLines = figmaMapping.lines.slice(1, -1).map((innerLine) => `${indent(depth + 2)}${innerLine}`);
+    const innerLines = figmaMapping.lines
+      .slice(1, -1)
+      .map((innerLine) => `${indent(depth + 2)}${innerLine}`);
     const lastLine = figmaMapping.lines.at(-1);
     const multiLine = [
       `${indent(depth + 1)}${propKey}: ${figmaMapping.lines[0]}`,
@@ -165,4 +181,8 @@ export const buildPropsSection = (
  * @returns Lines for the events section.
  */
 export const buildReactExampleSection = (className: string): string =>
-  ['example: props => {', `${indent(1)}return <${className} {...props} />;`, '},'].join('\n');
+  [
+    "example: props => {",
+    `${indent(1)}return <${className} {...props} />;`,
+    "},",
+  ].join("\n");

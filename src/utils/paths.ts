@@ -23,10 +23,10 @@
  * @module utils/paths
  */
 
-import path from 'node:path';
+import path from "node:path";
 
 /** POSIX path separator character. */
-export const POSIX_PATH_SEPARATOR = '/';
+export const POSIX_PATH_SEPARATOR = "/";
 
 /**
  * Normalizes a file system path to an absolute, POSIX-style string.
@@ -36,10 +36,10 @@ export const POSIX_PATH_SEPARATOR = '/';
  */
 export const normalizePath = (value: string): string => {
   if (!value) {
-    return '';
+    return "";
   }
 
-  return path.resolve(value).replace(/\\/g, '/');
+  return path.resolve(value).replace(/\\/g, "/");
 };
 
 /**
@@ -56,8 +56,11 @@ export const normalizePath = (value: string): string => {
  * // '/src/components/button/code-connect/button.react.figma.tsx'
  * ```
  */
-export const buildCodeConnectFilePath = (componentDir: string, fileName: string): string =>
-  path.posix.join(componentDir.replace(/\\/g, '/'), 'code-connect', fileName);
+export const buildCodeConnectFilePath = (
+  componentDir: string,
+  fileName: string,
+): string =>
+  path.posix.join(componentDir.replace(/\\/g, "/"), "code-connect", fileName);
 
 /**
  * Returns the POSIX basename of a normalized path.
@@ -86,17 +89,17 @@ export const normalizedBasename = (value: string): string =>
  */
 export const resolveDistReactImportPath = (componentDir: string): string => {
   const normalizedDir = normalizePath(componentDir);
-  const srcMarker = '/src/';
+  const srcMarker = "/src/";
   const markerIndex = normalizedDir.lastIndexOf(srcMarker);
   let rootCandidate = path.posix.dirname(normalizedDir);
   if (markerIndex >= 0) {
     rootCandidate = normalizedDir.slice(0, markerIndex);
   }
   const packageRoot = rootCandidate || path.posix.parse(normalizedDir).root;
-  const distReactPath = path.posix.join(packageRoot, 'dist', 'react');
-  const codeConnectDir = path.posix.join(normalizedDir, 'code-connect');
+  const distReactPath = path.posix.join(packageRoot, "dist", "react");
+  const codeConnectDir = path.posix.join(normalizedDir, "code-connect");
   let relativePath = path.posix.relative(codeConnectDir, distReactPath);
-  if (!relativePath.startsWith('.')) {
+  if (!relativePath.startsWith(".")) {
     relativePath = `./${relativePath}`;
   }
   return relativePath;

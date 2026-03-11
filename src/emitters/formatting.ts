@@ -52,7 +52,8 @@ export const formatPropAccessor = (value: string): string =>
  * @param value
  * @returns A string of spaces for indentation.
  */
-export const formatPropKey = (value: string): string => (isValidIdentifier(value) ? value : `'${value}'`);
+export const formatPropKey = (value: string): string =>
+  isValidIdentifier(value) ? value : `'${value}'`;
 
 /**
  * Indents each line of a content block.
@@ -62,7 +63,7 @@ export const formatPropKey = (value: string): string => (isValidIdentifier(value
  * @param value
  * @returns Array of indented lines.
  */
-export const indent = (depth: number): string => '  '.repeat(depth);
+export const indent = (depth: number): string => "  ".repeat(depth);
 
 // ============================================================================
 // Identifier Handling
@@ -78,7 +79,7 @@ export const indent = (depth: number): string => '  '.repeat(depth);
  */
 export const indentBlock = (content: string, depth: number): string[] => {
   const prefix = indent(depth);
-  return content.split('\n').map((line) => `${prefix}${line}`);
+  return content.split("\n").map((line) => `${prefix}${line}`);
 };
 
 /**
@@ -88,7 +89,8 @@ export const indentBlock = (content: string, depth: number): string[] => {
  * @param value - The property key.
  * @returns The formatted key (e.g., 'disabled' or "'data-value'").
  */
-export const isValidIdentifier = (value: string): boolean => /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
+export const isValidIdentifier = (value: string): boolean =>
+  /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
 
 /**
  * Formats a property accessor for template literals.
@@ -98,10 +100,12 @@ export const isValidIdentifier = (value: string): boolean => /^[A-Za-z_$][A-Za-z
  */
 export const toTitleCase = (value: string): string =>
   value
-    .replaceAll(/[_-]+/g, ' ')
-    .replaceAll(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replaceAll(/[_-]+/g, " ")
+    .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
     .trim()
-    .split(' ')
+    .split(" ")
     .filter(Boolean)
-    .map((token) => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
-    .join(' ');
+    .map(
+      (token) => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase(),
+    )
+    .join(" ");

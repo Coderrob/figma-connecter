@@ -28,12 +28,12 @@
  * @module emitters/factory
  */
 
-import { RegistryFactory } from '../core/registry-factory';
-import { EmitterTarget } from '../core/types';
+import { RegistryFactory } from "../core/registry-factory";
+import { EmitterTarget } from "../core/types";
 
-import { FigmaReactEmitter } from './figma-react';
-import { FigmaWebComponentEmitter } from './figma-webcomponent';
-import type { Emitter } from './types';
+import { FigmaReactEmitter } from "./figma-react";
+import { FigmaWebComponentEmitter } from "./figma-webcomponent";
+import type { Emitter } from "./types";
 
 /**
  * Options for selecting emitter targets from the registry.
@@ -69,7 +69,8 @@ export interface EmitterPluginOptions {
  * @param target
  * @returns Web Component emitter.
  */
-export const createEmitter = (target: EmitterTarget): Emitter => emitterFactory.createInstance(target);
+export const createEmitter = (target: EmitterTarget): Emitter =>
+  emitterFactory.createInstance(target);
 
 /**
  * Creates a React emitter instance.
@@ -82,14 +83,20 @@ export const createEmitters = (options: EmitterFactoryOptions): Emitter[] => {
   const allTargets = emitterFactory.listTargets();
 
   // Iterate in registry order to ensure consistent output
-  return allTargets.filter((target) => targets.has(target)).map((target) => emitterFactory.createInstance(target));
+  return allTargets
+    .filter((target) => targets.has(target))
+    .map((target) => emitterFactory.createInstance(target));
 };
 
 /**
  * Emitter factory implementation extending generic registry factory.
  */
-class EmitterFactoryImpl extends RegistryFactory<EmitterTarget, Emitter, EmitterMetadata> {
-  protected readonly factoryTypeName = 'Emitter';
+class EmitterFactoryImpl extends RegistryFactory<
+  EmitterTarget,
+  Emitter,
+  EmitterMetadata
+> {
+  protected readonly factoryTypeName = "Emitter";
 }
 
 /**
@@ -101,9 +108,9 @@ const emitterFactory = new EmitterFactoryImpl([
     {
       factory: createWebComponentEmitter,
       metadata: {
-        fileExtension: '.webcomponent.figma.ts',
-        displayName: 'Web Component',
-        description: 'Figma Code Connect for HTML/Web Components',
+        fileExtension: ".webcomponent.figma.ts",
+        displayName: "Web Component",
+        description: "Figma Code Connect for HTML/Web Components",
       },
     },
   ],
@@ -112,9 +119,9 @@ const emitterFactory = new EmitterFactoryImpl([
     {
       factory: createReactEmitter,
       metadata: {
-        fileExtension: '.react.figma.tsx',
-        displayName: 'React',
-        description: 'Figma Code Connect for React components',
+        fileExtension: ".react.figma.tsx",
+        displayName: "React",
+        description: "Figma Code Connect for React components",
       },
     },
   ],
@@ -162,8 +169,10 @@ const createWebComponentEmitter = (): Emitter => new FigmaWebComponentEmitter();
  * @param target
  * @returns Array of registered emitter targets.
  */
-export const getAllEmitterMetadata = (): ReadonlyMap<EmitterTarget, EmitterMetadata> =>
-  emitterFactory.getAllMetadata();
+export const getAllEmitterMetadata = (): ReadonlyMap<
+  EmitterTarget,
+  EmitterMetadata
+> => emitterFactory.getAllMetadata();
 
 /**
  * Gets metadata for a specific emitter target.
@@ -172,7 +181,8 @@ export const getAllEmitterMetadata = (): ReadonlyMap<EmitterTarget, EmitterMetad
  * @param options
  * @returns Metadata for the target.
  */
-export const getEmitterMetadata = (target: EmitterTarget): EmitterMetadata => emitterFactory.getMetadata(target);
+export const getEmitterMetadata = (target: EmitterTarget): EmitterMetadata =>
+  emitterFactory.getMetadata(target);
 
 /**
  * Gets metadata for all registered emitters.
@@ -181,7 +191,8 @@ export const getEmitterMetadata = (target: EmitterTarget): EmitterMetadata => em
  * @param target
  * @returns Map of targets to their metadata.
  */
-export const hasEmitterPlugin = (target: EmitterTarget): boolean => emitterFactory.hasPlugin(target);
+export const hasEmitterPlugin = (target: EmitterTarget): boolean =>
+  emitterFactory.hasPlugin(target);
 
 /**
  * Creates a single emitter instance for the requested target.
@@ -190,7 +201,8 @@ export const hasEmitterPlugin = (target: EmitterTarget): boolean => emitterFacto
  * @param options
  * @returns Emitter instance for the target.
  */
-export const listEmitterTargets = (): EmitterTarget[] => emitterFactory.listTargets();
+export const listEmitterTargets = (): EmitterTarget[] =>
+  emitterFactory.listTargets();
 
 /**
  * Creates emitter instances for the requested targets.
