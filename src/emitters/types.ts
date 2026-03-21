@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { ComponentModel, EmitResult, EmitterOptions, EmitterTarget } from '../core/types';
+import type { ComponentModel, EmitResult, EmitterOptions, EmitterTarget } from '@/src/core/types';
 
 /**
  * Context for emitter operations, containing model and emitter options.

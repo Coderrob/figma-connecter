@@ -22,11 +22,24 @@
  * @module utils
  */
 
-// Paths
-// Collections
-// TypeScript AST helpers
-export type { MergeByKeyOptions } from './merge-by-key';
-export { mergeByKey } from './merge-by-key';
-export { normalizePath } from './paths';
-export { kebabToTitleCase, toCamelCase, toKebabCase, toPascalCase, upperCaseFirstCharacter } from './strings';
-export { getDecoratorOptions, getJSDocSummary, getJSDocTagText, getLiteralValue } from './ts';
+export { mergeByKey } from "./merge-by-key";
+export {
+  buildCodeConnectFilePath,
+  normalizedBasename,
+  normalizePath,
+  resolveDistReactImportPath,
+  POSIX_PATH_SEPARATOR
+} from "./paths";
+export {
+  kebabToTitleCase,
+  toCamelCase,
+  toKebabCase,
+  toPascalCase,
+  upperCaseFirstCharacter,
+} from "./strings";
+export {
+  getDecoratorOptions,
+  getJSDocSummary,
+  getJSDocTagText,
+  getLiteralValue,
+} from "./ts";

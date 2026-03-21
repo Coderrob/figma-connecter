@@ -14,11 +14,17 @@
  * limitations under the License.
  */
 
-import path from 'node:path';
-
-import { buildGeneratedSectionMarkers, FIGMA_PACKAGE_HTML } from '../../core/constants';
-import { type EmitResult, EmitterTarget, FileChangeStatus, GeneratedSectionName } from '../../core/types';
-import type { Emitter, EmitterContext } from '../types';
+import {
+  buildGeneratedSectionMarkers,
+  FIGMA_PACKAGE_HTML,
+} from '@/src/core/constants';
+import {
+  type EmitResult,
+  EmitterTarget,
+  FileChangeStatus,
+  GeneratedSectionName,
+} from '@/src/core/types';
+import type { Emitter, EmitterContext } from '@/src/emitters/types';
 import {
   buildExampleTemplate,
   buildFilePayload,
@@ -31,9 +37,10 @@ import {
   withProps,
   withSections,
   withWarnings,
-} from '../utils';
+} from '@/src/emitters/utils';
+import { buildCodeConnectFilePath } from '@/src/utils/paths';
 
-import { buildImportsLine } from './helpers';
+import { buildImportsLine } from "./helpers";
 
 /**
  * Emitter for generating Figma Code Connect files for Web Components.
@@ -52,7 +59,7 @@ export class FigmaWebComponentEmitter implements Emitter {
     const { model, options } = emitterContext;
     const componentName = getComponentBaseName(model);
     const fileName = `${componentName}.webcomponent.figma.ts`;
-    const filePath = path.join(model.componentDir, 'code-connect', fileName);
+    const filePath = buildCodeConnectFilePath(model.componentDir, fileName);
     const figmaUrl = `<FIGMA_${componentName.toUpperCase()}_URL>`;
 
     // Build props section with warning collection
@@ -63,17 +70,35 @@ export class FigmaWebComponentEmitter implements Emitter {
     const importsLine = buildImportsLine(model, options);
 
     // Compose generated section content
-    const propsSection = propsLines.join('\n');
+    const propsSection = propsLines.join("\n");
     const exampleSection = `example: ${example.example},`;
-    const propsMarkers = buildGeneratedSectionMarkers(GeneratedSectionName.Props);
-    const exampleMarkers = buildGeneratedSectionMarkers(GeneratedSectionName.Example);
+    const propsMarkers = buildGeneratedSectionMarkers(
+      GeneratedSectionName.Props,
+    );
+    const exampleMarkers = buildGeneratedSectionMarkers(
+      GeneratedSectionName.Example,
+    );
     return buildFilePayload(
       createFilePayload(filePath, FileChangeStatus.Created),
-      withImports(['// @ts-ignore', `import figma, { html } from '${FIGMA_PACKAGE_HTML}';`, '']),
+      withImports([
+        "// @ts-ignore",
+        `import figma, { html } from '${FIGMA_PACKAGE_HTML}';`,
+        "",
+      ]),
       withSections({ lines: [`figma.connect('${figmaUrl}', {`] }),
-      withProps({ content: propsSection, markers: propsMarkers, name: GeneratedSectionName.Props, depth: 1 }),
-      withExample({ content: exampleSection, markers: exampleMarkers, name: GeneratedSectionName.Example, depth: 1 }),
-      withSections({ lines: [`${indent(1)}${importsLine}`, '});', ''] }),
+      withProps({
+        content: propsSection,
+        markers: propsMarkers,
+        name: GeneratedSectionName.Props,
+        depth: 1,
+      }),
+      withExample({
+        content: exampleSection,
+        markers: exampleMarkers,
+        name: GeneratedSectionName.Example,
+        depth: 1,
+      }),
+      withSections({ lines: [`${indent(1)}${importsLine}`, "});", ""] }),
       withWarnings(warnings),
     );
   }

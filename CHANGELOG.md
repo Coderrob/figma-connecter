@@ -8,13 +8,24 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ## [Unreleased]
 
+### Changed
+
+- Refactor tag-name resolver into focused namespace and export-resolution helpers to reduce responsibilities and cognitive complexity (`bcb7a96`)
+- Refactor pipeline runner report construction into a shared helper and optimize batch result accumulation to avoid repeated array copies (`bbf8c94`)
+
+- Refactor `src/core/logger.ts` to use type guard functions (`isString`, `isNumber`, `isObject`, `isFunction`) replacing verbose `typeof` expressions (`3f2b91c`)
+
 ### Added
 
+- Add JSDoc documentation to `CommandBuilder` class and all public methods in `command-builder.ts` (`e62a497`)
+- Add `ClassDiscoveryMethod` enum to replace string literal union in `ClassSource.discoveryMethod` (`9234c52`)
 - Add custom ESLint rule `custom/no-inline-require-typeof` to prevent inline require() anti-pattern (`f4edc87`)
 - Add import anti-pattern guidelines to AGENTS.md documentation (`f4edc87`)
 - Add `isInsideJestIsolateModules()` helper function in ESLint rule for consistent exception handling (TBD)
 - Add named constants for Figma package imports: `FIGMA_PACKAGE_REACT`, `FIGMA_PACKAGE_HTML` (`f13a67e`)
 - Add `FileChangeStatus` enum for file action types (`f13a67e`)
+- Add `LogContextKey` enum for known `LogContext` property keys (`11bd624`)
+- Add `PRIORITY_CONTEXT_KEYS`, `DURATION_UNIT_SUFFIX`, and `SUCCESS_INDICATOR` named constants to logger (`11bd624`)
 - Add explicit type annotations to all test variables (`b498db9`)
 - Add modular emitter utilities: `formatting.ts`, `figma-mapper.ts`, `section-builder.ts`, `file-builder.ts` (`708338a`)
 - Add 4 branch coverage tests for helpers and emitter edge cases (`c561764`)
@@ -31,12 +42,19 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Changed
 
+- Replace `figmaType as string === 'enum'` with `figmaType === FigmaPropertyType.Enum` in `decorator-extractor.ts` (`9234c52`)
+- Replace `Record<string, string>` mapping and `propType === 'enum'` with `Partial<Record<FigmaPropertyType, string>>` in `figma-mapper.ts` (`9234c52`)
+- Update `component-discovery.ts` to use `ClassDiscoveryMethod` enum values (`9234c52`)
+- Update `component-discovery.test.ts` assertions to use `ClassDiscoveryMethod` enum values (`9234c52`)
+- Export `ClassDiscoveryMethod` from `src/core/index.ts` barrel (`9234c52`)
+- Extract `writeFileWithChange` and `applySectionUpdate` helpers from `writeEmission` in `src/pipeline/batch.ts` to reduce repetition and tighten the write logic (TBD)
 - Replace magic strings with `FIGMA_PACKAGE_REACT` and `FIGMA_PACKAGE_HTML` constants (`f13a67e`)
 - Replace `'created' | 'updated' | 'unchanged'` union type with `FileChangeStatus` enum (`f13a67e`)
 - Update `EmitResult.action` to use `FileChangeStatus` enum instead of string literals (`f13a67e`)
 - Update `FilePayloadDraft.action` to use `FileChangeStatus` enum (`f13a67e`)
 - Update all emitters to use `FileChangeStatus.Created` instead of `'created'` (`f13a67e`)
 - Update all test assertions to use `FileChangeStatus` enum values (`f13a67e`)
+- Replace magic strings in `logger.ts` with `LogContextKey` enum and named constants (`11bd624`)
 - Add explicit `jest.Mock` type annotations to all mock functions in tests (`b498db9`)
 - Add explicit `NodeJS.WriteStream` type annotations to stream objects in tests (`b498db9`)
 - Extract emitter utilities into focused modules, reducing utils.ts from 523 to 56 lines (`708338a`)
@@ -57,6 +75,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 - Improve ESLint rule to check for `jest.isolateModules()` in all visitors, not just VariableDeclarator (TBD)
 - Reorder type assertion check before unwrapping in ESLint rule for proper specialized error message (TBD)
 - Change mock parser `model: null` to `model: undefined` in test to align with actual parser contract (TBD)
+- Refactor `inheritance-resolver.ts` to decompose large conditional expressions into extracted helper functions: `getFunctionBodyFromVariableDeclaration`, `getReturnExpressionFromBlock`, `getReturnExpressionFromVariableDeclaration`, `findClassByNameInBlock`, `isSkippableExpression` (TBD)
 
 ### Removed
 
@@ -68,6 +87,17 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 - Remove backward compatibility comments from tests and documentation (`838479c`)
 
 ### Fixed
+
+- Replace remaining path/line-ending normalization calls with `replaceAll` and remove redundant merge helper assertion (`378e3b8`)
+- Use `node:fs` type import in IO shared types for Node import consistency (`378e3b8`)
+
+- Fix malformed raw template literals in progress/source loader that caused TypeScript parse failures (`b6ace33`)
+- Add Jest alias mapping for `@/` imports to resolve module-not-found test failures (`b6ace33`)
+- Restore `mapResult` compatibility export in core result helpers (`b6ace33`)
+- Correct source readability checks to rely on `R_OK` access semantics across platforms (`b6ace33`)
+- Fix factory initialization order issues causing runtime TDZ errors in parser/emitter factories (`b6ace33`)
+- Fix strict nullability checks in connect handler dry-run logging and decorator enum inference (`b6ace33`)
+- Fix plugin info map typing regression after import/type refactor (`b6ace33`)
 
 - Fix failing unit tests: Update test expectations to match mdc- namespace prefix in fixtures (`pending`).
 - Fix base fixture references: Rename button.component to base.component in base directory index and constants (`pending`).
@@ -93,6 +123,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Changed
 
+- Extract named constants `UNIX_READ_PERMISSION_MASK` and `UNIX_WRITE_PERMISSION_MASK` in `source-loader.ts` to replace cryptic inline octal literals with self-documenting identifiers (TBD)
 - Upgrade ESLint to v9.39.2 with flat config format (`pending`).
 - Migrate all rules from `.eslintrc.cjs` to `eslint.config.mjs` as default config (`pending`).
 - Update typescript-eslint to v8.22.0 for better TypeScript support (`pending`).

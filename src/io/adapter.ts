@@ -22,20 +22,9 @@
  * @module io/adapter
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-
-/**
- * Minimal IO adapter for file operations.
- */
-export interface IoAdapter {
-  /** Checks whether a file exists. */
-  readonly exists: (filePath: string) => boolean;
-  /** Reads file contents as UTF-8. */
-  readonly readFile: (filePath: string) => string;
-  /** Writes file contents as UTF-8, creating directories as needed. */
-  readonly writeFile: (filePath: string, content: string) => void;
-}
+import fs from "node:fs";
+import path from "node:path";
+import type { IoAdapter } from "@/src/types/io";
 
 /**
  * Default IO adapter backed by the Node.js filesystem.
@@ -47,14 +36,14 @@ export const nodeIoAdapter: IoAdapter = {
    * @param filePath - File path to check.
    * @returns True when the file exists.
    */
-  exists: fs.existsSync,
+  exists: (filePath: string) => fs.existsSync(filePath),
   /**
    * Reads file contents as UTF-8.
    *
    * @param filePath - File path to read.
    * @returns File contents.
    */
-  readFile: (filePath: string) => fs.readFileSync(filePath, 'utf8'),
+  readFile: (filePath: string) => fs.readFileSync(filePath, "utf8"),
   /**
    * Writes file contents as UTF-8, creating directories as needed.
    *
@@ -64,8 +53,22 @@ export const nodeIoAdapter: IoAdapter = {
    */
   writeFile: (filePath: string, content: string) => {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, content, 'utf8');
+    fs.writeFileSync(filePath, content, "utf8");
   },
+  /**
+   * Checks file stats.
+   *
+   * @param filePath - File path to stat.
+   * @returns File stats object.
+   */
+  stat: (filePath: string) => fs.statSync(filePath),
+  /**
+   * Lists files in directory.
+   *
+   * @param dirPath - Directory path.
+   * @returns Array of file names.
+   */
+  listFiles: (dirPath: string) => fs.readdirSync(dirPath),
 };
 
 /**
@@ -104,6 +107,7 @@ export class MemoryIoAdapter implements IoAdapter {
    *
    * @param filePath - File path to read.
    * @returns File contents.
+   * @throws Error when the requested file is not present in memory.
    */
   readFile(filePath: string): string {
     const content = this.files.get(filePath);
@@ -124,6 +128,50 @@ export class MemoryIoAdapter implements IoAdapter {
   }
 
   /**
+   * Gets file stats from memory.
+   *
+   * @param {string} filePath - File path to stat.
+   * @returns {object} File stats object.
+   */
+  stat(filePath: string) {
+    const exists = this.files.has(filePath);
+    return {
+      /**
+       * Checks if path is a file.
+       *
+       * @returns {boolean} True if file exists
+       */
+      isFile: () => exists,
+      /**
+       * Checks if path is a directory.
+       *
+       * @returns {boolean} Always false for in-memory adapter
+       */
+      isDirectory: () => false,
+    };
+  }
+
+  /**
+   * Lists files in a directory from memory.
+   *
+   * @param {string} dirPath - Directory path.
+   * @returns {string[]} Array of file names.
+   */
+  listFiles(dirPath: string) {
+    const prefix = dirPath.endsWith("/") ? dirPath : `${dirPath}/`;
+    const files: string[] = [];
+    for (const key of this.files.keys()) {
+      if (key.startsWith(prefix)) {
+        const remainder = key.slice(prefix.length).split("/")[0];
+        if (remainder) {
+          files.push(remainder);
+        }
+      }
+    }
+    return Array.from(new Set(files));
+  }
+
+  /**
    * Exposes stored files for assertions in tests.
    *
    * @returns Map of stored files.
@@ -139,5 +187,8 @@ export class MemoryIoAdapter implements IoAdapter {
  * @param initialFiles - Optional initial file contents.
  * @returns In-memory IO adapter instance.
  */
-export const createMemoryIoAdapter = (initialFiles?: Record<string, string> | Map<string, string>): MemoryIoAdapter =>
-  new MemoryIoAdapter(initialFiles);
+export function createMemoryIoAdapter(
+  initialFiles?: Record<string, string> | Map<string, string>,
+): MemoryIoAdapter {
+  return new MemoryIoAdapter(initialFiles);
+}

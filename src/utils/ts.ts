@@ -22,7 +22,27 @@
  * @module utils/ts
  */
 
-import ts from 'typescript';
+import ts from "typescript";
+
+/**
+ * Retrieves the options object for a decorator call expression.
+ *
+ * @param decorator - Decorator node to inspect.
+ * @returns Object literal options or null when unavailable.
+ */
+export const getDecoratorOptions = (
+  decorator: ts.Decorator,
+): ts.ObjectLiteralExpression | null => {
+  const { expression } = decorator;
+  if (!ts.isCallExpression(expression)) {
+    return null;
+  }
+  const [options] = expression.arguments;
+  if (!options || !ts.isObjectLiteralExpression(options)) {
+    return null;
+  }
+  return options;
+};
 
 /**
  * Extracts the first JSDoc summary for a node.
@@ -39,12 +59,12 @@ export const getJSDocSummary = (node: ts.Node): string | null => {
   if (!comment) {
     return null;
   }
-  if (typeof comment === 'string') {
+  if (typeof comment === "string") {
     return comment.trim();
   }
   return comment
     .map((part) => part.text)
-    .join('')
+    .join("")
     .trim();
 };
 
@@ -56,33 +76,15 @@ export const getJSDocSummary = (node: ts.Node): string | null => {
  */
 export const getJSDocTagText = (tag: ts.JSDocTag): string => {
   if (!tag.comment) {
-    return '';
+    return "";
   }
-  if (typeof tag.comment === 'string') {
+  if (typeof tag.comment === "string") {
     return tag.comment.trim();
   }
   return tag.comment
     .map((part) => part.text)
-    .join('')
+    .join("")
     .trim();
-};
-
-/**
- * Retrieves the options object for a decorator call expression.
- *
- * @param decorator - Decorator node to inspect.
- * @returns Object literal options or null when unavailable.
- */
-export const getDecoratorOptions = (decorator: ts.Decorator): ts.ObjectLiteralExpression | null => {
-  const { expression } = decorator;
-  if (!ts.isCallExpression(expression)) {
-    return null;
-  }
-  const [options] = expression.arguments;
-  if (!options || !ts.isObjectLiteralExpression(options)) {
-    return null;
-  }
-  return options;
 };
 
 /**
@@ -91,7 +93,9 @@ export const getDecoratorOptions = (decorator: ts.Decorator): ts.ObjectLiteralEx
  * @param node - Expression node to inspect.
  * @returns Literal value or null when not a supported literal.
  */
-export const getLiteralValue = (node: ts.Expression | undefined): string | number | boolean | null => {
+export const getLiteralValue = (
+  node: ts.Expression | undefined,
+): string | number | boolean | null => {
   if (!node) {
     return null;
   }

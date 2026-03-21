@@ -25,7 +25,7 @@ import { aggregateResults, createResult } from '../../src/core/result';
 import { EmitterTarget } from '../../src/core/types';
 import type { Emitter } from '../../src/emitters/types';
 import { createMemoryIoAdapter } from '../../src/io/adapter';
-import type { DiscoveredFile } from '../../src/io/file-discovery';
+import type { DiscoveredFile } from '../../src/types/io';
 import type { SourceLoadResult } from '../../src/io/source-loader';
 import type { Parser } from '../../src/parsers/types';
 import { ParserTarget } from '../../src/parsers/types';

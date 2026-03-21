@@ -22,12 +22,7 @@
  * @module utils/merge-by-key
  */
 
-export interface MergeByKeyOptions<TItem, TKey> {
-  /** Returns the key used to merge items. */
-  readonly getKey: (item: TItem) => TKey;
-  /** Merge strategy when the key already exists (defaults to last-in-wins). */
-  readonly merge?: (existing: TItem, incoming: TItem) => TItem;
-}
+import type { MergeByKeyOptions } from "../types/utils";
 
 /**
  * Merges a list of items into a Map keyed by the provided selector.
@@ -47,7 +42,11 @@ export function mergeByKey<TItem, TKey>(
   for (const item of items) {
     const key = options.getKey(item);
     if (map.has(key)) {
-      const existing = map.get(key) as TItem;
+      const existing = map.get(key);
+      if (existing === undefined) {
+        map.set(key, item);
+        continue;
+      }
       map.set(key, merge(existing, item));
     } else {
       map.set(key, item);

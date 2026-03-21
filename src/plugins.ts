@@ -28,7 +28,8 @@ import {
   getAllParserMetadata,
   registerEmitterPlugin as registerEmitterPluginImpl,
   registerParserPlugin as registerParserPluginImpl,
-} from './internal-plugin-registry';
+} from "./internal-plugin-registry";
+import type { IPluginInfo, IPluginOptions } from "./types/plugins";
 
 // Re-export plugin interfaces and functions
 export {
@@ -36,21 +37,50 @@ export {
   hasEmitterPlugin,
   listEmitterTargets,
   registerEmitterPlugin,
-} from './emitters/factory';
-export { hasParserPlugin, listParserTargets, type ParserPluginOptions, registerParserPlugin } from './parsers/factory';
+} from "./emitters/factory";
+export {
+  hasParserPlugin,
+  listParserTargets,
+  type ParserPluginOptions,
+  registerParserPlugin,
+} from "./parsers/factory";
+
+/**
+ * Gets information about all registered plugins.
+ * Useful for debugging and displaying available extensions.
+ *
+ * @returns Plugin information.
+ */
+export function getPluginInfo(): IPluginInfo {
+  const emitterMetadata = getAllEmitterMetadata();
+  const parserMetadata = getAllParserMetadata();
+  const emitters = new Map<string, { displayName: string; description: string }>();
+  const parsers = new Map<string, { displayName: string; description: string }>();
+
+  for (const [target, meta] of Array.from(emitterMetadata)) {
+    emitters.set(target, {
+      displayName: meta.displayName,
+      description: meta.description,
+    });
+  }
+
+  for (const [target, meta] of Array.from(parserMetadata)) {
+    parsers.set(target, {
+      displayName: meta.displayName,
+      description: meta.description,
+    });
+  }
+
+  return {
+    emitters,
+    parsers,
+  };
+}
 
 /**
  * Unified plugin registration options.
  * Allows registering multiple emitters and parsers in a single call.
- */
-export interface PluginOptions {
-  /** Emitter plugins to register */
-  readonly emitters?: readonly import('./emitters/factory').EmitterPluginOptions[];
-  /** Parser plugins to register */
-  readonly parsers?: readonly import('./parsers/factory').ParserPluginOptions[];
-}
-
-/**
+ *
  * Registers one or more plugins in a single call.
  * Provides a convenient interface for plugin packages that bundle
  * both emitters and parsers.
@@ -58,7 +88,7 @@ export interface PluginOptions {
  * @param options - Plugin configuration.
  * @throws Error if any target is already registered.
  */
-export const registerPlugin = (options: PluginOptions): void => {
+export function registerPlugin(options: IPluginOptions): void {
   if (options.emitters) {
     for (const emitter of options.emitters) {
       registerEmitterPluginImpl(emitter);
@@ -70,38 +100,4 @@ export const registerPlugin = (options: PluginOptions): void => {
       registerParserPluginImpl(parser);
     }
   }
-};
-
-/**
- * Plugin information for display purposes.
- */
-export interface PluginInfo {
-  readonly emitters: ReadonlyMap<string, { displayName: string; description: string }>;
-  readonly parsers: ReadonlyMap<string, { displayName: string; description: string }>;
 }
-
-/**
- * Gets information about all registered plugins.
- * Useful for debugging and displaying available extensions.
- *
- * @returns Plugin information.
- */
-export const getPluginInfo = (): PluginInfo => {
-  const emitterMetadata = getAllEmitterMetadata();
-  const parserMetadata = getAllParserMetadata();
-
-  return {
-    emitters: new Map(
-      Array.from(emitterMetadata, ([target, meta]) => [
-        target,
-        { displayName: meta.displayName, description: meta.description },
-      ]),
-    ),
-    parsers: new Map(
-      Array.from(parserMetadata, ([target, meta]) => [
-        target,
-        { displayName: meta.displayName, description: meta.description },
-      ]),
-    ),
-  };
-};

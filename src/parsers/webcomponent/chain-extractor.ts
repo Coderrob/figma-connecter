@@ -22,9 +22,9 @@
  * @module parsers/webcomponent/chain-extractor
  */
 
-import ts from 'typescript';
+import { mergeByKey } from "@/src/utils/merge-by-key";
 
-import { mergeByKey } from '../../utils/merge-by-key';
+import ts from "typescript";
 
 /**
  * Aggregated extraction results for a class chain.
@@ -41,7 +41,9 @@ export interface ChainExtractionResult<TItem> {
  */
 export interface ChainExtractorOptions<TItem> {
   /** Extractor applied to each class in the chain. */
-  readonly extract: (classNode: ts.ClassLikeDeclaration) => ChainExtractionResult<TItem>;
+  readonly extract: (
+    classNode: ts.ClassLikeDeclaration,
+  ) => ChainExtractionResult<TItem>;
   /** Key selector for deterministic merging. */
   readonly getKey: (item: TItem) => string;
   /** Optional merge strategy when keys collide. */
@@ -55,13 +57,21 @@ export interface ChainExtractorOptions<TItem> {
  * @param options - Extraction and merge options.
  * @returns Aggregated items and warnings.
  */
-export const extractFromChain = <TItem>(
+export function extractFromChain<TItem>(
   classChain: readonly ts.ClassLikeDeclaration[],
   options: ChainExtractorOptions<TItem>,
-): ChainExtractionResult<TItem> => {
-  const results = classChain.map(options.extract);
-  const collected = results.flatMap((result) => result.items);
-  const warnings = results.flatMap((result) => result.warnings);
+): ChainExtractionResult<TItem> {
+  const results: ChainExtractionResult<TItem>[] = [];
+  for (const classNode of classChain) {
+    results.push(options.extract(classNode));
+  }
+
+  const collected: TItem[] = [];
+  const warnings: string[] = [];
+  for (const result of results) {
+    collected.push(...result.items);
+    warnings.push(...result.warnings);
+  }
 
   const merged = mergeByKey(collected, {
     getKey: options.getKey,
@@ -72,4 +82,4 @@ export const extractFromChain = <TItem>(
     items: Array.from(merged.values()),
     warnings,
   };
-};
+}

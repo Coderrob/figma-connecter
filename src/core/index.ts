@@ -33,7 +33,7 @@ export {
 export { formatEmitTargetOptions, listEmitTargets, parseEmitTargets } from './emit-targets';
 export type { LogContext, LoggerOptions } from './logger';
 export { RegistryFactory, type PluginOptions, type RegistryEntry } from './registry-factory';
-export { createScopedLogger, Logger, LogLevel, resolveLogLevel } from './logger';
+export { createScopedLogger, Logger, LogContextKey, LogLevel, resolveLogLevel } from './logger';
 export type { ReportTimer } from './report';
 export {
   addCreatedFile,
@@ -60,7 +60,8 @@ export {
   hasDiagnostics,
   hasErrors,
   hasWarnings,
-  map as mapResult,
+  map,
+  mapResult,
   mergeDiagnostics,
   mergeErrors,
   mergeWarnings,
@@ -86,4 +87,4 @@ export type {
   PropertyVisibility,
   TagNameResult,
 } from './types';
-export { EmitterTarget, FileChangeStatus } from './types';
+export { ClassDiscoveryMethod, EmitterTarget, FileChangeStatus } from './types';

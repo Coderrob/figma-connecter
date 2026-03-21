@@ -16,24 +16,22 @@
 /**
  * IO Module Index
  *
- * Re-exports IO utilities for discovery, loading, and writing.
- *
  * @module io
  */
 
-export type { IoAdapter } from './adapter';
-export { createMemoryIoAdapter, MemoryIoAdapter, nodeIoAdapter } from './adapter';
-export type { DiscoveredFile, FileDiscoveryFileSystem, FileDiscoveryOptions } from './file-discovery';
+export {
+  createMemoryIoAdapter,
+  MemoryIoAdapter,
+  nodeIoAdapter,
+} from "./adapter";
 export {
   COMPONENT_GLOB,
   COMPONENT_SUFFIX,
   DEFAULT_EXCLUDE_DIRS,
   discoverComponentFiles,
   isComponentFile,
-} from './file-discovery';
-export type { FileWriteOptions, FileWriteResult, WriteStatus } from './file-writer';
-export { writeFile } from './file-writer';
-export type { SectionMarkers, SectionUpdateResult } from './section-updater';
+} from "./file-discovery";
+export { writeFile } from "./file-writer";
 export {
   applyGeneratedSectionUpdates,
   buildGeneratedSection,
@@ -41,6 +39,5 @@ export {
   extractGeneratedSection,
   hasGeneratedSection,
   replaceGeneratedSection,
-} from './section-updater';
-export type { SourceLoaderOptions, SourceLoadResult } from './source-loader';
-export { loadSourceProgram, resolveTsconfigPath } from './source-loader';
+} from "./section-updater";
+export { loadSourceProgram, resolveTsconfigPath } from "./source-loader";

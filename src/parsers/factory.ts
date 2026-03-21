@@ -28,10 +28,14 @@
  * @module parsers/factory
  */
 
-import { RegistryFactory } from '../core/registry-factory';
+import { RegistryFactory } from "../core/registry-factory";
 
-import { type Parser, ParserTarget } from './types';
-import { WebComponentParser } from './webcomponent';
+import { type Parser, ParserTarget } from "./types";
+import { WebComponentParser } from "./webcomponent";
+
+function createWebComponentParser(): Parser {
+  return new WebComponentParser();
+}
 
 /**
  * Metadata describing a parser's capabilities and configuration.
@@ -57,15 +61,21 @@ export interface ParserPluginOptions {
 /**
  * Creates a Web Component parser instance.
  *
+ * @param target
  * @returns Web Component parser.
  */
-const createWebComponentParser = (): Parser => new WebComponentParser();
+export const createDefaultParser = (): Parser =>
+  parserFactory.createDefaultInstance();
 
 /**
  * Parser factory implementation extending generic registry factory.
  */
-class ParserFactoryImpl extends RegistryFactory<ParserTarget, Parser, ParserMetadata> {
-  protected readonly factoryTypeName = 'Parser';
+class ParserFactoryImpl extends RegistryFactory<
+  ParserTarget,
+  Parser,
+  ParserMetadata
+> {
+  protected readonly factoryTypeName = "Parser";
 }
 
 /**
@@ -77,9 +87,10 @@ const parserFactory = new ParserFactoryImpl([
     {
       factory: createWebComponentParser,
       metadata: {
-        displayName: 'Web Component',
-        description: 'Parses LitElement-based Web Components with @property decorators',
-        filePatterns: ['*.component.ts', '*.element.ts'],
+        displayName: "Web Component",
+        description:
+          "Parses LitElement-based Web Components with @property decorators",
+        filePatterns: ["*.component.ts", "*.element.ts"],
       },
     },
   ],
@@ -90,6 +101,7 @@ const parserFactory = new ParserFactoryImpl([
  * Allows external packages to extend parser support without modifying this file.
  *
  * @param options - Plugin configuration.
+ * @param target
  * @throws Error if target is already registered.
  *
  * @example
@@ -106,60 +118,69 @@ const parserFactory = new ParserFactoryImpl([
  *   },
  * });
  * ```
+ * @returns TODO: describe return value
  */
-export const registerParserPlugin = (options: ParserPluginOptions): void => {
-  parserFactory.registerPlugin(options);
-};
+export const createParser = (target: ParserTarget): Parser =>
+  parserFactory.createInstance(target);
 
 /**
  * Checks if a parser target is registered.
  *
  * @param target - Target to check.
+ * @param options
  * @returns True if registered.
  */
-export const hasParserPlugin = (target: ParserTarget): boolean => parserFactory.hasPlugin(target);
-
-/**
- * Returns the list of registered parser targets.
- *
- * @returns Array of registered parser targets.
- */
-export const listParserTargets = (): ParserTarget[] => parserFactory.listTargets();
+export const getAllParserMetadata = (): ReadonlyMap<
+  ParserTarget,
+  ParserMetadata
+> => parserFactory.getAllMetadata();
 
 /**
  * Gets metadata for a specific parser target.
  *
  * @param target - Parser target to query.
+ * @param options
  * @returns Metadata for the target.
  */
-export const getParserMetadata = (target: ParserTarget): ParserMetadata => parserFactory.getMetadata(target);
+export const getDefaultParserTarget = (): ParserTarget =>
+  parserFactory.getDefaultTarget();
 
 /**
  * Gets metadata for all registered parsers.
  *
+ * @param options
+ * @param target
  * @returns Map of targets to their metadata.
  */
-export const getAllParserMetadata = (): ReadonlyMap<ParserTarget, ParserMetadata> =>
-  parserFactory.getAllMetadata();
+export const getParserMetadata = (target: ParserTarget): ParserMetadata =>
+  parserFactory.getMetadata(target);
 
 /**
  * Returns the default parser target.
  *
+ * @param target
+ * @param options
  * @returns The first registered parser target.
  */
-export const getDefaultParserTarget = (): ParserTarget => parserFactory.getDefaultTarget();
+export const hasParserPlugin = (target: ParserTarget): boolean =>
+  parserFactory.hasPlugin(target);
 
 /**
  * Creates a parser instance for the requested target.
  *
  * @param target - Parser target to instantiate.
+ * @param options
  * @returns Parser instance for the target.
  */
-export const createParser = (target: ParserTarget): Parser => parserFactory.createInstance(target);
+export const listParserTargets = (): ParserTarget[] =>
+  parserFactory.listTargets();
 
 /**
  * Creates the default parser instance.
  *
+ * @param options
  * @returns Parser instance for the default target.
  */
-export const createDefaultParser = (): Parser => parserFactory.createDefaultInstance();
+export const registerParserPlugin = (options: ParserPluginOptions): void => {
+  parserFactory.registerPlugin(options);
+};

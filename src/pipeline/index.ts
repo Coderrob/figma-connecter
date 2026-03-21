@@ -21,6 +21,5 @@
  *
  * @module pipeline
  */
-export { processComponentBatch } from './batch';
-export type { PipelineContext, PipelineContextSeed } from './context';
-export { runConnectPipeline } from './runner';
+export { processComponentBatch } from "./batch";
+export { runConnectPipeline } from "./runner";

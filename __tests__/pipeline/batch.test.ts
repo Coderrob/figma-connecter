@@ -29,7 +29,7 @@ import { applyAggregateDiagnostics, createResult } from '../../src/core/result';
 import { type EmitResult, EmitterTarget, GeneratedSectionName } from '../../src/core/types';
 import type { Emitter } from '../../src/emitters/types';
 import { createMemoryIoAdapter } from '../../src/io/adapter';
-import type { DiscoveredFile } from '../../src/io/file-discovery';
+import type { DiscoveredFile } from '../../src/types/io';
 import type { Parser } from '../../src/parsers/types';
 import { ParserTarget } from '../../src/parsers/types';
 import { processComponentBatch } from '../../src/pipeline/batch';

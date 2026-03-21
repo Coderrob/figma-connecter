@@ -59,7 +59,10 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
   /**
    * Internal registry mapping targets to their entries.
    */
-  protected readonly registry: Map<TTarget, RegistryEntry<TInstance, TMetadata>>;
+  protected readonly registry: Map<
+    TTarget,
+    RegistryEntry<TInstance, TMetadata>
+  >;
 
   /**
    * Name of the factory type for error messages (e.g., "Parser", "Emitter").
@@ -71,7 +74,11 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
    *
    * @param initialEntries - Optional initial registry entries.
    */
-  constructor(initialEntries?: ReadonlyArray<[TTarget, RegistryEntry<TInstance, TMetadata>]>) {
+  constructor(
+    initialEntries?: ReadonlyArray<
+      [TTarget, RegistryEntry<TInstance, TMetadata>]
+    >,
+  ) {
     this.registry = new Map(initialEntries);
   }
 
@@ -122,7 +129,9 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
   getMetadata(target: TTarget): TMetadata {
     const entry = this.registry.get(target);
     if (!entry) {
-      throw new Error(`No ${this.factoryTypeName.toLowerCase()} registered for target: ${String(target)}`);
+      throw new Error(
+        `No ${this.factoryTypeName.toLowerCase()} registered for target: ${String(target)}`,
+      );
     }
     return entry.metadata;
   }
@@ -133,7 +142,11 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
    * @returns Map of targets to their metadata.
    */
   getAllMetadata(): ReadonlyMap<TTarget, TMetadata> {
-    return new Map(Array.from(this.registry, ([target, entry]) => [target, entry.metadata]));
+    const metadata = new Map<TTarget, TMetadata>();
+    for (const [target, entry] of Array.from(this.registry)) {
+      metadata.set(target, entry.metadata);
+    }
+    return metadata;
   }
 
   /**
@@ -146,7 +159,9 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
   createInstance(target: TTarget): TInstance {
     const entry = this.registry.get(target);
     if (!entry) {
-      throw new Error(`No ${this.factoryTypeName.toLowerCase()} registered for target: ${String(target)}`);
+      throw new Error(
+        `No ${this.factoryTypeName.toLowerCase()} registered for target: ${String(target)}`,
+      );
     }
     return entry.factory();
   }
@@ -160,7 +175,9 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
   getDefaultTarget(): TTarget {
     const targets = this.listTargets();
     if (targets.length === 0) {
-      throw new Error(`No ${this.factoryTypeName.toLowerCase()} targets registered.`);
+      throw new Error(
+        `No ${this.factoryTypeName.toLowerCase()} targets registered.`,
+      );
     }
     return targets[0];
   }
