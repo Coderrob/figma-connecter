@@ -33,6 +33,10 @@ import { RegistryFactory } from "../core/registry-factory";
 import { type Parser, ParserTarget } from "./types";
 import { WebComponentParser } from "./webcomponent";
 
+function createWebComponentParser(): Parser {
+  return new WebComponentParser();
+}
+
 /**
  * Metadata describing a parser's capabilities and configuration.
  */
@@ -125,15 +129,6 @@ export const createParser = (target: ParserTarget): Parser =>
  * @param target - Target to check.
  * @param options
  * @returns True if registered.
- */
-const createWebComponentParser = (): Parser => new WebComponentParser();
-
-/**
- * Returns the list of registered parser targets.
- *
- * @param options
- * @param target
- * @returns Array of registered parser targets.
  */
 export const getAllParserMetadata = (): ReadonlyMap<
   ParserTarget,

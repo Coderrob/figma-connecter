@@ -34,15 +34,15 @@ import ts from "typescript";
 // Constants
 // ============================================================================
 
+// ============================================================================
+// Private Helper Functions
+// ============================================================================
+
 /** Unix read permission bits for owner, group, and others (r--r--r--). */
 const UNIX_READ_PERMISSION_MASK = 0o444;
 
 /** Unix write permission bits for owner, group, and others (-w--w--w-). */
 const UNIX_WRITE_PERMISSION_MASK = 0o222;
-
-// ============================================================================
-// Private Helper Functions
-// ============================================================================
 
 /**
  * Validates that a file exists and is readable.
@@ -83,6 +83,9 @@ const isReadableFile = (filePath: string, errors: string[]): boolean => {
       errors.push(`Source file is not readable: ${filePath}`);
       return false;
     }
+
+    // Windows can report R_OK even when chmod(000) is used in tests.
+    // Treat missing write bits as unreadable for parity with CI expectations.
     if (process.platform === "win32" && (mode & UNIX_WRITE_PERMISSION_MASK) === 0) {
       errors.push(`Source file is not readable: ${filePath}`);
       return false;
@@ -143,7 +146,7 @@ export function loadSourceProgram(
   let compilerOptions = ts.getDefaultCompilerOptions();
 
   if (configPath) {
-    const normalizedConfigPath = configPath.replaceAll(String.raw`\`, "/");
+    const normalizedConfigPath = configPath.replaceAll("\\", "/");
     /**
      * Reads a file from the file system.
      *

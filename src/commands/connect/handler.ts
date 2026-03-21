@@ -235,7 +235,7 @@ function logDryRunDetails(
       `${name}: created ${created}, updated ${updated}, unchanged ${unchanged}`,
     );
 
-    if (component.fileChanges?.length > 0) {
+    if (component.fileChanges && component.fileChanges.length > 0) {
       for (const change of component.fileChanges) {
         const relative =
           path.relative(process.cwd(), change.filePath) || change.filePath;

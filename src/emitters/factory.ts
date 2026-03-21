@@ -35,6 +35,14 @@ import { FigmaReactEmitter } from "./figma-react";
 import { FigmaWebComponentEmitter } from "./figma-webcomponent";
 import type { Emitter } from "./types";
 
+function createReactEmitter(): Emitter {
+  return new FigmaReactEmitter();
+}
+
+function createWebComponentEmitter(): Emitter {
+  return new FigmaWebComponentEmitter();
+}
+
 /**
  * Options for selecting emitter targets from the registry.
  */
@@ -150,24 +158,6 @@ const emitterFactory = new EmitterFactoryImpl([
  * });
  * ```
  * @returns TODO: describe return value
- */
-const createReactEmitter = (): Emitter => new FigmaReactEmitter();
-
-/**
- * Checks if an emitter target is registered.
- *
- * @param target - Target to check.
- * @param options
- * @returns True if registered.
- */
-const createWebComponentEmitter = (): Emitter => new FigmaWebComponentEmitter();
-
-/**
- * Returns the list of registered emitter targets.
- *
- * @param options
- * @param target
- * @returns Array of registered emitter targets.
  */
 export const getAllEmitterMetadata = (): ReadonlyMap<
   EmitterTarget,

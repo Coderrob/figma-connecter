@@ -85,6 +85,14 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Fixed
 
+- Fix malformed raw template literals in progress/source loader that caused TypeScript parse failures (`pending`)
+- Add Jest alias mapping for `@/` imports to resolve module-not-found test failures (`pending`)
+- Restore `mapResult` compatibility export in core result helpers (`pending`)
+- Correct source readability checks to rely on `R_OK` access semantics across platforms (`pending`)
+- Fix factory initialization order issues causing runtime TDZ errors in parser/emitter factories (`pending`)
+- Fix strict nullability checks in connect handler dry-run logging and decorator enum inference (`pending`)
+- Fix plugin info map typing regression after import/type refactor (`pending`)
+
 - Fix failing unit tests: Update test expectations to match mdc- namespace prefix in fixtures (`pending`).
 - Fix base fixture references: Rename button.component to base.component in base directory index and constants (`pending`).
 - Fix inheritance test: Update to test Button with BaseComponent instead of DisabledMixin (`pending`).

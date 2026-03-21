@@ -54,8 +54,8 @@ export {
 export function getPluginInfo(): IPluginInfo {
   const emitterMetadata = getAllEmitterMetadata();
   const parserMetadata = getAllParserMetadata();
-  const emitters = new Map<EmitterTarget, PluginRegistryEntry>();
-  const parsers = new Map<ParserTarget, PluginRegistryEntry>();
+  const emitters = new Map<string, { displayName: string; description: string }>();
+  const parsers = new Map<string, { displayName: string; description: string }>();
 
   for (const [target, meta] of Array.from(emitterMetadata)) {
     emitters.set(target, {

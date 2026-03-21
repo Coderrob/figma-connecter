@@ -387,3 +387,10 @@ export function map<T, U>(
     errors: result.errors,
   };
 }
+
+/**
+ * Backward-compatible alias for {@link map}.
+ *
+ * @deprecated Use map instead.
+ */
+export const mapResult = map;

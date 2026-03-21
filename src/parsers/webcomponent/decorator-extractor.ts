@@ -387,10 +387,10 @@ const parseDecoratorOptions = (
       }
     } else if (key === "attribute") {
       const literal = getLiteralValue(property.initializer);
-      if (!literal) {
-        acc.attribute = null;
-      } else if (literal) {
+      if (literal === true) {
         acc.attribute = undefined;
+      } else if (literal === false) {
+        acc.attribute = null;
       } else if (literal !== null) {
         acc.attribute = String(literal);
       } else {
@@ -432,7 +432,7 @@ const resolveFigmaType = (
   }
 
   // Check for enum values from union types (design-system properties)
-  if (enumValues?.length > 0) {
+  if ((enumValues?.length ?? 0) > 0) {
     return FigmaPropertyType.Enum;
   }
 

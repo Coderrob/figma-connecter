@@ -29,7 +29,7 @@ import type {
 import { ProgressStatus } from "@/src/types/cli";
 
 /** Animation frames for the spinner. */
-const SPINNER_FRAMES = ["-", String.raw`\`, "|", "/"];
+const SPINNER_FRAMES = ["-", "\\", "|", "/"];
 
 /** Default animation interval in milliseconds. */
 const DEFAULT_INTERVAL_MS = 100;
