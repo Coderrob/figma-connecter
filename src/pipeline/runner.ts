@@ -72,6 +72,23 @@ interface RunnerContext {
 
 type RunnerStep = (state: Result<RunnerContext>) => Result<RunnerContext>;
 
+const buildReport = (
+  results: readonly ComponentResult[],
+  timer: ReportTimer,
+  includeComponents: boolean,
+  componentResults: readonly ComponentResult[],
+): GenerationReport => {
+  const report = {
+    ...results.reduce(
+      (accumulator, element) => reportReducer(accumulator, element),
+      createEmptyReport(),
+    ),
+    durationMs: timer.stop(),
+  };
+
+  return includeComponents ? { ...report, componentResults } : report;
+};
+
 /**
  * Appends diagnostics to the runner results collection.
  *
@@ -139,21 +156,12 @@ const discoverComponentsStep: RunnerStep = (state) => {
  */
 const finalizeReportStep: RunnerStep = (state) => {
   const { componentResults, discovered, results, timer } = state.value;
-  const report = {
-    ...results.reduce(
-      /**
-       * <anonymous> TODO: describe
-       * @param accumulator TODO: describe parameter
-       * @param element TODO: describe parameter
-       * @returns TODO: describe return value
-       */
-      (accumulator, element) => reportReducer(accumulator, element),
-      createEmptyReport(),
-    ),
-    durationMs: timer.stop(),
-  };
-  const reportWithComponents =
-    discovered.length > 0 ? { ...report, componentResults } : report;
+  const reportWithComponents = buildReport(
+    results,
+    timer,
+    discovered.length > 0,
+    componentResults,
+  );
 
   return mapResult(state, (context) => ({
     ...context,
@@ -308,27 +316,13 @@ export function runConnectPipeline(
     return Promise.resolve(finalState.value.report);
   }
 
-  const fallbackReport = {
-    ...finalState.value.results.reduce(
-      /**
-       * <anonymous> TODO: describe
-       * @param accumulator TODO: describe parameter
-       * @param element TODO: describe parameter
-       * @returns TODO: describe return value
-       */
-      (accumulator, element) => reportReducer(accumulator, element),
-      createEmptyReport(),
-    ),
-    durationMs: finalState.value.timer.stop(),
-  };
-
   return Promise.resolve(
-    finalState.value.discovered.length > 0
-      ? {
-          ...fallbackReport,
-          componentResults: finalState.value.componentResults,
-        }
-      : fallbackReport,
+    buildReport(
+      finalState.value.results,
+      finalState.value.timer,
+      finalState.value.discovered.length > 0,
+      finalState.value.componentResults,
+    ),
   );
 }
 

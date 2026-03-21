@@ -481,31 +481,23 @@ export function processComponentBatch(
     emitComponentStep,
   ];
 
-  const batchState = discovered.reduce(
-    /**
-     * <anonymous> TODO: describe
-     * @param acc TODO: describe parameter
-     * @param file TODO: describe parameter
-     * @returns TODO: describe return value
-     */
-    (acc, file) => {
-      if (!acc.shouldContinue) {
-        return acc;
-      }
+  const results: Result<ComponentResult>[] = [];
+  let shouldContinue = true;
 
-      const initialState = createFileContext(file, context, continueOnError);
-      const finalState = runSteps(initialState, steps);
-      const outcome = finalizeFileOutcome(finalState);
+  for (const file of discovered) {
+    if (!shouldContinue) {
+      break;
+    }
 
-      return {
-        results: [...acc.results, outcome.result],
-        shouldContinue: outcome.shouldContinue,
-      };
-    },
-    { results: [] as Result<ComponentResult>[], shouldContinue: true },
-  );
+    const initialState = createFileContext(file, context, continueOnError);
+    const finalState = runSteps(initialState, steps);
+    const outcome = finalizeFileOutcome(finalState);
 
-  return aggregateResults(batchState.results);
+    results.push(outcome.result);
+    shouldContinue = outcome.shouldContinue;
+  }
+
+  return aggregateResults(results);
 }
 
 /**

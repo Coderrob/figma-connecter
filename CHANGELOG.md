@@ -11,6 +11,7 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 ### Changed
 
 - Refactor tag-name resolver into focused namespace and export-resolution helpers to reduce responsibilities and cognitive complexity (`pending`)
+- Refactor pipeline runner report construction into a shared helper and optimize batch result accumulation to avoid repeated array copies (`pending`)
 
 - Refactor `src/core/logger.ts` to use type guard functions (`isString`, `isNumber`, `isObject`, `isFunction`) replacing verbose `typeof` expressions (`3f2b91c`)
 
