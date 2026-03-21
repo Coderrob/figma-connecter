@@ -39,7 +39,7 @@ export const normalizePath = (value: string): string => {
     return "";
   }
 
-  return path.resolve(value).replace(/\\/g, "/");
+  return path.resolve(value).replaceAll("\\", "/");
 };
 
 /**
@@ -60,7 +60,7 @@ export const buildCodeConnectFilePath = (
   componentDir: string,
   fileName: string,
 ): string =>
-  path.posix.join(componentDir.replace(/\\/g, "/"), "code-connect", fileName);
+  path.posix.join(componentDir.replaceAll("\\", "/"), "code-connect", fileName);
 
 /**
  * Returns the POSIX basename of a normalized path.

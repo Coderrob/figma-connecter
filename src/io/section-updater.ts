@@ -315,7 +315,7 @@ const nextLineBreak = (
  * @returns The section content or null when missing.
  */
 const normalizeLineEndings = (content: string, lineEnding: string): string =>
-  content.replace(/\r\n|\r|\n/g, lineEnding);
+  content.replaceAll(/\r\n|\r|\n/g, lineEnding);
 
 /**
  * Builds a generated section block with markers and indentation.

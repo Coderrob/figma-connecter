@@ -6,7 +6,7 @@ import type {
   PipelineContext,
   PipelineContextSeed,
 } from "@/src/types/pipeline";
-import type fs from "fs";
+import type fs from "node:fs";
 
 import type ts from "typescript";
 

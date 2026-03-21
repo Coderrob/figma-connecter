@@ -42,7 +42,11 @@ export function mergeByKey<TItem, TKey>(
   for (const item of items) {
     const key = options.getKey(item);
     if (map.has(key)) {
-      const existing = map.get(key) as TItem;
+      const existing = map.get(key);
+      if (existing === undefined) {
+        map.set(key, item);
+        continue;
+      }
       map.set(key, merge(existing, item));
     } else {
       map.set(key, item);

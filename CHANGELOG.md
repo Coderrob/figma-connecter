@@ -88,6 +88,9 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 
 ### Fixed
 
+- Replace remaining path/line-ending normalization calls with `replaceAll` and remove redundant merge helper assertion (`pending`)
+- Use `node:fs` type import in IO shared types for Node import consistency (`pending`)
+
 - Fix malformed raw template literals in progress/source loader that caused TypeScript parse failures (`b6ace33`)
 - Add Jest alias mapping for `@/` imports to resolve module-not-found test failures (`b6ace33`)
 - Restore `mapResult` compatibility export in core result helpers (`b6ace33`)
