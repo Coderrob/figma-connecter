@@ -30,7 +30,7 @@ import type { ICommandStages, IGlobalCliOptions } from "@/src/types/cli";
  * @param options - The global CLI options.
  * @returns The resolved log level.
  */
-export function resolveLogLevel(options: IGlobalCliOptions): LogLevel {
+export function resolveLogLevel(options: Readonly<IGlobalCliOptions>): LogLevel {
   if (options.quiet) {
     return LogLevel.ERROR;
   }
@@ -47,8 +47,8 @@ export function resolveLogLevel(options: IGlobalCliOptions): LogLevel {
  * @returns Promise that resolves when command execution completes.
  * @throws Re-throws any error from command execution after invoking onError.
  */
-export async function runCommandStages<Context, Result>(
-  command: ICommandStages<Context, Result>,
+export async function runCommandStages<Context, IResult>(
+  command: Readonly<ICommandStages<Context, IResult>>,
 ): Promise<void> {
   const context = command.validate();
 
@@ -57,6 +57,8 @@ export async function runCommandStages<Context, Result>(
     command.report(context, result);
   } catch (error) {
     command.onError?.(context, error);
-    throw error;
+    return Promise.reject(
+      error instanceof Error ? error : new Error(String(error)),
+    );
   }
 }

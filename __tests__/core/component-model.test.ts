@@ -15,7 +15,7 @@
  */
 
 /**
- * @fileoverview Snapshot tests for ComponentModel shape consistency.
+ * @fileoverview Snapshot tests for IComponentModel shape consistency.
  */
 
 import { expectKeysEqual } from '../helpers/assertions';
@@ -26,7 +26,7 @@ import {
   createMockProperty,
 } from '../helpers/fixtures';
 
-describe('ComponentModel consistency', () => {
+describe('IComponentModel consistency', () => {
   it('should use props field and maintains stable shape', () => {
     const model = createMockComponentModel({
       props: [createMockProperty()],

@@ -292,6 +292,8 @@ const zeroToleranceRules = {
       "warn",
     ]),
   ),
+  // BDD sidecar files are not used in this repository.
+  "zero-tolerance/require-bdd-spec": "off",
   // Override specific rules to be errors
   "zero-tolerance/prefer-string-raw": "error",
   "zero-tolerance/no-parent-imports": "error",

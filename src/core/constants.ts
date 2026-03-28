@@ -22,27 +22,36 @@
  * @module core/constants
  */
 
-import type { GeneratedSectionMarkers, GeneratedSectionName } from "./types";
+import type { IGeneratedSectionMarkers, GeneratedSectionName } from "./types";
 
 /**
  * Canonical marker pair for generated sections.
  */
-export const GENERATED_SECTION_MARKERS: GeneratedSectionMarkers = {
+export const GENERATED_SECTION_MARKERS: IGeneratedSectionMarkers = {
   start: "// BEGIN GENERATED",
   end: "// END GENERATED",
 };
 
+interface IDefaultConnectOptions {
+  readonly recursive: boolean;
+  readonly dryRun: boolean;
+  readonly emit: string;
+  readonly strict: boolean;
+  readonly continueOnError: boolean;
+  readonly force: boolean;
+}
+
 /**
  * Default configuration values for the connect command.
  */
-export const DEFAULT_CONNECT_OPTIONS = {
+export const DEFAULT_CONNECT_OPTIONS: IDefaultConnectOptions = {
   recursive: false,
   dryRun: false,
   emit: "all",
   strict: true,
   continueOnError: true,
   force: false,
-} as const;
+};
 
 /**
  * Default base import path for generated component imports.
@@ -62,8 +71,8 @@ export const FIGMA_PACKAGE_HTML = "@figma/code-connect/html";
  * @returns The named start/end marker pair.
  */
 export function buildGeneratedSectionMarkers(
-  name: GeneratedSectionName,
-): GeneratedSectionMarkers {
+  name: Readonly<GeneratedSectionName>,
+): IGeneratedSectionMarkers {
   return {
     start: `${GENERATED_SECTION_MARKERS.start}: ${name}`,
     end: `${GENERATED_SECTION_MARKERS.end}: ${name}`,

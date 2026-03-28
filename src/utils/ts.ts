@@ -31,7 +31,7 @@ import ts from "typescript";
  * @returns Object literal options or null when unavailable.
  */
 export const getDecoratorOptions = (
-  decorator: ts.Decorator,
+  decorator: Readonly<ts.Decorator>,
 ): ts.ObjectLiteralExpression | null => {
   const { expression } = decorator;
   if (!ts.isCallExpression(expression)) {
@@ -44,13 +44,26 @@ export const getDecoratorOptions = (
   return options;
 };
 
+interface ITextPart {
+  readonly text: string;
+}
+
+/**
+ * Extracts plain text from a JSDoc display part.
+ * @param part - Display part to read.
+ * @returns Text content for the display part.
+ */
+function getDisplayPartText(part: Readonly<ITextPart>): string {
+  return part.text;
+}
+
 /**
  * Extracts the first JSDoc summary for a node.
  *
  * @param node - AST node to inspect.
  * @returns Summary text or null when missing.
  */
-export const getJSDocSummary = (node: ts.Node): string | null => {
+export const getJSDocSummary = (node: Readonly<ts.Node>): string | null => {
   const docs = ts.getJSDocCommentsAndTags(node).filter(ts.isJSDoc);
   if (docs.length === 0) {
     return null;
@@ -62,10 +75,7 @@ export const getJSDocSummary = (node: ts.Node): string | null => {
   if (typeof comment === "string") {
     return comment.trim();
   }
-  return comment
-    .map((part) => part.text)
-    .join("")
-    .trim();
+  return comment.map(getDisplayPartText).join("").trim();
 };
 
 /**
@@ -74,17 +84,14 @@ export const getJSDocSummary = (node: ts.Node): string | null => {
  * @param tag - JSDoc tag to read.
  * @returns Tag text content.
  */
-export const getJSDocTagText = (tag: ts.JSDocTag): string => {
+export const getJSDocTagText = (tag: Readonly<ts.JSDocTag>): string => {
   if (!tag.comment) {
     return "";
   }
   if (typeof tag.comment === "string") {
     return tag.comment.trim();
   }
-  return tag.comment
-    .map((part) => part.text)
-    .join("")
-    .trim();
+  return tag.comment.map(getDisplayPartText).join("").trim();
 };
 
 /**

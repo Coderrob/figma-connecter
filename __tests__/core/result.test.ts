@@ -15,7 +15,7 @@
  */
 
 /**
- * @fileoverview Tests for Result helpers.
+ * @fileoverview Tests for IResult helpers.
  */
 
 import {
@@ -37,7 +37,7 @@ import {
   mergeWarnings,
 } from '../../src/core';
 
-describe('Result helpers', () => {
+describe('IResult helpers', () => {
   it('should create a result with default diagnostics', () => {
     const result = createResult('value');
     expect(result.value).toBe('value');

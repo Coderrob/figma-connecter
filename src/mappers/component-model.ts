@@ -17,15 +17,15 @@
 /**
  * Component Model Mapper
  *
- * Normalizes parser output into a ComponentModel for downstream emitters.
+ * Normalizes parser output into a IComponentModel for downstream emitters.
  *
  * @module mappers/component-model
  */
 
 import type {
-  ComponentModel,
-  EventDescriptor,
-  PropertyDescriptor,
+  IComponentModel,
+  IEventDescriptor,
+  IPropertyDescriptor,
 } from "@/src/core/types";
 import { normalizedBasename, normalizePath } from "@/src/utils/paths";
 
@@ -34,13 +34,13 @@ import { mapPropertiesToAttributes } from "./attribute-mapper";
 /**
  * Input payload for normalizing a component model.
  */
-export interface ComponentModelInput {
+export interface IComponentModelInput {
   readonly className?: string;
   readonly tagName: string;
   readonly filePath: string;
   readonly componentDir: string;
-  readonly props: readonly PropertyDescriptor[];
-  readonly events: readonly EventDescriptor[];
+  readonly props: readonly IPropertyDescriptor[];
+  readonly events: readonly IEventDescriptor[];
 }
 
 /**
@@ -63,9 +63,9 @@ export function deriveImportPath(componentDir: string): string {
  * Normalizes a component model for downstream emitters.
  *
  * @param input - Raw parser output to normalize.
- * @returns Normalized ComponentModel.
+ * @returns Normalized IComponentModel.
  */
-export function mapComponentModel(input: ComponentModelInput): ComponentModel {
+export function mapComponentModel(input: Readonly<IComponentModelInput>): IComponentModel {
   const className = input.className?.trim() || "UnknownComponent";
   const props = input.props ?? [];
   const events = input.events ?? [];

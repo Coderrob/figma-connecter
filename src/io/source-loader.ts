@@ -25,9 +25,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { PipelineContext } from '@/src/types/pipeline';
+import type { ISourceLoaderOptions, ISourceLoadResult } from "@/src/types/io";
 
-import type { SourceLoaderOptions, SourceLoadResult } from '@/src/types/io';
+import type { IPipelineContext } from "@/src/types/pipeline";
 import ts from "typescript";
 
 // ============================================================================
@@ -44,15 +44,16 @@ const UNIX_READ_PERMISSION_MASK = 0o444;
 /** Unix write permission bits for owner, group, and others (-w--w--w-). */
 const UNIX_WRITE_PERMISSION_MASK = 0o222;
 
+/** Platform identifier for Windows. */
+const WINDOWS_PLATFORM = "win32";
+
 /**
- * Validates that a file exists and is readable.
+ * Formats a TypeScript diagnostic into a human-readable string.
  *
- * @param filePath - Path to validate.
- * @param errors - Error collection to append to.
- * @param diagnostic
- * @returns True when the file is readable.
+ * @param diagnostic - Diagnostic to format.
+ * @returns Formatted diagnostic string.
  */
-const formatDiagnostic = (diagnostic: ts.Diagnostic): string => {
+const formatDiagnostic = (diagnostic: Readonly<ts.Diagnostic>): string => {
   const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
   if (diagnostic.file && diagnostic.start !== undefined) {
     const location = diagnostic.file.getLineAndCharacterOfPosition(
@@ -64,38 +65,35 @@ const formatDiagnostic = (diagnostic: ts.Diagnostic): string => {
 };
 
 /**
- * Formats a TypeScript diagnostic into a human-readable string.
+ * Validates that a file exists and is readable.
  *
- * @param diagnostic - Diagnostic to format.
- * @param filePath
- * @param errors
- * @returns Formatted diagnostic string.
+ * @param filePath - Path to validate.
+ * @returns Undefined when file is readable; otherwise an error message.
  */
-const isReadableFile = (filePath: string, errors: string[]): boolean => {
+const getReadableFileError = (filePath: string): string | undefined => {
   if (!fs.existsSync(filePath)) {
-    errors.push(`Source file not found: ${filePath}`);
-    return false;
+    return `Source file not found: ${filePath}`;
   }
 
   try {
     const mode = fs.statSync(filePath).mode;
     if ((mode & UNIX_READ_PERMISSION_MASK) === 0) {
-      errors.push(`Source file is not readable: ${filePath}`);
-      return false;
+      return `Source file is not readable: ${filePath}`;
     }
 
     // Windows can report R_OK even when chmod(000) is used in tests.
     // Treat missing write bits as unreadable for parity with CI expectations.
-    if (process.platform === "win32" && (mode & UNIX_WRITE_PERMISSION_MASK) === 0) {
-      errors.push(`Source file is not readable: ${filePath}`);
-      return false;
+    if (
+      process.platform === WINDOWS_PLATFORM &&
+      (mode & UNIX_WRITE_PERMISSION_MASK) === 0
+    ) {
+      return `Source file is not readable: ${filePath}`;
     }
 
     fs.accessSync(filePath, fs.constants.R_OK);
-    return true;
+    return undefined;
   } catch {
-    errors.push(`Source file is not readable: ${filePath}`);
-    return false;
+    return `Source file is not readable: ${filePath}`;
   }
 };
 
@@ -106,31 +104,37 @@ const isReadableFile = (filePath: string, errors: string[]): boolean => {
 /**
  * Resolves a tsconfig path from an explicit path or search root.
  *
- * @param tsconfigPath - Explicit tsconfig path, if provided.
- * @param searchPath - Path to search from when resolving tsconfig.
- * @param configFileName - Config file name to search for (defaults to "tsconfig.json").
- * @param componentFiles
- * @param options
- * @returns Resolved tsconfig path or undefined when not found.
+ * @param componentFiles - Component file paths to load into the program.
+ * @param options - Source loader options.
+ * @returns Source load result with program, checker, and pipeline context.
  */
 export function loadSourceProgram(
   componentFiles: readonly string[],
-  options: SourceLoaderOptions,
-): SourceLoadResult {
-  const errors: string[] = [];
-  const rootNames: string[] = [];
-  for (const filePath of componentFiles) {
-    rootNames.push(path.resolve(filePath));
-  }
-  const validFiles: string[] = [];
+  options: Readonly<ISourceLoaderOptions>,
+): ISourceLoadResult {
+  const rootNames = componentFiles.map(
+    /**
+     * Resolves a component file path to an absolute path.
+     *
+     * @param filePath - Relative or absolute file path.
+     * @returns Absolute file path.
+     */
+    (filePath) => path.resolve(filePath),
+  );
+
+  let errors: string[] = [];
+  let validFiles: string[] = [];
   for (const filePath of rootNames) {
-    if (isReadableFile(filePath, errors)) {
-      validFiles.push(filePath);
+    const readableError = getReadableFileError(filePath);
+    if (readableError) {
+      errors = [...errors, readableError];
+    } else {
+      validFiles = [...validFiles, filePath];
     }
   }
 
   if (rootNames.length === 0) {
-    errors.push("No component files provided.");
+    errors = [...errors, "No component files provided."];
   }
 
   const searchPath =
@@ -146,7 +150,7 @@ export function loadSourceProgram(
   let compilerOptions = ts.getDefaultCompilerOptions();
 
   if (configPath) {
-    const normalizedConfigPath = configPath.replaceAll("\\", "/");
+    const normalizedConfigPath = configPath.replaceAll(String.raw`\\`, "/");
     /**
      * Reads a file from the file system.
      *
@@ -157,7 +161,7 @@ export function loadSourceProgram(
       ts.sys.readFile(filePath);
     const configFile = ts.readConfigFile(normalizedConfigPath, readFile);
     if (configFile.error) {
-      errors.push(formatDiagnostic(configFile.error));
+      errors = [...errors, formatDiagnostic(configFile.error)];
     } else {
       const parsed = ts.parseJsonConfigFileContent(
         configFile.config,
@@ -165,12 +169,13 @@ export function loadSourceProgram(
         path.dirname(normalizedConfigPath),
       );
       compilerOptions = parsed.options;
-      for (const diagnostic of parsed.errors) {
-        errors.push(formatDiagnostic(diagnostic));
-      }
+      errors = [...errors, ...parsed.errors.map(formatDiagnostic)];
     }
   } else if (options.tsconfigPath) {
-    errors.push(`${configFileName} not found at: ${options.tsconfigPath}`);
+    errors = [
+      ...errors,
+      `${configFileName} not found at: ${options.tsconfigPath}`,
+    ];
   }
 
   const program = ts.createProgram({
@@ -179,22 +184,32 @@ export function loadSourceProgram(
   });
   const checker = program.getTypeChecker();
 
-  const sourceFiles: ts.SourceFile[] = [];
+  let sourceFiles: ts.SourceFile[] = [];
   for (const filePath of validFiles) {
     const sourceFile = program.getSourceFile(filePath);
     if (!sourceFile) {
-      errors.push(`TypeScript could not load source file: ${filePath}`);
+      errors = [
+        ...errors,
+        `TypeScript could not load source file: ${filePath}`,
+      ];
       continue;
     }
-    sourceFiles.push(sourceFile);
+    sourceFiles = [...sourceFiles, sourceFile];
   }
 
-  const sourceFileMap = new Map<string, ts.SourceFile>();
-  for (const sourceFile of sourceFiles) {
-    sourceFileMap.set(path.resolve(sourceFile.fileName), sourceFile);
-  }
+  const sourceFileMap = new Map(
+    sourceFiles.map(
+      /**
+       * Creates a map entry for a source file keyed by its resolved path.
+       *
+       * @param sourceFile - Source file to map.
+       * @returns Key-value pair with resolved path and source file.
+       */
+      (sourceFile) => [path.resolve(sourceFile.fileName), sourceFile],
+    ),
+  );
 
-  const context: PipelineContext = {
+  const context: IPipelineContext = {
     ...options.context,
     checker,
     sourceFileMap,
@@ -213,14 +228,12 @@ export function loadSourceProgram(
 }
 
 /**
- * Loads a TypeScript Program from the provided component files.
+ * Resolves a tsconfig path from an explicit path or a discovered config.
  *
- * @param componentFiles - Component file paths.
- * @param options - Loader options.
- * @param tsconfigPath
- * @param searchPath
- * @param configFileName
- * @returns Source load result with program, checker, and context.
+ * @param tsconfigPath - Explicit tsconfig path, if provided.
+ * @param searchPath - Path to search from when resolving tsconfig.
+ * @param configFileName - Config file name to search for.
+ * @returns Resolved tsconfig path or undefined when not found.
  */
 export function resolveTsconfigPath(
   tsconfigPath: string | undefined,
@@ -246,8 +259,9 @@ export function resolveTsconfigPath(
    * @param filename - Path to the file.
    * @returns True if the file exists, false otherwise.
    */
-  const fileExists = (filename: string): boolean => ts.sys.fileExists(filename);
+  const isExistingFile = (filename: string): boolean =>
+    ts.sys.fileExists(filename);
   const found =
-    ts.findConfigFile(searchRoot, fileExists, configFileName) ?? undefined;
+    ts.findConfigFile(searchRoot, isExistingFile, configFileName) ?? undefined;
   return found ? path.normalize(found) : undefined;
 }

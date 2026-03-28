@@ -67,7 +67,7 @@ export function validateConfigPath(value?: string): string | undefined {
  * @param options - The global CLI options to validate.
  * @throws Error if options contain incompatible combinations.
  */
-export function validateGlobalOptions(options: IGlobalCliOptions): void {
+export function validateGlobalOptions(options: Readonly<IGlobalCliOptions>): void {
   if (options.verbose && options.quiet) {
     throw new Error("Cannot use --verbose and --quiet together.");
   }

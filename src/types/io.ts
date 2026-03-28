@@ -2,15 +2,15 @@
  * IO-related shared types
  */
 
+import type fs from "node:fs";
 import type {
-  PipelineContext,
+  IPipelineContext,
   PipelineContextSeed,
 } from "@/src/types/pipeline";
-import type fs from "node:fs";
 
 import type ts from "typescript";
 
-export interface DiscoveredFile {
+export interface IDiscoveredFile {
   readonly filePath: string;
   readonly relativePath: string;
   readonly fileName: string;
@@ -18,19 +18,19 @@ export interface DiscoveredFile {
   readonly dirPath: string;
 }
 
-export interface FileDiscoveryOptions {
+export interface IFileDiscoveryOptions {
   readonly recursive?: boolean;
   readonly excludeDirs?: readonly string[];
-  readonly fileSystem?: FileDiscoveryFileSystem;
+  readonly fileSystem?: IFileDiscoveryFileSystem;
 }
 
-export interface FileDiscoveryFileSystem {
+export interface IFileDiscoveryFileSystem {
   readonly existsSync: (targetPath: string) => boolean;
   readonly statSync: (targetPath: string) => fs.Stats;
   readonly readdirSync: (targetPath: string) => fs.Dirent[];
 }
 
-export interface IoAdapter {
+export interface IIoAdapter {
   readonly exists: (filePath: string) => boolean;
   readonly readFile: (filePath: string) => string;
   readonly writeFile: (filePath: string, content: string) => void;
@@ -47,26 +47,26 @@ export enum WriteStatus {
   Unchanged = "unchanged",
 }
 
-export interface FileWriteResult {
+export interface IFileWriteResult {
   readonly filePath: string;
   readonly status: WriteStatus;
 }
 
-export interface FileWriteOptions {
+export interface IFileWriteOptions {
   readonly dryRun?: boolean;
-  readonly io?: IoAdapter;
+  readonly io?: IIoAdapter;
   readonly section?: {
     readonly content: string;
-    readonly markers?: SectionMarkers;
+    readonly markers?: ISectionMarkers;
   };
 }
 
-export interface SectionMarkers {
+export interface ISectionMarkers {
   readonly start: string;
   readonly end: string;
 }
 
-export interface SectionUpdateResult {
+export interface ISectionUpdateResult {
   readonly content: string;
   readonly status: SectionUpdateStatus;
 }
@@ -77,15 +77,15 @@ export enum SectionUpdateStatus {
   Unchanged = "unchanged",
 }
 
-export interface SourceLoaderOptions {
+export interface ISourceLoaderOptions {
   readonly context: PipelineContextSeed;
   readonly searchPath?: string;
   readonly tsconfigPath?: string;
   readonly tsconfigFileName?: string;
 }
 
-export interface SourceLoadResult {
-  readonly context: PipelineContext;
+export interface ISourceLoadResult {
+  readonly context: IPipelineContext;
   readonly checker: ts.TypeChecker;
   readonly configPath?: string;
   readonly errors: readonly string[];

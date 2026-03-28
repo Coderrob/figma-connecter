@@ -40,6 +40,10 @@ Each entry includes a commit SHA reference in parentheses for audit traceability
 - Add generic `ExtractionResult<T>` type for extraction operations (`68e0088`)
 - Add `.gitignore` file to exclude build artifacts and dependencies (`4ec618a`)
 
+### Fixed
+
+- Fix `@property({ attribute: '...' })` decorator parsing to correctly capture explicit string attribute names, resolve non-literal identifiers via source text, and use property-name default for boolean `true` (TBD)
+
 ### Changed
 
 - Replace `figmaType as string === 'enum'` with `figmaType === FigmaPropertyType.Enum` in `decorator-extractor.ts` (`9234c52`)

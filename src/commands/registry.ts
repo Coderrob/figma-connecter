@@ -57,7 +57,7 @@ export function listCommandNames(): string[] {
  * @param program - Commander program instance to register commands with.
  * @returns Nothing.
  */
-export function registerCommands(program: CommandInstance): void {
+export function registerCommands(program: Readonly<CommandInstance>): void {
   for (const factory of COMMAND_REGISTRY.values()) {
     const command = factory();
     program.addCommand(command);

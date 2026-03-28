@@ -17,14 +17,15 @@
 import {
   buildGeneratedSectionMarkers,
   FIGMA_PACKAGE_REACT,
-} from '@/src/core/constants';
+} from "@/src/core/constants";
 import {
-  type EmitResult,
+  type IGeneratedSectionMarkers,
+  type IEmitResult,
   EmitterTarget,
   FileChangeStatus,
   GeneratedSectionName,
-} from '@/src/core/types';
-import type { Emitter, EmitterContext } from '@/src/emitters/types';
+} from "@/src/core/types";
+import type { IEmitter, IEmitterContext } from "@/src/emitters/types";
 import {
   buildFilePayload,
   buildPropsSection,
@@ -36,15 +37,44 @@ import {
   withProps,
   withSections,
   withWarnings,
-} from '@/src/emitters/utils';
-import { buildCodeConnectFilePath, resolveDistReactImportPath } from '@/src/utils/paths';
+} from "@/src/emitters/utils";
+import {
+  buildCodeConnectFilePath,
+  resolveDistReactImportPath,
+} from "@/src/utils/paths";
 
 /**
- * Emitter for generating Figma Code Connect files for React components.
+ * IEmitter for generating Figma Code Connect files for React components.
  * Produces `*.react.figma.tsx` files using `@figma/code-connect`.
  */
-export class FigmaReactEmitter implements Emitter {
+export class FigmaReactEmitter implements IEmitter {
   readonly target = EmitterTarget.React;
+
+  /**
+   * Builds generated props/example section content and markers.
+   *
+   * @param emitterContext - Context containing model and emitter options.
+   * @returns Section payload and warnings for output generation.
+   */
+  private buildSectionPayload(emitterContext: Readonly<IEmitterContext>): {
+    readonly exampleMarkers: IGeneratedSectionMarkers;
+    readonly exampleSection: string;
+    readonly propsMarkers: IGeneratedSectionMarkers;
+    readonly propsSection: string;
+    readonly warnings: readonly string[];
+  } {
+    const { model } = emitterContext;
+    const { lines: propsLines, warnings } = buildPropsSection(model.props, 0);
+    return {
+      propsSection: propsLines.join("\n"),
+      exampleSection: buildReactExampleSection(model.className),
+      propsMarkers: buildGeneratedSectionMarkers(GeneratedSectionName.Props),
+      exampleMarkers: buildGeneratedSectionMarkers(
+        GeneratedSectionName.Example,
+      ),
+      warnings,
+    };
+  }
 
   /**
    * Resolves the component import path for React Code Connect output.
@@ -69,48 +99,67 @@ export class FigmaReactEmitter implements Emitter {
    * @param emitterContext - Context containing model and emitter options.
    * @returns Emit result containing file content and metadata.
    */
-  emit(emitterContext: EmitterContext): EmitResult {
+  emit(emitterContext: Readonly<IEmitterContext>): IEmitResult {
     const { model, options } = emitterContext;
     const componentName = getComponentBaseName(model);
     const fileName = `${componentName}.react.figma.tsx`;
     const filePath = buildCodeConnectFilePath(model.componentDir, fileName);
     const figmaUrl = `<FIGMA_${componentName.toUpperCase()}_URL>`;
-
     const importPath = this.resolveReactImportPath(
       model.componentDir,
       options.baseImportPath,
     );
+    const {
+      propsSection,
+      exampleSection,
+      propsMarkers,
+      exampleMarkers,
+      warnings,
+    } = this.buildSectionPayload(emitterContext);
+    return this.buildEmitResult({
+      filePath,
+      className: model.className,
+      importPath,
+      figmaUrl,
+      propsSection,
+      propsMarkers,
+      exampleSection,
+      exampleMarkers,
+      warnings,
+    });
+  }
 
-    const { lines: propsLines, warnings } = buildPropsSection(model.props, 0);
-    const propsSection = propsLines.join("\n");
-    const exampleSection = buildReactExampleSection(model.className);
-    const propsMarkers = buildGeneratedSectionMarkers(
-      GeneratedSectionName.Props,
-    );
-    const exampleMarkers = buildGeneratedSectionMarkers(
-      GeneratedSectionName.Example,
-    );
-
+  /**
+   * Builds the final file payload for React Code Connect output.
+   *
+   * @param emitOptions - Precomputed content and metadata for result construction.
+   * @returns Emit result with generated file payload and warnings.
+   */
+  private buildEmitResult(
+    emitOptions: Readonly<{
+      className: string;
+      exampleMarkers: Readonly<IGeneratedSectionMarkers>;
+      exampleSection: string;
+      figmaUrl: string;
+      filePath: string;
+      importPath: string;
+      propsMarkers: Readonly<IGeneratedSectionMarkers>;
+      propsSection: string;
+      warnings: readonly string[];
+    }>,
+  ): IEmitResult {
+    const { filePath, className, importPath, figmaUrl, propsSection, propsMarkers } = emitOptions;
+    const { exampleSection, exampleMarkers, warnings } = emitOptions;
     return buildFilePayload(
       createFilePayload(filePath, FileChangeStatus.Created),
       withImports([
-        `import { ${model.className} } from '${importPath}';`,
+        `import { ${className} } from '${importPath}';`,
         `import figma from '${FIGMA_PACKAGE_REACT}';`,
         "",
       ]),
       withSections({ lines: [`figma.connect('${figmaUrl}', {`] }),
-      withProps({
-        content: propsSection,
-        markers: propsMarkers,
-        name: GeneratedSectionName.Props,
-        depth: 1,
-      }),
-      withExample({
-        content: exampleSection,
-        markers: exampleMarkers,
-        name: GeneratedSectionName.Example,
-        depth: 1,
-      }),
+      withProps({ content: propsSection, markers: propsMarkers, name: GeneratedSectionName.Props, depth: 1 }),
+      withExample({ content: exampleSection, markers: exampleMarkers, name: GeneratedSectionName.Example, depth: 1 }),
       withSections({ lines: ["});", ""] }),
       withWarnings(warnings),
     );

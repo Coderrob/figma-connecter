@@ -23,15 +23,77 @@
  * @module emitters/figma-mapper
  */
 
-import type { ComponentModel, PropertyDescriptor } from "../core/types";
-import { normalizedBasename } from "../utils/paths";
+import type { IComponentModel, IPropertyDescriptor } from "@/src/core/types";
+import { normalizedBasename } from "@/src/utils/paths";
 
 import { toTitleCase } from "./formatting";
 
+const PROP_TYPE_ENUM = "enum";
+
 /**
- * Result of mapping a property to Figma syntax.
+ * Builds a single enum entry line for figma.enum mapping.
+ * @param value - Enum value.
+ * @returns Formatted enum entry line.
  */
-export interface FigmaPropMapping {
+function buildEnumEntryLine(value: string): string {
+  const key = toTitleCase(value);
+  return `'${key}': ${JSON.stringify(value)},`;
+}
+
+/**
+ * Builds figma enum mapping lines for a property.
+ * @param label - Display label for the property.
+ * @param enumValues - Enum values to map.
+ * @returns Figma enum mapping lines.
+ */
+function buildEnumMappingLines(
+  label: string,
+  enumValues: readonly string[],
+): string[] {
+  const sorted = enumValues.toSorted(compareByLocale);
+  return [`figma.enum('${label}', {`, ...sorted.map(buildEnumEntryLine), "})"];
+}
+
+/**
+ * Compares two strings using locale-aware ordering.
+ * @param left - Left value.
+ * @param right - Right value.
+ * @returns Comparison result.
+ */
+function compareByLocale(left: string, right: string): number {
+  return left.localeCompare(right);
+}
+
+/**
+ * Compares two named items using their `name` field.
+ * @param left - Left item.
+ * @param right - Right item.
+ * @returns Comparison result.
+ */
+function compareByName<T extends { name: string }>(
+  left: Readonly<T>,
+  right: Readonly<T>,
+): number {
+  return left.name.localeCompare(right.name);
+}
+
+/**
+ * Builds a default scalar type mapping table for figma expressions.
+ * @param label - Display label for the property.
+ * @returns Type-to-expression mapping table.
+ */
+function createScalarMapping(label: string): Record<string, string> {
+  return {
+    string: `figma.string('${label}')`,
+    number: `figma.string('${label}')`,
+    boolean: `figma.boolean('${label}')`,
+  };
+}
+
+/**
+ * IResult of mapping a property to Figma syntax.
+ */
+export interface IFigmaPropMapping {
   /** Lines of code for the Figma mapping expression. */
   readonly lines: string[];
   /** Warning message if the type couldn't be mapped cleanly. */
@@ -39,23 +101,13 @@ export interface FigmaPropMapping {
 }
 
 /**
- * Maps a property descriptor to Figma Code Connect syntax.
- * Handles string, number, boolean, enum, and unknown types.
- *
- * @param prop - The property descriptor to map.
- * @param model
- * @returns The Figma mapping expression lines and optional warning.
- *
- * @example
- * ```typescript
- * mapPropToFigma({ name: 'disabled', type: 'boolean' });
- * // { lines: ["figma.boolean('Disabled')"] }
- *
- * mapPropToFigma({ name: 'variant', type: 'enum', enumValues: ['primary', 'secondary'] });
- * // { lines: ["figma.enum('Variant', {", "'Primary': \"primary\",", ...] }
- * ```
+ * getComponentBaseName TODO: describe.
+ * @param model TODO: describe parameter
+ * @returns TODO: describe return value
  */
-export const getComponentBaseName = (model: ComponentModel): string => {
+export const getComponentBaseName = (
+  model: Readonly<IComponentModel>,
+): string => {
   const fileName = normalizedBasename(model.filePath);
   const pattern = /^(.*)\.component\.[tj]sx?$/i;
   const match = pattern.exec(fileName);
@@ -66,36 +118,27 @@ export const getComponentBaseName = (model: ComponentModel): string => {
 };
 
 /**
- * Sorts items by their name field using localeCompare.
- *
- * @param items - Items with name fields to sort.
- * @param prop
- * @returns Sorted array copy.
+ * mapPropToFigma TODO: describe.
+ * @param prop TODO: describe parameter
+ * @returns TODO: describe return value
  */
-export const mapPropToFigma = (prop: PropertyDescriptor): FigmaPropMapping => {
+export const mapPropToFigma = (
+  prop: Readonly<IPropertyDescriptor>,
+): IFigmaPropMapping => {
   const label = toTitleCase(prop.name);
 
   // Handle enum types with values
-  const propType = prop.type as string;
-  if (propType === "enum" && prop.enumValues && prop.enumValues.length > 0) {
-    const sorted = [...prop.enumValues].sort((a, b) => a.localeCompare(b));
-    const lines = [
-      `figma.enum('${label}', {`,
-      ...sorted.map((value) => {
-        const key = toTitleCase(value);
-        return `'${key}': ${JSON.stringify(value)},`;
-      }),
-      "})",
-    ];
-    return { lines };
+  const propType = String(prop.type);
+  if (
+    propType === PROP_TYPE_ENUM &&
+    prop.enumValues &&
+    prop.enumValues.length > 0
+  ) {
+    return { lines: buildEnumMappingLines(label, prop.enumValues) };
   }
 
   // Type to Figma mapping
-  const mapping: Record<string, string> = {
-    string: `figma.string('${label}')`,
-    number: `figma.string('${label}')`,
-    boolean: `figma.boolean('${label}')`,
-  };
+  const mapping = createScalarMapping(label);
 
   const expression = mapping[prop.type];
   if (expression) {
@@ -110,13 +153,10 @@ export const mapPropToFigma = (prop: PropertyDescriptor): FigmaPropMapping => {
 };
 
 /**
- * Extracts the base component name from a ComponentModel.
- * Uses the filename pattern `*.component.ts` or falls back to directory name.
- *
- * @param model - The component model.
- * @param items
- * @returns The base name (e.g., 'button' from 'button.component.ts').
+ * sortByName TODO: describe.
+ * @param items TODO: describe parameter
+ * @returns TODO: describe return value
  */
 export const sortByName = <T extends { name: string }>(
   items: readonly T[],
-): T[] => [...items].sort((a, b) => a.name.localeCompare(b.name));
+): T[] => items.toSorted(compareByName);

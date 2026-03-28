@@ -24,12 +24,16 @@
  * @module parsers/webcomponent/ast-visitor
  */
 
-import ts from 'typescript';
+import ts from "typescript";
+
+const CUSTOM_EVENT_TYPE = "CustomEvent";
+const DISPATCH_EVENT_METHOD = "dispatchEvent";
+const REGISTER_METHOD = "register";
 
 /**
  * Information about a dispatchEvent call found in the AST.
  */
-export interface DispatchEventCall {
+export interface IDispatchEventCall {
   /** The event name literal (if identifiable) */
   readonly eventName: string;
   /** The containing class declaration */
@@ -41,7 +45,7 @@ export interface DispatchEventCall {
 /**
  * Information about a register() call found in the AST.
  */
-export interface RegisterCall {
+export interface IRegisterCall {
   /** The receiver identifier (e.g., 'MyComponent' in MyComponent.register()) */
   readonly receiver?: string;
   /** The first argument to register() */
@@ -51,10 +55,10 @@ export interface RegisterCall {
 }
 
 /**
- * Result of visiting a source file's AST.
+ * IResult of visiting a source file's AST.
  * Contains all information needed by extractors without requiring additional traversals.
  */
-export interface ASTVisitorResult {
+export interface IASTVisitorResult {
   /** All class declarations found in the source file */
   readonly classDeclarations: readonly ts.ClassDeclaration[];
 
@@ -62,16 +66,22 @@ export interface ASTVisitorResult {
   readonly defaultExport?: ts.Identifier | ts.Expression;
 
   /** Map of class declarations to their decorators */
-  readonly classDecorators: ReadonlyMap<ts.ClassDeclaration, readonly ts.Decorator[]>;
+  readonly classDecorators: ReadonlyMap<
+    ts.ClassDeclaration,
+    readonly ts.Decorator[]
+  >;
 
   /** Map of class declarations to their JSDoc tags */
-  readonly classJSDocTags: ReadonlyMap<ts.ClassDeclaration, readonly ts.JSDocTag[]>;
+  readonly classJSDocTags: ReadonlyMap<
+    ts.ClassDeclaration,
+    readonly ts.JSDocTag[]
+  >;
 
   /** All dispatchEvent calls found in class methods */
-  readonly dispatchEventCalls: readonly DispatchEventCall[];
+  readonly dispatchEventCalls: readonly IDispatchEventCall[];
 
   /** All register() calls found in the source file */
-  readonly registerCalls: readonly RegisterCall[];
+  readonly registerCalls: readonly IRegisterCall[];
 }
 
 /**
@@ -80,13 +90,13 @@ export interface ASTVisitorResult {
  * @param arg - Argument to the dispatchEvent call.
  * @returns Event name if it's a CustomEvent with a string literal, otherwise null.
  */
-const extractEventName = (arg: ts.Expression): string | null => {
+const extractEventName = (arg: Readonly<ts.Expression>): string | null => {
   if (!ts.isNewExpression(arg)) {
     return null;
   }
 
   const eventType = arg.expression;
-  if (!ts.isIdentifier(eventType) || eventType.text !== 'CustomEvent') {
+  if (!ts.isIdentifier(eventType) || eventType.text !== CUSTOM_EVENT_TYPE) {
     return null;
   }
 
@@ -115,29 +125,36 @@ const extractEventName = (arg: ts.Expression): string | null => {
  * @param sourceFile - TypeScript source file to visit.
  * @returns Collected AST information.
  */
-export function visitSourceFile(sourceFile: ts.SourceFile): ASTVisitorResult {
-  const classDeclarations: ts.ClassDeclaration[] = [];
-  const classDecorators = new Map<ts.ClassDeclaration, readonly ts.Decorator[]>();
+export function visitSourceFile(
+  sourceFile: Readonly<ts.SourceFile>,
+): IASTVisitorResult {
+  let classDeclarations: ts.ClassDeclaration[] = [];
+  const classDecorators = new Map<
+    ts.ClassDeclaration,
+    readonly ts.Decorator[]
+  >();
   const classJSDocTags = new Map<ts.ClassDeclaration, readonly ts.JSDocTag[]>();
-  const dispatchEventCalls: DispatchEventCall[] = [];
-  const registerCalls: RegisterCall[] = [];
+  let dispatchEventCalls: IDispatchEventCall[] = [];
+  let registerCalls: IRegisterCall[] = [];
   let defaultExport: ts.Identifier | ts.Expression | undefined;
 
   // Stack to track current class context during traversal
-  const classStack: ts.ClassLikeDeclaration[] = [];
+  let classStack: readonly ts.ClassLikeDeclaration[] = [];
 
   /**
    * Recursively visits nodes in the AST.
    *
    * @param node - Current node being visited.
    */
-  const visit = (node: ts.Node): void => {
+  const visit = (node: Readonly<ts.Node>): void => {
     // Collect class declarations
     if (ts.isClassDeclaration(node)) {
-      classDeclarations.push(node);
+      classDeclarations = [...classDeclarations, node];
 
       // Collect decorators
-      const decorators = ts.canHaveDecorators(node) ? (ts.getDecorators(node) ?? []) : [];
+      const decorators = ts.canHaveDecorators(node)
+        ? (ts.getDecorators(node) ?? [])
+        : [];
       if (decorators.length > 0) {
         classDecorators.set(node, decorators);
       }
@@ -149,55 +166,66 @@ export function visitSourceFile(sourceFile: ts.SourceFile): ASTVisitorResult {
       }
 
       // Push onto stack for nested class tracking
-      classStack.push(node);
+      classStack = [...classStack, node];
       ts.forEachChild(node, visit);
-      classStack.pop();
+      classStack = classStack.slice(0, -1);
       return;
     }
 
     // Track class expressions (for mixins, etc.)
     if (ts.isClassExpression(node)) {
-      classStack.push(node);
+      classStack = [...classStack, node];
       ts.forEachChild(node, visit);
-      classStack.pop();
+      classStack = classStack.slice(0, -1);
       return;
     }
 
     // Collect default exports
     if (ts.isExportAssignment(node) && !node.isExportEquals) {
-      defaultExport = node.expression as ts.Identifier | ts.Expression;
+      defaultExport = node.expression;
     }
 
     // Collect dispatchEvent calls
-    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression)
+    ) {
       const propertyAccess = node.expression;
 
       // Check for dispatchEvent
-      if (propertyAccess.name.text === 'dispatchEvent') {
+      if (propertyAccess.name.text === DISPATCH_EVENT_METHOD) {
         const [arg] = node.arguments;
         if (arg) {
           const eventName = extractEventName(arg);
           if (eventName) {
             const containingClass = classStack.at(-1);
             if (containingClass) {
-              dispatchEventCalls.push({
-                eventName,
-                containingClass,
-                callNode: node,
-              });
+              dispatchEventCalls = [
+                ...dispatchEventCalls,
+                {
+                  eventName,
+                  containingClass,
+                  callNode: node,
+                },
+              ];
             }
           }
         }
       }
 
       // Check for register() calls
-      if (propertyAccess.name.text === 'register') {
-        const receiver = ts.isIdentifier(propertyAccess.expression) ? propertyAccess.expression.text : undefined;
-        registerCalls.push({
-          receiver,
-          argument: node.arguments[0],
-          callNode: node,
-        });
+      if (propertyAccess.name.text === REGISTER_METHOD) {
+        const receiver = ts.isIdentifier(propertyAccess.expression)
+          ? propertyAccess.expression.text
+          : undefined;
+        registerCalls = [
+          ...registerCalls,
+          {
+            receiver,
+            argument: node.arguments[0],
+            callNode: node,
+          },
+        ];
       }
     }
 

@@ -24,12 +24,12 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { IoAdapter } from "@/src/types/io";
+import type { IIoAdapter } from "@/src/types/io";
 
 /**
  * Default IO adapter backed by the Node.js filesystem.
  */
-export const nodeIoAdapter: IoAdapter = {
+export const nodeIoAdapter: IIoAdapter = {
   /**
    * Checks whether a file exists.
    *
@@ -74,7 +74,7 @@ export const nodeIoAdapter: IoAdapter = {
 /**
  * In-memory IO adapter for tests.
  */
-export class MemoryIoAdapter implements IoAdapter {
+export class MemoryIoAdapter implements IIoAdapter {
   private readonly files = new Map<string, string>();
 
   /**
@@ -159,15 +159,11 @@ export class MemoryIoAdapter implements IoAdapter {
    */
   listFiles(dirPath: string) {
     const prefix = dirPath.endsWith("/") ? dirPath : `${dirPath}/`;
-    const files: string[] = [];
-    for (const key of this.files.keys()) {
-      if (key.startsWith(prefix)) {
-        const remainder = key.slice(prefix.length).split("/")[0];
-        if (remainder) {
-          files.push(remainder);
-        }
-      }
-    }
+
+    const files = Array.from(this.files.keys())
+      .filter(isInPrefix.bind(undefined, prefix))
+      .map(toFirstRemainderSegment.bind(undefined, prefix))
+      .filter(isNonEmptyRemainder);
     return Array.from(new Set(files));
   }
 
@@ -191,4 +187,33 @@ export function createMemoryIoAdapter(
   initialFiles?: Record<string, string> | Map<string, string>,
 ): MemoryIoAdapter {
   return new MemoryIoAdapter(initialFiles);
+}
+
+/**
+ * Checks whether a file key resides under the requested prefix.
+ * @param prefix - Directory prefix.
+ * @param key - In-memory file key.
+ * @returns True when the key starts with the prefix.
+ */
+function isInPrefix(prefix: string, key: string): boolean {
+  return key.startsWith(prefix);
+}
+
+/**
+ * Narrows potentially empty remainder values to non-empty strings.
+ * @param remainder - Potentially empty remainder segment.
+ * @returns True when the segment is non-empty.
+ */
+function isNonEmptyRemainder(remainder: string): remainder is string {
+  return Boolean(remainder);
+}
+
+/**
+ * Extracts the first relative path segment after the provided prefix.
+ * @param prefix - Directory prefix.
+ * @param key - In-memory file key.
+ * @returns First relative segment after the prefix.
+ */
+function toFirstRemainderSegment(prefix: string, key: string): string {
+  return key.slice(prefix.length).split("/")[0];
 }

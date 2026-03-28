@@ -25,9 +25,9 @@
 
 import {
   WriteStatus,
-  type FileWriteOptions,
-  type FileWriteResult,
-} from '@/src/types/io';
+  type IFileWriteOptions,
+  type IFileWriteResult,
+} from "@/src/types/io";
 import { nodeIoAdapter } from "./adapter";
 import {
   DEFAULT_SECTION_MARKERS,
@@ -45,40 +45,31 @@ import {
 export function writeFile(
   filePath: string,
   content: string,
-  options: FileWriteOptions = {},
-): FileWriteResult {
+  options: Readonly<IFileWriteOptions> = {},
+): IFileWriteResult {
   const dryRun = options.dryRun ?? false;
   const io = options.io ?? nodeIoAdapter;
-  const exists = io.exists(filePath);
-
-  if (!exists) {
+  if (!io.exists(filePath)) {
     if (!dryRun) {
       io.writeFile(filePath, content);
     }
-
     return { filePath, status: WriteStatus.Created };
   }
 
   const existingContent = io.readFile(filePath);
-  let updatedContent = content;
-
-  if (options.section) {
-    const markers = options.section.markers ?? DEFAULT_SECTION_MARKERS;
-    const result = replaceGeneratedSection(
-      existingContent,
-      options.section.content,
-      markers,
-    );
-    updatedContent = result.content;
-  }
+  const updatedContent = options.section
+    ? replaceGeneratedSection(
+        existingContent,
+        options.section.content,
+        options.section.markers ?? DEFAULT_SECTION_MARKERS,
+      ).content
+    : content;
 
   if (existingContent === updatedContent) {
     return { filePath, status: WriteStatus.Unchanged };
   }
-
   if (!dryRun) {
     io.writeFile(filePath, updatedContent);
   }
-
   return { filePath, status: WriteStatus.Updated };
 }

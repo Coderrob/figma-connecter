@@ -14,47 +14,99 @@
  * limitations under the License.
  */
 
-import ts from "typescript";
+import type { IPropertyDescriptor, IExtractionResult } from "@/src/core/types";
 
-import type { PropertyDescriptor, ExtractionResult } from "../../core/types";
-import { FigmaPropertyType, PropertyVisibility } from "../../core/types";
-import { toKebabCase } from "../../utils/strings";
+import { FigmaPropertyType, PropertyVisibility } from "@/src/core/types";
+import { toKebabCase } from "@/src/utils/strings";
 import {
   getDecoratorOptions,
   getJSDocSummary,
   getLiteralValue,
-} from "../../utils/ts";
+} from "@/src/utils/ts";
+import ts from "typescript";
 
 import { extractFromChain } from "./chain-extractor";
 
+const DECORATOR_KEY_ATTRIBUTE = "attribute";
+const DECORATOR_KEY_REFLECT = "reflect";
+const DECORATOR_KEY_TYPE = "type";
+const JS_TYPE_BOOLEAN = "Boolean";
+const JS_TYPE_NUMBER = "Number";
+const JS_TYPE_STRING = "String";
+const PROPERTY_DECORATOR_NAME = "property";
+const TS_PRIMITIVE_BOOLEAN = "boolean";
+const TS_PRIMITIVE_NUMBER = "number";
+const TS_PRIMITIVE_STRING = "string";
+
+type DecoratorOptionsResult = {
+  typeName?: string;
+  attribute?: string | null;
+  reflect?: boolean;
+};
+
 /**
- * Result of property extraction containing properties and warnings.
+ * IResult of property extraction containing properties and warnings.
  */
-export type PropertyExtractionResult = ExtractionResult<PropertyDescriptor>;
+export type PropertyExtractionResult = IExtractionResult<IPropertyDescriptor>;
 
 /**
  * Context for property extraction operations.
  */
-export interface PropertyExtractionContext {
+export interface IPropertyExtractionContext {
   readonly checker: ts.TypeChecker;
 }
 
 /**
- * Determines whether a decorator is a `@property` decorator.
- *
- * @param decorator - Decorator node to inspect.
- * @param node
- * @param sourceFile
- * @param classNode
- * @param context
- * @returns True when the decorator targets `property`.
+ * extractPropertyDecorators TODO: describe.
+ * @param classChain TODO: describe parameter
+ * @param context TODO: describe parameter
+ * @returns TODO: describe return value
  */
-const extractPropertyDecoratorsFromClass = (
-  classNode: ts.ClassLikeDeclaration,
-  context: PropertyExtractionContext,
+export const extractPropertyDecorators = (
+  classChain: readonly ts.ClassLikeDeclaration[],
+  context: Readonly<IPropertyExtractionContext>,
 ): PropertyExtractionResult => {
-  const descriptors: PropertyDescriptor[] = [];
-  const warnings: string[] = [];
+  const extracted = extractFromChain(classChain, {
+    /**
+     * Extracts properties and warnings for a class node.
+     *
+     * @param classNode - Class node to inspect.
+     * @returns Extracted items and warnings for the class node.
+     */
+    extract: (classNode) => {
+      const { items, warnings } = extractPropertyDecoratorsFromClass(
+        classNode,
+        context,
+      );
+      return { items, warnings };
+    },
+    /**
+     * Provides the merge key for a property descriptor.
+     *
+     * @param descriptor - Property descriptor to key.
+     * @returns Key used for deduplication.
+     */
+    getKey: (descriptor) => descriptor.name,
+  });
+
+  return {
+    items: extracted.items,
+    warnings: extracted.warnings,
+  };
+};
+
+/**
+ * extractPropertyDecoratorsFromClass TODO: describe.
+ * @param classNode TODO: describe parameter
+ * @param context TODO: describe parameter
+ * @returns TODO: describe return value
+ */
+function extractPropertyDecoratorsFromClass(
+  classNode: Readonly<ts.ClassLikeDeclaration>,
+  context: Readonly<IPropertyExtractionContext>,
+): PropertyExtractionResult {
+  let descriptors: IPropertyDescriptor[] = [];
+  let warnings: string[] = [];
   const sourceFile = classNode.getSourceFile();
   const { checker } = context;
 
@@ -89,9 +141,10 @@ const extractPropertyDecoratorsFromClass = (
 
     const propertyName = getPropertyName(member);
     if (!propertyName) {
-      warnings.push(
+      warnings = [
+        ...warnings,
         `Unable to resolve property name for member: ${member.getText(sourceFile)}`,
-      );
+      ];
       continue;
     }
 
@@ -116,7 +169,7 @@ const extractPropertyDecoratorsFromClass = (
     const resolvedAttribute =
       attribute === null ? null : (attribute ?? toKebabCase(propertyName));
 
-    const descriptor: PropertyDescriptor = {
+    const descriptor: IPropertyDescriptor = {
       name: propertyName,
       attribute: resolvedAttribute,
       type: figmaType,
@@ -132,72 +185,25 @@ const extractPropertyDecoratorsFromClass = (
         : {}),
     };
 
-    descriptors.push(descriptor);
+    descriptors = [...descriptors, descriptor];
   }
 
   return {
     items: descriptors,
     warnings,
   };
-};
+}
 
 /**
- * Resolves a property name from a declaration node.
- *
- * @param node - Declaration node to inspect.
- * @param decorator
- * @param typeNode
- * @param type
- * @param sourceFile
- * @returns Property name or null when unresolved.
+ * getDefaultValue TODO: describe.
+ * @param node TODO: describe parameter
+ * @param sourceFile TODO: describe parameter
+ * @returns TODO: describe return value
  */
-export const extractPropertyDecorators = (
-  classChain: readonly ts.ClassLikeDeclaration[],
-  context: PropertyExtractionContext,
-): PropertyExtractionResult => {
-  const extracted = extractFromChain(classChain, {
-    /**
-     * Extracts properties and warnings for a class node.
-     *
-     * @param classNode - Class node to inspect.
-     * @returns Extracted items and warnings for the class node.
-     */
-    extract: (classNode) => {
-      const { items, warnings } = extractPropertyDecoratorsFromClass(
-        classNode,
-        context,
-      );
-      return { items, warnings };
-    },
-    /**
-     * Provides the merge key for a property descriptor.
-     *
-     * @param descriptor - Property descriptor to key.
-     * @returns Key used for deduplication.
-     */
-    getKey: (descriptor) => descriptor.name,
-  });
-
-  return {
-    items: extracted.items,
-    warnings: extracted.warnings,
-  };
-};
-
-/**
- * Extracts a default value from a property initializer.
- *
- * @param node - Property declaration node.
- * @param sourceFile - Source file containing the node.
- * @param decorator
- * @param typeNode
- * @param type
- * @returns Parsed default value or null when absent.
- */
-const getDefaultValue = (
-  node: ts.PropertyDeclaration,
-  sourceFile: ts.SourceFile,
-): string | number | boolean | null => {
+function getDefaultValue(
+  node: Readonly<ts.PropertyDeclaration>,
+  sourceFile: Readonly<ts.SourceFile>,
+): string | number | boolean | null {
   const { initializer } = node;
   if (!initializer) {
     return null;
@@ -207,69 +213,62 @@ const getDefaultValue = (
     return literal;
   }
   return initializer.getText(sourceFile);
-};
+}
 
 /**
- * Parses decorator options from a `@property` decorator call.
- *
- * @param decorator - Decorator to parse.
- * @param sourceFile - Source file containing the decorator.
- * @param typeNode
- * @param node
- * @param type
- * @returns Parsed options for type, attribute, and reflect.
+ * getEnumValuesFromType TODO: describe.
+ * @param type TODO: describe parameter
+ * @returns TODO: describe return value
  */
-const getEnumValuesFromType = (
+function getEnumValuesFromType(
   type: ts.Type | undefined,
-): string[] | undefined => {
-  if (!type || !(type.flags & ts.TypeFlags.Union)) {
+): string[] | undefined {
+  if (!type || !isUnionType(type)) {
     return undefined;
   }
-  const union = type as ts.UnionType;
-  const values = union.types
-    .filter((member) => member.flags & ts.TypeFlags.StringLiteral)
-    .map((member) => (member as ts.StringLiteralType).value);
+  const values = type.types
+    .filter(isStringLiteralType)
+    .map(getStringLiteralValue);
   return values.length > 0 ? values : undefined;
-};
+}
 
 /**
- * Extracts enum values from a literal union type node.
- *
- * @param typeNode - Type node to inspect.
- * @param decorator
- * @param sourceFile
- * @param type
- * @param node
- * @returns Array of literal values or undefined when not a literal union.
+ * getEnumValuesFromTypeNode TODO: describe.
+ * @param typeNode TODO: describe parameter
+ * @returns TODO: describe return value
  */
-const getEnumValuesFromTypeNode = (
-  typeNode?: ts.TypeNode,
-): string[] | undefined => {
+function getEnumValuesFromTypeNode(
+  typeNode?: Readonly<ts.TypeNode>,
+): string[] | undefined {
   if (!typeNode || !ts.isUnionTypeNode(typeNode)) {
     return undefined;
   }
   const values = typeNode.types
     .filter(ts.isLiteralTypeNode)
-    .map((literal) =>
-      ts.isStringLiteral(literal.literal) ? literal.literal.text : null,
-    )
-    .filter((value): value is string => Boolean(value));
+    .map(getLiteralNodeText)
+    .filter(isNonNullString);
 
   return values.length > 0 ? values : undefined;
-};
+}
 
 /**
- * Extracts enum values from a resolved union type.
+ * Returns the text of a string literal within a LiteralTypeNode, or null.
  *
- * @param type - Resolved type from the checker.
- * @param decorator
- * @param sourceFile
- * @param classNode
- * @param context
- * @param node
- * @returns Array of literal values or undefined when not a literal union.
+ * @param literal - LiteralTypeNode to inspect.
+ * @returns String value or null.
  */
-const getPropertyName = (node: ts.NamedDeclaration): string | null => {
+function getLiteralNodeText(
+  literal: Readonly<ts.LiteralTypeNode>,
+): string | null {
+  return ts.isStringLiteral(literal.literal) ? literal.literal.text : null;
+}
+
+/**
+ * getPropertyName TODO: describe.
+ * @param node TODO: describe parameter
+ * @returns TODO: describe return value
+ */
+function getPropertyName(node: Readonly<ts.NamedDeclaration>): string | null {
   const { name } = node;
   if (!name) {
     return null;
@@ -284,24 +283,30 @@ const getPropertyName = (node: ts.NamedDeclaration): string | null => {
     }
   }
   return null;
-};
+}
 
 /**
- * Resolves a TypeScript type string for a class member.
+ * Returns the string literal value from a StringLiteralType.
  *
- * @param node - Member node to inspect.
- * @param checker - Type checker for type resolution.
- * @param decorator
- * @param sourceFile - Source file containing the member.
- * @param classChain
- * @param context
- * @returns The resolved type string.
+ * @param type - String literal type.
+ * @returns Literal string value.
  */
-const getTsType = (
-  node: ts.Node,
-  checker: ts.TypeChecker,
-  sourceFile: ts.SourceFile,
-): string => {
+function getStringLiteralValue(type: Readonly<ts.StringLiteralType>): string {
+  return type.value;
+}
+
+/**
+ * getTsType TODO: describe.
+ * @param node TODO: describe parameter
+ * @param checker TODO: describe parameter
+ * @param sourceFile TODO: describe parameter
+ * @returns TODO: describe return value
+ */
+function getTsType(
+  node: Readonly<ts.Node>,
+  checker: Readonly<ts.TypeChecker>,
+  sourceFile: Readonly<ts.SourceFile>,
+): string {
   if (ts.isPropertyDeclaration(node) || ts.isGetAccessorDeclaration(node)) {
     if (node.type) {
       return node.type.getText(sourceFile);
@@ -309,121 +314,160 @@ const getTsType = (
   }
   const type = checker.getTypeAtLocation(node);
   return checker.typeToString(type);
-};
+}
 
 /**
- * Maps TypeScript type information to a Figma property type.
+ * Narrows a nullable string to a non-null string.
  *
- * @param typeName - Decorator-provided type name, if any.
- * @param enumValues - Enum values derived from union types.
- * @param tsType - Resolved TypeScript type string.
- * @param propertyName - The property name for pattern-based heuristics.
- * @param node
- * @param checker
- * @param decorator
- * @param sourceFile
- * @returns The mapped Figma property type.
+ * @param value - Nullable string value.
+ * @returns True when value is a non-null string.
  */
-const isPropertyDecorator = (
-  decorator: ts.Decorator,
-): decorator is ts.Decorator => {
+function isNonNullString(value: string | null): value is string {
+  return value !== null;
+}
+
+/**
+ * isPropertyDecorator TODO: describe.
+ * @param decorator TODO: describe parameter
+ * @returns TODO: describe return value
+ */
+function isPropertyDecorator(
+  decorator: Readonly<ts.Decorator>,
+): decorator is ts.Decorator {
   const { expression } = decorator;
   if (!ts.isCallExpression(expression)) {
     return false;
   }
   const callee = expression.expression;
   if (ts.isIdentifier(callee)) {
-    return callee.text === "property";
+    return callee.text === PROPERTY_DECORATOR_NAME;
   }
   if (ts.isPropertyAccessExpression(callee)) {
-    return callee.name.text === "property";
+    return callee.name.text === PROPERTY_DECORATOR_NAME;
   }
   return false;
-};
+}
 
 /**
- * Extracts property descriptors from a single class declaration.
+ * Narrows a TypeScript type to ts.StringLiteralType.
  *
- * @param classNode - Class node to inspect.
- * @param context - Property extraction context.
- * @param typeName
- * @param enumValues
- * @param tsType
- * @param propertyName
- * @param node
- * @param checker
- * @param decorator
- * @param sourceFile
- * @returns Extracted property descriptors and warnings.
+ * @param type - Type to narrow.
+ * @returns True when the type is a string literal type.
  */
-const parseDecoratorOptions = (
-  decorator: ts.Decorator,
-  sourceFile: ts.SourceFile,
-): {
-  typeName?: string;
-  attribute?: string | null;
-  reflect?: boolean;
-} => {
+function isStringLiteralType(
+  type: Readonly<ts.Type>,
+): type is ts.StringLiteralType {
+  return !!(type.flags & ts.TypeFlags.StringLiteral);
+}
+
+/**
+ * Narrows a TypeScript type to ts.UnionType.
+ *
+ * @param type - Type to narrow.
+ * @returns True when the type is a union type.
+ */
+function isUnionType(type: Readonly<ts.Type>): type is ts.UnionType {
+  return !!(type.flags & ts.TypeFlags.Union);
+}
+
+/**
+ * parseDecoratorOptions TODO: describe.
+ * @param decorator TODO: describe parameter
+ * @param sourceFile TODO: describe parameter
+ * @returns TODO: describe return value
+ */
+function parseDecoratorOptions(
+  decorator: Readonly<ts.Decorator>,
+  sourceFile: Readonly<ts.SourceFile>,
+): DecoratorOptionsResult {
   const options = getDecoratorOptions(decorator);
   if (!options) {
     return {};
   }
 
-  return options.properties.reduce<{
-    typeName?: string;
-    attribute?: string | null;
-    reflect?: boolean;
-  }>((acc, property) => {
-    if (!ts.isPropertyAssignment(property) || !ts.isIdentifier(property.name)) {
-      return acc;
-    }
-    const key = property.name.text;
-
-    if (key === "type") {
-      if (ts.isIdentifier(property.initializer)) {
-        acc.typeName = property.initializer.text;
-      } else if (ts.isPropertyAccessExpression(property.initializer)) {
-        acc.typeName = property.initializer.name.text;
-      }
-    } else if (key === "attribute") {
-      const literal = getLiteralValue(property.initializer);
-      if (literal === true) {
-        acc.attribute = undefined;
-      } else if (literal === false) {
-        acc.attribute = null;
-      } else if (literal !== null) {
-        acc.attribute = String(literal);
-      } else {
-        acc.attribute = property.initializer.getText(sourceFile);
-      }
-    } else if (key === "reflect") {
-      const literal = getLiteralValue(property.initializer);
-      if (typeof literal === "boolean") {
-        acc.reflect = literal;
-      }
-    }
-
-    return acc;
-  }, {});
-};
+  return options.properties.reduce<DecoratorOptionsResult>(
+    processDecoratorProperty.bind(null, sourceFile),
+    {},
+  );
+}
 
 /**
- * Extracts property decorators across an inheritance chain.
+ * Processes a single decorator property assignment into the accumulator.
  *
- * @param classChain - Ordered class chain to inspect.
- * @param context - Property extraction context.
- * @param typeName
- * @param enumValues
- * @param tsType
- * @param propertyName
- * @returns Extracted property descriptors and warnings.
+ * @param sourceFile - Source file for text extraction.
+ * @param acc - Current accumulator state.
+ * @param property - Property assignment to process.
+ * @returns Updated accumulator.
  */
-const resolveFigmaType = (
+function processDecoratorProperty(
+  sourceFile: Readonly<ts.SourceFile>,
+  acc: Readonly<DecoratorOptionsResult>,
+  property: Readonly<ts.ObjectLiteralElementLike>,
+): DecoratorOptionsResult {
+  if (!ts.isPropertyAssignment(property) || !ts.isIdentifier(property.name)) {
+    return acc;
+  }
+  const key = property.name.text;
+
+  if (key === DECORATOR_KEY_TYPE) {
+    if (ts.isIdentifier(property.initializer)) {
+      return { ...acc, typeName: property.initializer.text };
+    } else if (ts.isPropertyAccessExpression(property.initializer)) {
+      return { ...acc, typeName: property.initializer.name.text };
+    }
+  } else if (key === DECORATOR_KEY_ATTRIBUTE) {
+    return {
+      ...acc,
+      attribute: resolveAttributeOption(property.initializer, sourceFile),
+    };
+  } else if (key === DECORATOR_KEY_REFLECT) {
+    const literal = getLiteralValue(property.initializer);
+    if (typeof literal === "boolean") {
+      return { ...acc, reflect: literal };
+    }
+  }
+
+  return acc;
+}
+
+/**
+ * Resolves the attribute option value from a decorator property initializer.
+ *
+ * @param initializer - The expression node from the decorator option.
+ * @param sourceFile - Source file for text extraction.
+ * @returns The resolved attribute name, null to disable, or undefined to use the default.
+ */
+function resolveAttributeOption(
+  initializer: Readonly<ts.Expression>,
+  sourceFile: Readonly<ts.SourceFile>,
+): string | null | undefined {
+  const literal = getLiteralValue(initializer);
+  if (literal === null) {
+    return initializer.getText(sourceFile);
+  }
+  if (typeof literal === "boolean") {
+    return literal ? undefined : null;
+  }
+  if (typeof literal === "string") {
+    return literal;
+  }
+  return undefined;
+}
+
+/**
+ * resolveFigmaType TODO: describe.
+ * @param typeName TODO: describe parameter
+ * @param enumValues TODO: describe parameter
+ * @param tsType TODO: describe parameter
+ * @param propertyName TODO: describe parameter
+ * @returns TODO: describe return value
+ */
+function resolveFigmaType(
   typeName: string | undefined,
   enumValues: string[] | undefined,
   tsType: string,
   propertyName: string,
-): FigmaPropertyType => {
+): FigmaPropertyType {
   // Pattern-based heuristics: treat HTML tag name properties as strings, not enums
   // These are implementation details, not design-system variants
   const isTagNameProperty = propertyName.toLowerCase().endsWith("tagname");
@@ -437,27 +481,27 @@ const resolveFigmaType = (
   }
 
   // Explicit decorator type declarations
-  if (typeName === "String") {
+  if (typeName === JS_TYPE_STRING) {
     return FigmaPropertyType.String;
   }
-  if (typeName === "Number") {
+  if (typeName === JS_TYPE_NUMBER) {
     return FigmaPropertyType.Number;
   }
-  if (typeName === "Boolean") {
+  if (typeName === JS_TYPE_BOOLEAN) {
     return FigmaPropertyType.Boolean;
   }
 
   // Inferred TypeScript types
   const normalized = tsType.toLowerCase();
-  if (normalized === "string") {
+  if (normalized === TS_PRIMITIVE_STRING) {
     return FigmaPropertyType.String;
   }
-  if (normalized === "number") {
+  if (normalized === TS_PRIMITIVE_NUMBER) {
     return FigmaPropertyType.Number;
   }
-  if (normalized === "boolean") {
+  if (normalized === TS_PRIMITIVE_BOOLEAN) {
     return FigmaPropertyType.Boolean;
   }
 
   return FigmaPropertyType.Unknown;
-};
+}

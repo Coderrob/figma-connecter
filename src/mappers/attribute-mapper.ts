@@ -22,8 +22,22 @@
  * @module mappers/attribute-mapper
  */
 
-import type { AttributeDescriptor, PropertyDescriptor } from "@/src/core/types";
+import type {
+  IAttributeDescriptor,
+  IPropertyDescriptor,
+} from "@/src/core/types";
 import { mergeByKey } from "@/src/utils/merge-by-key";
+
+/**
+ * Narrows nullable attribute descriptors to concrete descriptor values.
+ * @param attribute - Candidate attribute descriptor.
+ * @returns True when the descriptor is non-null.
+ */
+function isAttributeDescriptor(
+  attribute: IAttributeDescriptor | null,
+): attribute is IAttributeDescriptor {
+  return attribute !== null;
+}
 
 /**
  * Maps property descriptors into unique attribute descriptors.
@@ -32,15 +46,11 @@ import { mergeByKey } from "@/src/utils/merge-by-key";
  * @returns Attribute descriptors keyed by attribute name.
  */
 export function mapPropertiesToAttributes(
-  properties: readonly PropertyDescriptor[],
-): AttributeDescriptor[] {
-  const mapped: AttributeDescriptor[] = [];
-  for (const property of properties) {
-    const attribute = mapPropertyToAttribute(property);
-    if (attribute) {
-      mapped.push(attribute);
-    }
-  }
+  properties: readonly IPropertyDescriptor[],
+): IAttributeDescriptor[] {
+  const mapped = properties
+    .map(mapPropertyToAttribute)
+    .filter(isAttributeDescriptor);
 
   const merged = mergeByKey(mapped, {
     /**
@@ -62,8 +72,8 @@ export function mapPropertiesToAttributes(
  * @returns Attribute descriptor or null if no attribute is configured.
  */
 export function mapPropertyToAttribute(
-  property: PropertyDescriptor,
-): AttributeDescriptor | null {
+  property: Readonly<IPropertyDescriptor>,
+): IAttributeDescriptor | null {
   if (!property.attribute) {
     return null;
   }

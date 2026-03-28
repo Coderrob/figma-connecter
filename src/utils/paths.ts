@@ -29,47 +29,41 @@ import path from "node:path";
 export const POSIX_PATH_SEPARATOR = "/";
 
 /**
- * Normalizes a file system path to an absolute, POSIX-style string.
- *
- * @param value - The input path.
- * @returns Normalized absolute path with forward slashes.
- */
-export const normalizePath = (value: string): string => {
-  if (!value) {
-    return "";
-  }
-
-  return path.resolve(value).replaceAll("\\", "/");
-};
-
-/**
- * Builds the output file path for a Code Connect file.
- * Places the file in a `code-connect` subdirectory under the component directory.
- *
- * @param componentDir - The component's directory path.
- * @param fileName - The output file name.
- * @returns The full POSIX output path.
- *
- * @example
- * ```typescript
- * buildCodeConnectFilePath('/src/components/button', 'button.react.figma.tsx');
- * // '/src/components/button/code-connect/button.react.figma.tsx'
- * ```
+ * Builds the output path for a generated Code Connect file.
+ * @param componentDir - Source component directory that owns the generated file.
+ * @param fileName - Generated file name to place inside `code-connect`.
+ * @returns POSIX-style path to the generated Code Connect file.
  */
 export const buildCodeConnectFilePath = (
   componentDir: string,
   fileName: string,
 ): string =>
-  path.posix.join(componentDir.replaceAll("\\", "/"), "code-connect", fileName);
+  path.posix.join(
+    componentDir.replaceAll(String.raw`\\`, "/"),
+    "code-connect",
+    fileName,
+  );
 
 /**
- * Returns the POSIX basename of a normalized path.
- *
- * @param value - The input path.
- * @returns The last segment of the normalized path.
+ * Resolves the basename from a normalized path string.
+ * @param value - Path value to normalize before extracting the basename.
+ * @returns Final path segment using POSIX path semantics.
  */
 export const normalizedBasename = (value: string): string =>
   path.posix.basename(normalizePath(value));
+
+/**
+ * Normalizes a filesystem path to an absolute POSIX-style string.
+ * @param value - Input path to normalize.
+ * @returns Absolute path with forward slashes, or an empty string for empty input.
+ */
+export function normalizePath(value: string): string {
+  if (!value) {
+    return "";
+  }
+
+  return path.resolve(value).replaceAll(String.raw`\\`, "/");
+}
 
 /**
  * Resolves the relative dist/react import path from the code-connect directory.

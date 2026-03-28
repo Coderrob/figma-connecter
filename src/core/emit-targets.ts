@@ -114,7 +114,17 @@ export function parseEmitTargets(
     );
   }
 
-  const unique = [...new Set(tokens)] as EmitterTarget[];
+  /**
+   * Narrows a token to a recognized EmitterTarget.
+   *
+   * @param token - Normalized token to check.
+   * @returns True when token is in the allowed set.
+   */
+  function isKnownTarget(token: string): token is EmitterTarget {
+    return allowed.has(token);
+  }
+
+  const unique = [...new Set(tokens)].filter(isKnownTarget);
   if (unique.length === 0) {
     throw new Error("No valid emit targets found.");
   }

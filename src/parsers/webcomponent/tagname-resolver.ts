@@ -15,22 +15,31 @@
  */
 
 import path from "node:path";
-import ts from "typescript";
+import { TagNameSource } from "@/src/core/types";
 
-import { TagNameSource } from "../../core/types";
+import { nodeIoAdapter } from "@/src/io/adapter";
 
-import { nodeIoAdapter } from "../../io/adapter";
 import type {
-  TagNameResolution,
-  TagNameResolverOptions,
-} from "../../types/parsers-webcomponent";
-import { toKebabCase } from "../../utils/strings";
+  ITagNameResolution,
+  ITagNameResolverOptions,
+} from "@/src/types/parsers-webcomponent";
+import { toKebabCase } from "@/src/utils/strings";
+import { getJSDocTagText, getLiteralValue } from "@/src/utils/ts";
 
-import { getJSDocTagText, getLiteralValue } from "../../utils/ts";
-import type { ASTVisitorResult } from "./ast-visitor";
+import ts from "typescript";
+import type { IASTVisitorResult } from "./ast-visitor";
 import { resolveIdentifierValue } from "./tagname/export-resolution";
 import { applyNamespace } from "./tagname/namespace";
 
+const REGISTER_METHOD_NAME = "register";
+const TAGNAME_JSDOC_TAG = "tagname";
+
+/**
+ * createSourceFile TODO: describe.
+ * @param filePath TODO: describe parameter
+ * @param contents TODO: describe parameter
+ * @returns TODO: describe return value
+ */
 const createSourceFile = (filePath: string, contents: string): ts.SourceFile =>
   ts.createSourceFile(
     filePath,
@@ -40,6 +49,11 @@ const createSourceFile = (filePath: string, contents: string): ts.SourceFile =>
     ts.ScriptKind.TS,
   );
 
+/**
+ * readFileIfExists TODO: describe.
+ * @param filePath TODO: describe parameter
+ * @returns TODO: describe return value
+ */
 const readFileIfExists = (filePath: string): string | null => {
   try {
     if (!nodeIoAdapter.exists(filePath)) {
@@ -51,6 +65,12 @@ const readFileIfExists = (filePath: string): string | null => {
   }
 };
 
+/**
+ * resolveFromFilename TODO: describe.
+ * @param componentFilePath TODO: describe parameter
+ * @param componentDir TODO: describe parameter
+ * @returns TODO: describe return value
+ */
 const resolveFromFilename = (
   componentFilePath: string,
   componentDir: string,
@@ -63,6 +83,12 @@ const resolveFromFilename = (
   return applyNamespace(componentDir, derived);
 };
 
+/**
+ * resolveFromIndexFile TODO: describe.
+ * @param componentDir TODO: describe parameter
+ * @param className TODO: describe parameter
+ * @returns TODO: describe return value
+ */
 const resolveFromIndexFile = (
   componentDir: string,
   className?: string,
@@ -83,9 +109,15 @@ const resolveFromIndexFile = (
   return { tagName, warnings: warning ? [warning] : [] };
 };
 
+/**
+ * resolveFromJSDoc TODO: describe.
+ * @param classDeclaration TODO: describe parameter
+ * @param astData TODO: describe parameter
+ * @returns TODO: describe return value
+ */
 const resolveFromJSDoc = (
-  classDeclaration?: ts.ClassDeclaration,
-  astData?: ASTVisitorResult,
+  classDeclaration?: Readonly<ts.ClassDeclaration>,
+  astData?: Readonly<IASTVisitorResult>,
 ): string | null => {
   if (!classDeclaration) {
     return null;
@@ -94,7 +126,15 @@ const resolveFromJSDoc = (
   const tags =
     astData?.classJSDocTags.get(classDeclaration) ??
     ts.getJSDocTags(classDeclaration);
-  const tag = tags.find((item) => item.tagName.text === "tagname");
+  const tag = tags.find(
+    /**
+     * Finds the first event tag by name.
+     *
+     * @param item - JSDoc tag candidate.
+     * @returns True when the tag name matches.
+     */
+    (item) => item.tagName.text === TAGNAME_JSDOC_TAG,
+  );
   if (!tag) {
     return null;
   }
@@ -103,65 +143,66 @@ const resolveFromJSDoc = (
   return text || null;
 };
 
+/**
+ * resolveTagName TODO: describe.
+ * @param options TODO: describe parameter
+ * @returns TODO: describe return value
+ */
 export const resolveTagName = (
-  options: TagNameResolverOptions,
-): TagNameResolution => {
-  const warnings: string[] = [];
-
-  const jsdocTagName = resolveFromJSDoc(
-    options.classDeclaration,
-    options.astData,
-  );
+  options: Readonly<ITagNameResolverOptions>,
+): ITagNameResolution => {
+  const jsdocTagName = resolveFromJSDoc(options.classDeclaration, options.astData);
   if (jsdocTagName) {
-    return {
-      tagName: jsdocTagName,
-      source: TagNameSource.JSDoc,
-      warnings,
-    };
+    return { tagName: jsdocTagName, source: TagNameSource.JSDoc, warnings: [] };
   }
 
-  const indexResult = resolveFromIndexFile(
-    options.componentDir,
-    options.className,
-  );
+  const indexResult = resolveFromIndexFile(options.componentDir, options.className);
   if (indexResult.tagName) {
     return {
       tagName: indexResult.tagName,
       source: TagNameSource.IndexTs,
-      warnings: warnings.concat(indexResult.warnings),
+      warnings: [...indexResult.warnings],
     };
   }
 
-  warnings.push(...indexResult.warnings);
-
   return {
-    tagName: resolveFromFilename(
-      options.componentFilePath,
-      options.componentDir,
-    ),
+    tagName: resolveFromFilename(options.componentFilePath, options.componentDir),
     source: TagNameSource.Filename,
-    warnings,
+    warnings: [...indexResult.warnings],
   };
 };
 
-const resolveTagNameFromRegister = (
-  sourceFile: ts.SourceFile,
+/**
+ * Resolves a tag name from `register(...)` calls in an index file.
+ *
+ * @param sourceFile - Source file to inspect.
+ * @param componentDir - Component directory path.
+ * @param className - Optional class name to match register receiver.
+ * @returns Resolved tag name with optional warning.
+ */
+function resolveTagNameFromRegister(
+  sourceFile: Readonly<ts.SourceFile>,
   componentDir: string,
   className?: string,
-): { tagName: string | null; warning?: string } => {
-  const candidates: { receiver?: string; arg?: ts.Expression }[] = [];
+): { tagName: string | null; warning?: string } {
+  let candidates: { receiver?: string; arg?: ts.Expression }[] = [];
 
-  const visit = (node: ts.Node): void => {
+  /**
+   * visit TODO: describe.
+   * @param node TODO: describe parameter
+   * @returns TODO: describe return value
+   */
+  const visit = (node: Readonly<ts.Node>): void => {
     if (
       ts.isCallExpression(node) &&
       ts.isPropertyAccessExpression(node.expression)
     ) {
       const propertyAccess = node.expression;
-      if (propertyAccess.name.text === "register") {
+      if (propertyAccess.name.text === REGISTER_METHOD_NAME) {
         const receiver = ts.isIdentifier(propertyAccess.expression)
           ? propertyAccess.expression.text
           : undefined;
-        candidates.push({ receiver, arg: node.arguments[0] });
+        candidates = [...candidates, { receiver, arg: node.arguments[0] }];
       }
     }
     ts.forEachChild(node, visit);
@@ -174,8 +215,15 @@ const resolveTagNameFromRegister = (
   }
 
   const primary = className
-    ? (candidates.find((candidate) => candidate.receiver === className) ??
-      candidates[0])
+    ? (candidates.find(
+        /**
+         * Finds the register candidate matching the component class name.
+         *
+         * @param candidate - Register call candidate.
+         * @returns True when receiver matches the class name.
+         */
+        (candidate) => candidate.receiver === className,
+      ) ?? candidates[0])
     : candidates[0];
 
   const { arg } = primary;
@@ -205,4 +253,4 @@ const resolveTagNameFromRegister = (
     tagName: null,
     warning: `Unsupported register() tag expression: ${arg.getText(sourceFile)}`,
   };
-};
+}

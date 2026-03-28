@@ -29,7 +29,7 @@ import ts from "typescript";
 /**
  * Aggregated extraction results for a class chain.
  */
-export interface ChainExtractionResult<TItem> {
+export interface IChainExtractionResult<TItem> {
   /** Extracted items merged by key. */
   readonly items: readonly TItem[];
   /** Warnings produced during extraction. */
@@ -39,15 +39,28 @@ export interface ChainExtractionResult<TItem> {
 /**
  * Options for extracting and merging items across a class chain.
  */
-export interface ChainExtractorOptions<TItem> {
+export interface IChainExtractorOptions<TItem> {
   /** Extractor applied to each class in the chain. */
   readonly extract: (
     classNode: ts.ClassLikeDeclaration,
-  ) => ChainExtractionResult<TItem>;
+  ) => IChainExtractionResult<TItem>;
   /** Key selector for deterministic merging. */
   readonly getKey: (item: TItem) => string;
   /** Optional merge strategy when keys collide. */
   readonly merge?: (existing: TItem, incoming: TItem) => TItem;
+}
+
+/**
+ * Applies the configured extractor to a class node.
+ * @param options - Chain extraction options.
+ * @param classNode - Class node to process.
+ * @returns Extraction result for the class node.
+ */
+function extractForClassNode<TItem>(
+  options: Readonly<IChainExtractorOptions<TItem>>,
+  classNode: Readonly<ts.ClassLikeDeclaration>,
+): IChainExtractionResult<TItem> {
+  return options.extract(classNode);
 }
 
 /**
@@ -59,19 +72,11 @@ export interface ChainExtractorOptions<TItem> {
  */
 export function extractFromChain<TItem>(
   classChain: readonly ts.ClassLikeDeclaration[],
-  options: ChainExtractorOptions<TItem>,
-): ChainExtractionResult<TItem> {
-  const results: ChainExtractionResult<TItem>[] = [];
-  for (const classNode of classChain) {
-    results.push(options.extract(classNode));
-  }
-
-  const collected: TItem[] = [];
-  const warnings: string[] = [];
-  for (const result of results) {
-    collected.push(...result.items);
-    warnings.push(...result.warnings);
-  }
+  options: Readonly<IChainExtractorOptions<TItem>>,
+): IChainExtractionResult<TItem> {
+  const results = classChain.map(extractForClassNode.bind(undefined, options));
+  const collected = results.flatMap(selectExtractedItems);
+  const warnings = results.flatMap(selectWarnings);
 
   const merged = mergeByKey(collected, {
     getKey: options.getKey,
@@ -82,4 +87,26 @@ export function extractFromChain<TItem>(
     items: Array.from(merged.values()),
     warnings,
   };
+}
+
+/**
+ * Selects extracted items from a chain extraction result.
+ * @param result - Extraction result.
+ * @returns Extracted items.
+ */
+function selectExtractedItems<TItem>(
+  result: Readonly<IChainExtractionResult<TItem>>,
+): readonly TItem[] {
+  return result.items;
+}
+
+/**
+ * Selects warnings from a chain extraction result.
+ * @param result - Extraction result.
+ * @returns Extraction warnings.
+ */
+function selectWarnings<TItem>(
+  result: Readonly<IChainExtractionResult<TItem>>,
+): readonly string[] {
+  return result.warnings;
 }

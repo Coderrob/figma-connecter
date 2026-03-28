@@ -14,22 +14,52 @@
  * limitations under the License.
  */
 
-import ts from "typescript";
 import type {
-  InheritanceResolution,
-  InheritanceContext,
-} from "../../types/parsers-webcomponent";
+  IInheritanceResolution,
+  IInheritanceContext,
+} from "@/src/types/parsers-webcomponent";
+import ts from "typescript";
 
 /**
- * Resolves an aliased symbol for a node if present.
- *
- * @param checker - Type checker for symbol resolution.
- * @param node - Node to resolve.
- * @param symbol
- * @param declaration
- * @returns Resolved symbol or undefined.
+ * findClassByNameInBlock TODO: describe.
+ * @param body TODO: describe parameter
+ * @param name TODO: describe parameter
+ * @returns TODO: describe return value
  */
-const getFunctionBody = (declaration: ts.Declaration): ts.Block | null => {
+const findClassByNameInBlock = (
+  body: Readonly<ts.Block>,
+  name: string,
+): ts.ClassLikeDeclaration | null => {
+  for (const statement of body.statements) {
+    if (ts.isClassDeclaration(statement) && statement.name?.text === name) {
+      return statement;
+    }
+  }
+
+  for (const statement of body.statements) {
+    if (!ts.isVariableStatement(statement)) {
+      continue;
+    }
+    for (const decl of statement.declarationList.declarations) {
+      if (ts.isIdentifier(decl.name) && decl.name.text === name) {
+        if (decl.initializer && ts.isClassExpression(decl.initializer)) {
+          return decl.initializer;
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+/**
+ * getFunctionBody TODO: describe.
+ * @param declaration TODO: describe parameter
+ * @returns TODO: describe return value
+ */
+const getFunctionBody = (
+  declaration: Readonly<ts.Declaration>,
+): ts.Block | null => {
   if (
     ts.isFunctionDeclaration(declaration) ||
     ts.isFunctionExpression(declaration)
@@ -46,17 +76,13 @@ const getFunctionBody = (declaration: ts.Declaration): ts.Block | null => {
 };
 
 /**
- * Finds the first class declaration associated with a symbol.
- *
- * @param symbol - Symbol to inspect.
- * @param checker
- * @param node
- * @param declaration
- * @returns Class declaration or null when missing.
+ * getFunctionBodyFromVariableDeclaration TODO: describe.
+ * @param declaration TODO: describe parameter
+ * @returns TODO: describe return value
  */
-const getFunctionBodyFromVariableDeclaration = (
-  declaration: ts.VariableDeclaration,
-): ts.Block | null => {
+function getFunctionBodyFromVariableDeclaration(
+  declaration: Readonly<ts.VariableDeclaration>,
+): ts.Block | null {
   const { initializer } = declaration;
   if (!initializer) {
     return null;
@@ -68,19 +94,15 @@ const getFunctionBodyFromVariableDeclaration = (
     return initializer.body ?? null;
   }
   return null;
-};
+}
 
 /**
- * Checks if a symbol is from an external library or built-in type.
- *
- * @param symbol - Symbol to inspect.
- * @param checker
- * @param node
- * @param body
- * @returns True if the symbol is external.
+ * getReturnExpression TODO: describe.
+ * @param declaration TODO: describe parameter
+ * @returns TODO: describe return value
  */
 const getReturnExpression = (
-  declaration: ts.Declaration,
+  declaration: Readonly<ts.Declaration>,
 ): ts.Expression | null => {
   if (ts.isArrowFunction(declaration)) {
     if (!ts.isBlock(declaration.body)) {
@@ -106,86 +128,25 @@ const getReturnExpression = (
 };
 
 /**
- * Checks if a symbol represents a function or method parameter.
- *
- * @param symbol - Symbol to inspect.
- * @param checker
- * @param node
- * @returns True if the symbol is a parameter.
+ * getReturnExpressionFromBlock TODO: describe.
+ * @param body TODO: describe parameter
+ * @returns TODO: describe return value
  */
-const getReturnExpressionFromBlock = (body: ts.Block): ts.Expression | null => {
+function getReturnExpressionFromBlock(
+  body: Readonly<ts.Block>,
+): ts.Expression | null {
   const returnStatement = body.statements.find(ts.isReturnStatement);
   return returnStatement?.expression ?? null;
-};
+}
 
 /**
- * Resolves a class declaration from an expression.
- *
- * @param checker - Type checker for symbol resolution.
- * @param expression - Expression to resolve.
- * @param declaration
- * @param symbol
- * @param node
- * @returns Class declaration or null when unresolved.
+ * getReturnExpressionFromVariableDeclaration TODO: describe.
+ * @param declaration TODO: describe parameter
+ * @returns TODO: describe return value
  */
-const findClassByNameInBlock = (
-  body: ts.Block,
-  name: string,
-): ts.ClassLikeDeclaration | null => {
-  const classDecl = body.statements
-    .filter(ts.isClassDeclaration)
-    .find((cls) => cls.name?.text === name);
-  if (classDecl) {
-    return classDecl;
-  }
-
-  const varDecl = body.statements
-    .filter(ts.isVariableStatement)
-    .flatMap((stmt) => stmt.declarationList.declarations)
-    .find((decl) => ts.isIdentifier(decl.name) && decl.name.text === name);
-  if (varDecl?.initializer && ts.isClassExpression(varDecl.initializer)) {
-    return varDecl.initializer;
-  }
-
-  return null;
-};
-
-/**
- * Retrieves the function body from a variable declaration's function initializer.
- *
- * @param declaration - Variable declaration to inspect.
- * @param checker
- * @param expression
- * @param symbol
- * @param node
- * @returns Function body block or null.
- */
-const isExternalSymbol = (symbol: ts.Symbol): boolean => {
-  const declarations = symbol.getDeclarations() ?? [];
-  if (declarations.length === 0) {
-    return true;
-  }
-  // Check if any declaration is from a .d.ts file (library definition)
-  return declarations.some((decl) => {
-    const sourceFile = decl.getSourceFile();
-    return sourceFile.isDeclarationFile;
-  });
-};
-
-/**
- * Retrieves the function body for a declaration if available.
- *
- * @param declaration - Declaration to inspect.
- * @param checker
- * @param expression
- * @param body
- * @param symbol
- * @param node
- * @returns Function body block or null.
- */
-const getReturnExpressionFromVariableDeclaration = (
-  declaration: ts.VariableDeclaration,
-): ts.Expression | null => {
+function getReturnExpressionFromVariableDeclaration(
+  declaration: Readonly<ts.VariableDeclaration>,
+): ts.Expression | null {
   const { initializer } = declaration;
   if (!initializer) {
     return null;
@@ -202,82 +163,66 @@ const getReturnExpressionFromVariableDeclaration = (
       : null;
   }
   return null;
-};
+}
 
 /**
- * Unwraps parenthesized expressions to the inner expression.
- *
- * @param checker
- * @param expression - Expression to unwrap.
- * @param body
- * @param declaration
- * @param symbol
- * @param node
- * @returns Unwrapped expression.
- */
-const isParameterSymbol = (symbol: ts.Symbol): boolean => {
-  const declarations = symbol.getDeclarations() ?? [];
-  return declarations.some((decl) => ts.isParameter(decl));
-};
-
-/**
- * Finds the return expression in a block body.
- *
- * @param body - Block body to search.
- * @param checker
- * @param expression
- * @param declaration
- * @param name
- * @param symbol
- * @param node
- * @returns Return expression or null.
+ * getSymbolKey TODO: describe.
+ * @param checker TODO: describe parameter
+ * @param classDecl TODO: describe parameter
+ * @returns TODO: describe return value
  */
 const getSymbolKey = (
-  checker: ts.TypeChecker,
-  classDecl: ts.ClassLikeDeclaration,
+  checker: Readonly<ts.TypeChecker>,
+  classDecl: Readonly<ts.ClassLikeDeclaration>,
 ): string =>
   // Always use file path + position for uniqueness, especially important for
   // mixin patterns where multiple classes may have the same name (e.g., InnerMixinClass)
   `${classDecl.getSourceFile().fileName}:${classDecl.pos}`;
 
 /**
- * Resolves a returned expression from a variable declaration's function initializer.
- *
- * @param declaration - Variable declaration to inspect.
- * @param checker
- * @param expression
- * @param body
- * @param name
- * @param symbol
- * @returns Returned expression or null.
+ * isExternalSymbol TODO: describe.
+ * @param symbol TODO: describe parameter
+ * @returns TODO: describe return value
  */
-const resolveAliasedSymbol = (
-  checker: ts.TypeChecker,
-  node: ts.Node,
-): ts.Symbol | undefined => {
-  const symbol = checker.getSymbolAtLocation(node);
-  if (!symbol) {
-    return undefined;
+const isExternalSymbol = (symbol: Readonly<ts.Symbol>): boolean => {
+  const declarations = symbol.getDeclarations() ?? [];
+  if (declarations.length === 0) {
+    return true;
   }
-  if (symbol.flags & ts.SymbolFlags.Alias) {
-    return checker.getAliasedSymbol(symbol);
-  }
-  return symbol;
+  // Check if any declaration is from a .d.ts file (library definition)
+  return declarations.some(
+    /**
+     * Checks whether a declaration is from a .d.ts file.
+     *
+     * @param decl - Declaration to inspect.
+     * @returns True when the declaration is in a declaration file.
+     */
+    (decl) => {
+      const sourceFile = decl.getSourceFile();
+      return sourceFile.isDeclarationFile;
+    },
+  );
 };
 
 /**
- * Resolves a returned expression from a function or variable declaration.
- *
- * @param declaration - Declaration to inspect.
- * @param checker
- * @param expression
- * @param classDecl
- * @param symbol
- * @returns Returned expression or null.
+ * isParameterSymbol TODO: describe.
+ * @param symbol TODO: describe parameter
+ * @returns TODO: describe return value
+ */
+const isParameterSymbol = (symbol: Readonly<ts.Symbol>): boolean => {
+  const declarations = symbol.getDeclarations() ?? [];
+  return declarations.some(ts.isParameter);
+};
+
+/**
+ * isSkippableExpression TODO: describe.
+ * @param checker TODO: describe parameter
+ * @param expression TODO: describe parameter
+ * @returns TODO: describe return value
  */
 const isSkippableExpression = (
-  checker: ts.TypeChecker,
-  expression: ts.Expression,
+  checker: Readonly<ts.TypeChecker>,
+  expression: Readonly<ts.Expression>,
 ): boolean => {
   if (
     !ts.isIdentifier(expression) &&
@@ -290,37 +235,34 @@ const isSkippableExpression = (
 };
 
 /**
- * Finds a class-like declaration by name within a function body block.
- *
- * Searches both class declarations and class-expression variable declarations.
- *
- * @param body - Function body block to search.
- * @param name - Class name to find.
- * @param declaration
- * @param expression
- * @param checker
- * @param classDecl
- * @returns Matching class-like declaration or null.
+ * resolveAliasedSymbol TODO: describe.
+ * @param checker TODO: describe parameter
+ * @param node TODO: describe parameter
+ * @returns TODO: describe return value
  */
-const resolveClassDeclarationFromSymbol = (
-  symbol: ts.Symbol,
-): ts.ClassDeclaration | null => {
-  const declarations = symbol.getDeclarations() ?? [];
-  return declarations.find(ts.isClassDeclaration) ?? null;
-};
+function resolveAliasedSymbol(
+  checker: Readonly<ts.TypeChecker>,
+  node: Readonly<ts.Node>,
+): ts.Symbol | undefined {
+  const symbol = checker.getSymbolAtLocation(node);
+  if (!symbol) {
+    return undefined;
+  }
+  if (symbol.flags & ts.SymbolFlags.Alias) {
+    return checker.getAliasedSymbol(symbol);
+  }
+  return symbol;
+}
 
 /**
- * Resolves a mixin call expression to its returned class declaration.
- *
- * @param checker - Type checker for symbol resolution.
- * @param callExpression - Call expression for a mixin.
- * @param expression
- * @param classDecl
- * @returns Class-like declaration or null when unresolved.
+ * resolveClassDeclarationFromExpression TODO: describe.
+ * @param checker TODO: describe parameter
+ * @param expression TODO: describe parameter
+ * @returns TODO: describe return value
  */
 const resolveClassDeclarationFromExpression = (
-  checker: ts.TypeChecker,
-  expression: ts.Expression,
+  checker: Readonly<ts.TypeChecker>,
+  expression: Readonly<ts.Expression>,
 ): ts.ClassDeclaration | null => {
   if (
     !ts.isIdentifier(expression) &&
@@ -343,26 +285,31 @@ const resolveClassDeclarationFromExpression = (
 };
 
 /**
- * Determines whether a heritage expression should be silently skipped.
- *
- * Returns true for expressions that resolve to external (e.g., HTMLElement)
- * or parameter (e.g., superClass mixin argument) symbols.
- *
- * @param checker - Type checker for symbol resolution.
- * @param expression - Expression to evaluate.
- * @param callExpression
- * @param classDeclaration
- * @param context
- * @returns True if the expression can be safely skipped without a warning.
+ * resolveClassDeclarationFromSymbol TODO: describe.
+ * @param symbol TODO: describe parameter
+ * @returns TODO: describe return value
+ */
+function resolveClassDeclarationFromSymbol(
+  symbol: Readonly<ts.Symbol>,
+): ts.ClassDeclaration | null {
+  const declarations = symbol.getDeclarations() ?? [];
+  return declarations.find(ts.isClassDeclaration) ?? null;
+}
+
+/**
+ * resolveInheritanceChain TODO: describe.
+ * @param classDeclaration TODO: describe parameter
+ * @param context TODO: describe parameter
+ * @returns TODO: describe return value
  */
 export const resolveInheritanceChain = (
-  classDeclaration: ts.ClassDeclaration,
-  context: InheritanceContext,
-): InheritanceResolution => {
+  classDeclaration: Readonly<ts.ClassDeclaration>,
+  context: Readonly<IInheritanceContext>,
+): IInheritanceResolution => {
   const { checker } = context;
-  const chain: ts.ClassLikeDeclaration[] = [];
-  const warnings: string[] = [];
-  const unresolved: string[] = [];
+  let chain: ts.ClassLikeDeclaration[] = [];
+  let warnings: string[] = [];
+  let unresolved: string[] = [];
   const seen = new Set<string>();
 
   /**
@@ -371,19 +318,23 @@ export const resolveInheritanceChain = (
    * @param expression - Expression that could not be resolved.
    * @returns Nothing.
    */
-  const handleUnresolved = (expression: ts.Expression): void => {
+  const handleUnresolved = (expression: Readonly<ts.Expression>): void => {
     const text = expression.getText(expression.getSourceFile());
-    unresolved.push(text);
-    warnings.push(`Unable to resolve base class for expression: ${text}`);
+    unresolved = [...unresolved, text];
+    warnings = [
+      ...warnings,
+      `Unable to resolve base class for expression: ${text}`,
+    ];
   };
 
   /**
-   * Collects a class declaration and its base classes into the chain.
-   *
-   * @param classDecl - Class-like declaration to collect.
-   * @returns Nothing.
+   * collectFromClass TODO: describe.
+   * @param classDecl TODO: describe parameter
+   * @returns TODO: describe return value
    */
-  function collectFromClass(classDecl: ts.ClassLikeDeclaration): void {
+  function collectFromClass(
+    classDecl: Readonly<ts.ClassLikeDeclaration>,
+  ): void {
     const key = getSymbolKey(checker, classDecl);
     if (seen.has(key)) {
       return;
@@ -400,18 +351,17 @@ export const resolveInheritanceChain = (
       }
     }
 
-    chain.push(classDecl);
+    chain = [...chain, classDecl];
   }
 
   /**
-   * Collects class declarations from a heritage expression.
-   *
-   * @param expression - Heritage expression to resolve.
-   * @returns Nothing.
+   * collectFromExpression TODO: describe.
+   * @param expression TODO: describe parameter
+   * @returns TODO: describe return value
    */
-  function collectFromExpression(expression: ts.Expression): void {
+  function collectFromExpression(expression: Readonly<ts.Expression>): void {
     if (ts.isCallExpression(expression)) {
-      expression.arguments.forEach((arg) => collectFromExpression(arg));
+      expression.arguments.forEach(collectFromExpression);
       const mixinClass = resolveMixinClassFromCall(checker, expression);
       if (mixinClass) {
         collectFromClass(mixinClass);
@@ -447,30 +397,23 @@ export const resolveInheritanceChain = (
 };
 
 /**
- * Builds a stable symbol key for class de-duplication.
- *
- * @param checker - Type checker for symbol lookup.
- * @param classDecl - Class declaration to key.
- * @param callExpression
- * @param classDeclaration
- * @param context
- * @param expression
- * @returns Unique key for the class declaration.
+ * resolveMixinClassFromCall TODO: describe.
+ * @param checker TODO: describe parameter
+ * @param callExpression TODO: describe parameter
+ * @returns TODO: describe return value
  */
-const resolveMixinClassFromCall = (
-  checker: ts.TypeChecker,
-  callExpression: ts.CallExpression,
-): ts.ClassLikeDeclaration | null => {
+function resolveMixinClassFromCall(
+  checker: Readonly<ts.TypeChecker>,
+  callExpression: Readonly<ts.CallExpression>,
+): ts.ClassLikeDeclaration | null {
   const symbol = resolveAliasedSymbol(checker, callExpression.expression);
   if (!symbol) {
     return null;
   }
-
   const declarations = symbol.getDeclarations() ?? [];
   for (const declaration of declarations) {
     const body = getFunctionBody(declaration);
     const returnExpression = getReturnExpression(declaration);
-
     if (returnExpression) {
       const unwrapped = unwrapExpression(returnExpression);
       if (ts.isClassExpression(unwrapped)) {
@@ -483,7 +426,6 @@ const resolveMixinClassFromCall = (
         }
       }
     }
-
     if (body) {
       const classDeclarations = body.statements.filter(ts.isClassDeclaration);
       if (classDeclarations.length > 0) {
@@ -491,24 +433,18 @@ const resolveMixinClassFromCall = (
       }
     }
   }
-
   return null;
-};
+}
 
 /**
- * Resolves the inheritance chain for a class declaration.
- *
- * @param classDeclaration - Class declaration to resolve.
- * @param context - Inheritance resolution context.
- * @param checker
- * @param callExpression
- * @param expression
- * @returns Resolved inheritance chain with warnings.
+ * unwrapExpression TODO: describe.
+ * @param expression TODO: describe parameter
+ * @returns TODO: describe return value
  */
-const unwrapExpression = (expression: ts.Expression): ts.Expression => {
+function unwrapExpression(expression: Readonly<ts.Expression>): ts.Expression {
   let current = expression;
   while (ts.isParenthesizedExpression(current)) {
     current = current.expression;
   }
   return current;
-};
+}

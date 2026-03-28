@@ -34,7 +34,7 @@ import {
   wrapGeneratedSection,
 } from '../../src/emitters/utils';
 import { createMockComponentModel } from '../helpers/fixtures';
-import type { EventDescriptor } from '../../src/core/types';
+import type { IEventDescriptor } from '../../src/core/types';
 
 describe('getComponentBaseName', () => {
   it('should return file-based component name when pattern matches', () => {
@@ -169,7 +169,7 @@ describe('buildEventsSection', () => {
   });
 
   it('should build events section with multiple events', () => {
-    const events: EventDescriptor[] = [
+    const events: IEventDescriptor[] = [
       { name: 'click', reactHandler: 'onClick' },
       { name: 'change', reactHandler: 'onChange' },
     ];
@@ -181,14 +181,14 @@ describe('buildEventsSection', () => {
   });
 
   it('should handle events with custom depth', () => {
-    const events: EventDescriptor[] = [{ name: 'click', reactHandler: 'onClick' }];
+    const events: IEventDescriptor[] = [{ name: 'click', reactHandler: 'onClick' }];
     const result = buildEventsSection(events, 2);
 
     expect(result[0]).toContain('    events: {');
   });
 
   it('should properly close events object with closing brace', () => {
-    const events: EventDescriptor[] = [
+    const events: IEventDescriptor[] = [
       { name: 'click', reactHandler: 'onClick' },
       { name: 'change', reactHandler: 'onChange' },
     ];
@@ -210,7 +210,7 @@ describe('buildEventsSection', () => {
   });
 
   it('should sort events by name', () => {
-    const events: EventDescriptor[] = [
+    const events: IEventDescriptor[] = [
       { name: 'zChange', reactHandler: 'onZChange' },
       { name: 'aClick', reactHandler: 'onAClick' },
       { name: 'mMove', reactHandler: 'onMMove' },
@@ -225,7 +225,7 @@ describe('buildEventsSection', () => {
   });
 
   it('should handle special character event names with proper quoting', () => {
-    const events: EventDescriptor[] = [
+    const events: IEventDescriptor[] = [
       { name: 'data-change', reactHandler: 'onDataChange' },
       { name: 'custom-event', reactHandler: 'onCustomEvent' },
     ];
@@ -237,7 +237,7 @@ describe('buildEventsSection', () => {
   });
 
   it('should generate syntactically valid JavaScript object', () => {
-    const events: EventDescriptor[] = [
+    const events: IEventDescriptor[] = [
       { name: 'click', reactHandler: 'onClick' },
       { name: 'change', reactHandler: 'onChange' },
     ];

@@ -16,14 +16,17 @@
 
 import { ClassDiscoveryMethod } from "@/src/core/types";
 
-import type { ClassSource } from "@/src/core/types";
+import type { IClassSource } from "@/src/core/types";
 import ts from "typescript";
 
-import type { ASTVisitorResult } from "./ast-visitor";
+import type { IASTVisitorResult } from "./ast-visitor";
 
-export interface ComponentDiscoveryResult {
+const CUSTOM_ELEMENT_DECORATOR = "customElement";
+const TAGNAME_JSDOC_TAG = "tagname";
+
+export interface IComponentDiscoveryResult {
   readonly classDeclaration: ts.ClassDeclaration;
-  readonly source: ClassSource;
+  readonly source: IClassSource;
 }
 
 /**
@@ -33,8 +36,8 @@ export interface ComponentDiscoveryResult {
  * @returns Discovery result or null when no class is found.
  */
 export function discoverComponentClass(
-  astData: ASTVisitorResult,
-): ComponentDiscoveryResult | null {
+  astData: Readonly<IASTVisitorResult>,
+): IComponentDiscoveryResult | null {
   const classes = astData.classDeclarations;
   if (classes.length === 0) {
     return null;
@@ -53,13 +56,8 @@ export function discoverComponentClass(
   }
 
   // Check for named export assigned as default
-  const { defaultExport } = astData;
-  const statement = defaultExport
-    ? ({ expression: defaultExport } as ts.ExportAssignment)
-    : undefined;
-
-  if (statement && ts.isIdentifier(statement.expression)) {
-    const exportName = statement.expression.text;
+  if (astData.defaultExport && ts.isIdentifier(astData.defaultExport)) {
+    const exportName = astData.defaultExport.text;
     const matched = classes.find(
       /**
        * Finds the class declaration that matches the default export name.
@@ -103,10 +101,10 @@ export function discoverComponentClass(
           }
           const expr = decorator.expression.expression;
           if (ts.isIdentifier(expr)) {
-            return expr.text === "customElement";
+            return expr.text === CUSTOM_ELEMENT_DECORATOR;
           }
           if (ts.isPropertyAccessExpression(expr)) {
-            return expr.name.text === "customElement";
+            return expr.name.text === CUSTOM_ELEMENT_DECORATOR;
           }
           return false;
         },
@@ -139,7 +137,7 @@ export function discoverComponentClass(
          * @param tag - JSDoc tag to inspect.
          * @returns True when tag name is tagname.
          */
-        (tag) => tag.tagName.text === "tagname",
+        (tag) => tag.tagName.text === TAGNAME_JSDOC_TAG,
       );
     },
   );
@@ -168,7 +166,7 @@ export function discoverComponentClass(
  * @param node - Class declaration to inspect.
  * @returns True when the class is exported as default.
  */
-const isDefaultExportedClass = (node: ts.ClassDeclaration): boolean => {
+function isDefaultExportedClass(node: Readonly<ts.ClassDeclaration>): boolean {
   const modifiers = node.modifiers ?? [];
   const hasDefault = modifiers.some(
     /**
@@ -189,4 +187,4 @@ const isDefaultExportedClass = (node: ts.ClassDeclaration): boolean => {
     (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
   );
   return hasDefault && hasExport;
-};
+}

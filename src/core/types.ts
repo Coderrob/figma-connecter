@@ -45,7 +45,7 @@ export enum EmitterTarget {
 export type EmitTarget = `${EmitterTarget}`;
 
 // ============================================================================
-// Generic Extraction Result
+// Generic Extraction IResult
 // ============================================================================
 
 /**
@@ -54,7 +54,7 @@ export type EmitTarget = `${EmitterTarget}`;
  * 
  * @template T - The type of items being extracted
  */
-export interface ExtractionResult<T> {
+export interface IExtractionResult<T> {
   readonly items: readonly T[];
   readonly warnings: readonly string[];
 }
@@ -66,7 +66,7 @@ export interface ExtractionResult<T> {
 /**
  * Configuration options for the connect command.
  */
-export interface ConnectOptions {
+export interface IConnectOptions {
   /** Path to component file or directory. */
   readonly inputPath: string;
   /** Whether to recursively scan subdirectories. */
@@ -113,7 +113,7 @@ export enum PropertyVisibility {
 /**
  * Describes a property extracted from a Web Component's `@property` decorator.
  */
-export interface PropertyDescriptor {
+export interface IPropertyDescriptor {
   /** The JavaScript property name. */
   readonly name: string;
   /** The HTML attribute name, or null if `attribute: false`. */
@@ -137,7 +137,7 @@ export interface PropertyDescriptor {
 /**
  * Describes an HTML attribute derived from a component property.
  */
-export interface AttributeDescriptor {
+export interface IAttributeDescriptor {
   /** The HTML attribute name (kebab-case). */
   readonly name: string;
   /** The property name that backs this attribute. */
@@ -155,7 +155,7 @@ export interface AttributeDescriptor {
 /**
  * Describes an event dispatched by a Web Component.
  */
-export interface EventDescriptor {
+export interface IEventDescriptor {
   /** The event name (e.g., 'shown'). */
   readonly name: string;
   /** The React event handler name (e.g., 'onShown'). */
@@ -168,7 +168,7 @@ export interface EventDescriptor {
  * The unified component model consumed by emitters.
  * This is the output of parsing and the input for code generation.
  */
-export interface ComponentModel {
+export interface IComponentModel {
   /** The class name of the component (e.g., 'Button'). */
   readonly className: string;
   /** The custom element tag name (e.g., 'my-button'). */
@@ -178,11 +178,11 @@ export interface ComponentModel {
   /** The directory containing the component. */
   readonly componentDir: string;
   /** Properties extracted from `@property` decorators. */
-  readonly props: readonly PropertyDescriptor[];
+  readonly props: readonly IPropertyDescriptor[];
   /** Attributes derived from component properties. */
-  readonly attributes: readonly AttributeDescriptor[];
+  readonly attributes: readonly IAttributeDescriptor[];
   /** Events extracted from JSDoc or dispatchEvent calls. */
-  readonly events: readonly EventDescriptor[];
+  readonly events: readonly IEventDescriptor[];
   /** Import path for the component. */
   readonly importPath: string;
 }
@@ -204,7 +204,7 @@ export enum GenerationStatus {
  * Report produced by the generation process.
  * Used for CLI output and CI integration.
  */
-export interface GenerationReport {
+export interface IGenerationReport {
   /** Overall status of the generation. */
   readonly status: GenerationStatus;
   /** Files that were created. */
@@ -220,7 +220,7 @@ export interface GenerationReport {
   /** Total duration of the generation process in milliseconds. */
   readonly durationMs: number;
   /** Optional per-component results for detailed reporting. */
-  readonly componentResults?: readonly ComponentResult[];
+  readonly componentResults?: readonly IComponentResult[];
 }
 
 /**
@@ -245,7 +245,7 @@ export enum FileChangeReason {
 /**
  * Details about a file change for reporting.
  */
-export interface FileChangeDetail {
+export interface IFileChangeDetail {
   /** Path to the affected file. */
   readonly filePath: string;
   /** Change status for the file. */
@@ -255,11 +255,11 @@ export interface FileChangeDetail {
 }
 
 /**
- * Result of processing a single component.
+ * IResult of processing a single component.
  */
-export interface ComponentResult {
+export interface IComponentResult {
   /** The component model, if parsing succeeded. */
-  readonly model?: ComponentModel;
+  readonly model?: IComponentModel;
   /** The discovered component name, if available. */
   readonly componentName?: string;
   /** Files created for this component. */
@@ -269,7 +269,7 @@ export interface ComponentResult {
   /** Files unchanged for this component. */
   readonly unchanged: readonly string[];
   /** Detailed change information for each emitted file. */
-  readonly fileChanges?: readonly FileChangeDetail[];
+  readonly fileChanges?: readonly IFileChangeDetail[];
   /** Warnings for this component. */
   readonly warnings: readonly string[];
   /** Errors for this component. */
@@ -289,7 +289,7 @@ export enum ClassDiscoveryMethod {
 /**
  * Metadata about the source of a parsed class.
  */
-export interface ClassSource {
+export interface IClassSource {
   /** How the class was discovered. */
   readonly discoveryMethod: ClassDiscoveryMethod;
   /** The file path where the class was found. */
@@ -307,9 +307,9 @@ export enum TagNameSource {
 }
 
 /**
- * Result of resolving a component's tag name.
+ * IResult of resolving a component's tag name.
  */
-export interface TagNameResult {
+export interface ITagNameResult {
   /** The resolved tag name. */
   readonly tagName: string;
   /** How the tag name was resolved. */
@@ -317,13 +317,13 @@ export interface TagNameResult {
 }
 
 // ============================================================================
-// Emitter Types
+// IEmitter Types
 // ============================================================================
 
 /**
  * Options for emitter configuration.
  */
-export interface EmitterOptions {
+export interface IEmitterOptions {
   /** Whether this is a dry run. */
   readonly dryRun: boolean;
   /** Base import path for components. */
@@ -333,7 +333,7 @@ export interface EmitterOptions {
 /**
  * Marker pair for generated sections.
  */
-export interface GeneratedSectionMarkers {
+export interface IGeneratedSectionMarkers {
   /** Marker indicating the start of a generated section. */
   readonly start: string;
   /** Marker indicating the end of a generated section. */
@@ -351,25 +351,25 @@ export enum GeneratedSectionName {
 /**
  * Payload describing a generated section update.
  */
-export interface GeneratedSectionPayload {
+export interface IGeneratedSectionPayload {
   /** Optional name for a targeted generated section. */
   readonly name?: GeneratedSectionName;
   /** The generated section content (without markers). */
   readonly content: string;
   /** Marker strings used to delimit the section. */
-  readonly markers?: GeneratedSectionMarkers;
+  readonly markers?: IGeneratedSectionMarkers;
 }
 
 /**
- * Result of emitting a single file.
+ * IResult of emitting a single file.
  */
-export interface EmitResult {
+export interface IEmitResult {
   /** The file path that was or would be written. */
   readonly filePath: string;
   /** The generated content. */
   readonly content: string;
   /** Optional generated section payloads for partial updates. */
-  readonly sections?: readonly GeneratedSectionPayload[];
+  readonly sections?: readonly IGeneratedSectionPayload[];
   /** Whether the file was created, updated, or unchanged. */
   readonly action: FileChangeStatus;
   /** Warnings encountered during emission (e.g., unknown property types). */

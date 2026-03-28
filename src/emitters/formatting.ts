@@ -28,58 +28,63 @@
 // ============================================================================
 
 /**
- * Converts a string to Title Case.
- * Handles camelCase, kebab-case, and snake_case inputs.
- *
- * @param value - The string to convert.
- * @param depth
- * @returns The title-cased string (e.g., 'primary' → 'Primary').
- *
- * @example
- * ```typescript
- * toTitleCase('primary'); // 'Primary'
- * toTitleCase('dark-mode'); // 'Dark Mode'
- * ```
+ * Prefixes a line with an indentation string.
+ * @param prefix - Indentation prefix to prepend.
+ * @param line - Line content to indent.
+ * @returns Indented line content.
+ */
+function applyIndent(prefix: string, line: string): string {
+  return `${prefix}${line}`;
+}
+
+/**
+ * Formats a property accessor for generated `props` lookups.
+ * @param value - Property name to access on the `props` object.
+ * @returns Dot notation for identifiers, otherwise bracket notation.
  */
 export const formatPropAccessor = (value: string): string =>
   isValidIdentifier(value) ? `props.${value}` : `props['${value}']`;
 
 /**
- * Creates indentation string for the given depth.
- *
- * @param content
- * @param depth - The indentation level (0 = no indent).
- * @param value
- * @returns A string of spaces for indentation.
+ * Formats a property key for generated object literals.
+ * @param value - Property name to emit.
+ * @returns Unquoted identifiers or quoted string keys for non-identifiers.
  */
 export const formatPropKey = (value: string): string =>
   isValidIdentifier(value) ? value : `'${value}'`;
-
-/**
- * Indents each line of a content block.
- *
- * @param content - The content to indent.
- * @param depth - The indentation level.
- * @param value
- * @returns Array of indented lines.
- */
-export const indent = (depth: number): string => "  ".repeat(depth);
 
 // ============================================================================
 // Identifier Handling
 // ============================================================================
 
 /**
- * Checks if a string is a valid JavaScript identifier.
- *
- * @param value - The string to check.
- * @param content
- * @param depth
- * @returns True if the string is a valid identifier.
+ * Formats a single token for title-cased output.
+ * @param token - Token to capitalize.
+ * @returns Capitalized token with the remaining characters lowercased.
+ */
+function formatTitleToken(token: string): string {
+  return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+}
+
+/**
+ * Creates a repeated two-space indentation prefix.
+ * @param depth - Indentation depth in two-space units.
+ * @returns Indentation string for the requested depth.
+ */
+export function indent(depth: number): string {
+  return "  ".repeat(depth);
+}
+
+/**
+ * Indents each line in a multi-line string block.
+ * @param content - Multi-line content to indent.
+ * @param depth - Indentation depth in two-space units.
+ * @returns Array of indented lines.
  */
 export const indentBlock = (content: string, depth: number): string[] => {
   const prefix = indent(depth);
-  return content.split("\n").map((line) => `${prefix}${line}`);
+  const indentLine = applyIndent.bind(undefined, prefix);
+  return content.split("\n").map(indentLine);
 };
 
 /**
@@ -89,14 +94,15 @@ export const indentBlock = (content: string, depth: number): string[] => {
  * @param value - The property key.
  * @returns The formatted key (e.g., 'disabled' or "'data-value'").
  */
-export const isValidIdentifier = (value: string): boolean =>
-  /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
+export function isValidIdentifier(value: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
+}
 
 /**
- * Formats a property accessor for template literals.
+ * Converts an identifier or phrase into title case text.
  *
- * @param value - The property name.
- * @returns The accessor expression (e.g., 'props.disabled' or "props['data-value']").
+ * @param value - Source text to transform.
+ * @returns Title-cased text with separators normalized to spaces.
  */
 export const toTitleCase = (value: string): string =>
   value
@@ -105,7 +111,5 @@ export const toTitleCase = (value: string): string =>
     .trim()
     .split(" ")
     .filter(Boolean)
-    .map(
-      (token) => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase(),
-    )
+    .map(formatTitleToken)
     .join(" ");

@@ -29,7 +29,7 @@
  * @template TInstance - The type of instance created by the factory.
  * @template TMetadata - The type of metadata associated with the entry.
  */
-export interface RegistryEntry<TInstance, TMetadata> {
+export interface IRegistryEntry<TInstance, TMetadata> {
   readonly factory: () => TInstance;
   readonly metadata: TMetadata;
 }
@@ -41,10 +41,129 @@ export interface RegistryEntry<TInstance, TMetadata> {
  * @template TInstance - The type of instance created by the factory.
  * @template TMetadata - The type of metadata associated with the entry.
  */
-export interface PluginOptions<TTarget, TInstance, TMetadata> {
+export interface IPluginOptions<TTarget, TInstance, TMetadata> {
   readonly target: TTarget;
   readonly factory: () => TInstance;
   readonly metadata: TMetadata;
+}
+
+type RegistryEntries<TTarget, TInstance, TMetadata> = ReadonlyArray<
+  readonly [TTarget, IRegistryEntry<TInstance, TMetadata>]
+>;
+
+let registryEntriesStore = new Map<object, readonly unknown[]>();
+
+/**
+ * Formats a target identifier for error messages.
+ *
+ * @template TTarget - The type of target identifier.
+ * @param target - Target identifier to format.
+ * @returns String representation safe for diagnostics.
+ */
+function formatTargetIdentifier<TTarget>(target: Readonly<TTarget>): string {
+  if (
+    typeof target === "string" ||
+    typeof target === "number" ||
+    typeof target === "boolean" ||
+    typeof target === "bigint" ||
+    typeof target === "symbol"
+  ) {
+    return String(target);
+  }
+
+  if (target === null || target === undefined) {
+    return String(target);
+  }
+
+  return JSON.stringify(target);
+}
+
+/**
+ * Extracts the target identifier from a registry entry tuple.
+ *
+ * @template TTarget - The type of target identifier.
+ * @template TInstance - The type of instance created by the factory.
+ * @template TMetadata - The type of metadata associated with the entry.
+ * @param entry - Registry entry tuple.
+ * @returns Target identifier for the entry.
+ */
+function getEntryTarget<TTarget, TInstance, TMetadata>(
+  entry: Readonly<readonly [TTarget, IRegistryEntry<TInstance, TMetadata>]>,
+): TTarget {
+  return entry[0];
+}
+
+/**
+ * Normalizes factory names for lower-case error messages.
+ *
+ * @param factoryTypeName - Display name used by the factory.
+ * @returns Lower-case factory label suitable for error messages.
+ */
+function getFactoryLabel(factoryTypeName: string): string {
+  if (factoryTypeName.startsWith("I") && factoryTypeName.length > 1) {
+    return factoryTypeName.slice(1).toLowerCase();
+  }
+  return factoryTypeName.toLowerCase();
+}
+
+/**
+ * Returns stored registry entries for a factory instance.
+ *
+ * @param factory - Factory instance used as the storage key.
+ * @returns Stored registry entries.
+ */
+function getStoredRegistryEntries<TTarget, TInstance, TMetadata>(
+  factory: object,
+): RegistryEntries<TTarget, TInstance, TMetadata> {
+  const stored = registryEntriesStore.get(factory);
+  return isRegistryEntryArray<TTarget, TInstance, TMetadata>(stored)
+    ? stored
+    : [];
+}
+
+/**
+ * Narrows a stored value to typed registry entries.
+ *
+ * @template TTarget - Target identifier type.
+ * @template TInstance - Instance type.
+ * @template TMetadata - Metadata type.
+ * @param value - Value from the store.
+ * @returns True when value is a registry entries array.
+ */
+function isRegistryEntryArray<TTarget, TInstance, TMetadata>(
+  value: readonly unknown[] | undefined,
+): value is RegistryEntries<TTarget, TInstance, TMetadata> {
+  return value !== undefined;
+}
+
+/**
+ * Stores registry entries for a factory instance.
+ *
+ * @param factory - Factory instance used as the storage key.
+ * @param entries - Registry entries to store.
+ * @returns Nothing.
+ */
+function setStoredRegistryEntries<TTarget, TInstance, TMetadata>(
+  factory: object,
+  entries: Readonly<RegistryEntries<TTarget, TInstance, TMetadata>>,
+): void {
+  registryEntriesStore = new Map([...registryEntriesStore, [factory, entries]]);
+}
+
+/**
+ * Converts a registry entry tuple into a metadata tuple.
+ *
+ * @template TTarget - The type of target identifier.
+ * @template TInstance - The type of instance created by the factory.
+ * @template TMetadata - The type of metadata associated with the entry.
+ * @param entry - Registry entry tuple.
+ * @returns Target and metadata tuple.
+ */
+function toMetadataEntry<TTarget, TInstance, TMetadata>(
+  entry: Readonly<readonly [TTarget, IRegistryEntry<TInstance, TMetadata>]>,
+): readonly [TTarget, TMetadata] {
+  const [target, registryEntry] = entry;
+  return [target, registryEntry.metadata];
 }
 
 /**
@@ -57,29 +176,28 @@ export interface PluginOptions<TTarget, TInstance, TMetadata> {
  */
 export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
   /**
-   * Internal registry mapping targets to their entries.
-   */
-  protected readonly registry: Map<
-    TTarget,
-    RegistryEntry<TInstance, TMetadata>
-  >;
-
-  /**
-   * Name of the factory type for error messages (e.g., "Parser", "Emitter").
+   * Name of the factory type for error messages (e.g., "IParser", "IEmitter").
    */
   protected abstract readonly factoryTypeName: string;
 
   /**
    * Initializes the registry factory with optional initial entries.
    *
-   * @param initialEntries - Optional initial registry entries.
+   * @param entries - Optional initial registry entries.
    */
   constructor(
-    initialEntries?: ReadonlyArray<
-      [TTarget, RegistryEntry<TInstance, TMetadata>]
-    >,
+    entries: Readonly<RegistryEntries<TTarget, TInstance, TMetadata>> = [],
   ) {
-    this.registry = new Map(initialEntries);
+    setStoredRegistryEntries(this, entries);
+  }
+
+  /**
+   * Returns registry entries for the current factory instance.
+   *
+   * @returns Registry entries in registration order.
+   */
+  protected get entries(): RegistryEntries<TTarget, TInstance, TMetadata> {
+    return getStoredRegistryEntries<TTarget, TInstance, TMetadata>(this);
   }
 
   /**
@@ -88,16 +206,26 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
    * @param options - Plugin configuration.
    * @throws Error if target is already registered.
    */
-  registerPlugin(options: PluginOptions<TTarget, TInstance, TMetadata>): void {
-    if (this.registry.has(options.target)) {
+  registerPlugin(
+    options: Readonly<IPluginOptions<TTarget, TInstance, TMetadata>>,
+  ): void {
+    const registry = new Map(this.entries);
+    if (registry.has(options.target)) {
       throw new Error(
-        `${this.factoryTypeName} plugin already registered for target: ${String(options.target)}`,
+        `${this.factoryTypeName} plugin already registered for target: ${formatTargetIdentifier(options.target)}`,
       );
     }
-    this.registry.set(options.target, {
-      factory: options.factory,
-      metadata: options.metadata,
-    });
+
+    setStoredRegistryEntries(this, [
+      ...this.entries,
+      [
+        options.target,
+        {
+          factory: options.factory,
+          metadata: options.metadata,
+        },
+      ],
+    ]);
   }
 
   /**
@@ -106,8 +234,8 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
    * @param target - Target to check.
    * @returns True if registered.
    */
-  hasPlugin(target: TTarget): boolean {
-    return this.registry.has(target);
+  hasPlugin(target: Readonly<TTarget>): boolean {
+    return new Map(this.entries).has(target);
   }
 
   /**
@@ -116,7 +244,7 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
    * @returns Array of registered targets.
    */
   listTargets(): TTarget[] {
-    return [...this.registry.keys()];
+    return this.entries.map(getEntryTarget);
   }
 
   /**
@@ -126,11 +254,11 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
    * @returns Metadata for the target.
    * @throws Error if target is not registered.
    */
-  getMetadata(target: TTarget): TMetadata {
-    const entry = this.registry.get(target);
+  getMetadata(target: Readonly<TTarget>): TMetadata {
+    const entry = new Map(this.entries).get(target);
     if (!entry) {
       throw new Error(
-        `No ${this.factoryTypeName.toLowerCase()} registered for target: ${String(target)}`,
+        `No ${getFactoryLabel(this.factoryTypeName)} registered for target: ${formatTargetIdentifier(target)}`,
       );
     }
     return entry.metadata;
@@ -142,11 +270,7 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
    * @returns Map of targets to their metadata.
    */
   getAllMetadata(): ReadonlyMap<TTarget, TMetadata> {
-    const metadata = new Map<TTarget, TMetadata>();
-    for (const [target, entry] of Array.from(this.registry)) {
-      metadata.set(target, entry.metadata);
-    }
-    return metadata;
+    return new Map<TTarget, TMetadata>(this.entries.map(toMetadataEntry));
   }
 
   /**
@@ -156,11 +280,11 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
    * @returns Instance for the target.
    * @throws Error if target is not registered.
    */
-  createInstance(target: TTarget): TInstance {
-    const entry = this.registry.get(target);
+  createInstance(target: Readonly<TTarget>): TInstance {
+    const entry = new Map(this.entries).get(target);
     if (!entry) {
       throw new Error(
-        `No ${this.factoryTypeName.toLowerCase()} registered for target: ${String(target)}`,
+        `No ${getFactoryLabel(this.factoryTypeName)} registered for target: ${formatTargetIdentifier(target)}`,
       );
     }
     return entry.factory();
@@ -176,7 +300,7 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
     const targets = this.listTargets();
     if (targets.length === 0) {
       throw new Error(
-        `No ${this.factoryTypeName.toLowerCase()} targets registered.`,
+        `No ${getFactoryLabel(this.factoryTypeName)} targets registered.`,
       );
     }
     return targets[0];

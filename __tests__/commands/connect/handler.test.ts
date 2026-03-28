@@ -21,7 +21,7 @@
 import { Command } from 'commander';
 
 import { runConnectCommand } from '../../../src/commands/connect/handler';
-import type { ConnectCommandOptions } from '../../../src/commands/connect/types';
+import type { IConnectCommandOptions } from '../../../src/commands/connect/types';
 
 const mockGetGlobalOptions: jest.Mock = jest.fn();
 const mockValidateGlobalOptions: jest.Mock = jest.fn();
@@ -104,7 +104,7 @@ describe('runConnectCommand', () => {
       ],
     });
 
-    const options: ConnectCommandOptions = {
+    const options: IConnectCommandOptions = {
       path: './components',
       recursive: true,
       dryRun: true,
@@ -157,7 +157,7 @@ describe('runConnectCommand', () => {
     const error = new Error('Pipeline failed');
     mockRunConnectPipeline.mockRejectedValue(error);
 
-    const options: ConnectCommandOptions = {
+    const options: IConnectCommandOptions = {
       path: './components',
       recursive: false,
       dryRun: false,
@@ -192,7 +192,7 @@ describe('runConnectCommand', () => {
       componentResults: [],
     });
 
-    const options: ConnectCommandOptions = {
+    const options: IConnectCommandOptions = {
       path: './components',
       recursive: false,
       emit: 'webcomponent',
@@ -232,7 +232,7 @@ describe('runConnectCommand', () => {
       componentResults: [],
     });
 
-    const options: ConnectCommandOptions = {
+    const options: IConnectCommandOptions = {
       path: './components',
       recursive: false,
       dryRun: false,
@@ -282,7 +282,7 @@ describe('runConnectCommand', () => {
       ],
     });
 
-    const options: ConnectCommandOptions = {
+    const options: IConnectCommandOptions = {
       path: './components',
       recursive: false,
       dryRun: true,
@@ -317,7 +317,7 @@ describe('runConnectCommand', () => {
       errors: [],
     });
 
-    const options: ConnectCommandOptions = {
+    const options: IConnectCommandOptions = {
       path: './components',
       recursive: false,
       dryRun: true,

@@ -23,11 +23,11 @@ import type ts from 'typescript';
 import { createEmptyComponentResult } from '../../src/core/report';
 import { aggregateResults, createResult } from '../../src/core/result';
 import { EmitterTarget } from '../../src/core/types';
-import type { Emitter } from '../../src/emitters/types';
+import type { IEmitter } from '../../src/emitters/types';
 import { createMemoryIoAdapter } from '../../src/io/adapter';
-import type { DiscoveredFile } from '../../src/types/io';
-import type { SourceLoadResult } from '../../src/io/source-loader';
-import type { Parser } from '../../src/parsers/types';
+import type { IDiscoveredFile } from '../../src/types/io';
+import type { ISourceLoadResult } from '../../src/io/source-loader';
+import type { IParser } from '../../src/parsers/types';
 import { ParserTarget } from '../../src/parsers/types';
 import { runConnectPipeline } from '../../src/pipeline';
 
@@ -93,7 +93,7 @@ describe('runConnectPipeline', () => {
   });
 
   it('should collect errors and warnings from pipeline stages', async () => {
-    const discovered: DiscoveredFile[] = [
+    const discovered: IDiscoveredFile[] = [
       {
         filePath: '/tmp/components/button.component.ts',
         relativePath: 'button.component.ts',
@@ -103,8 +103,8 @@ describe('runConnectPipeline', () => {
       },
     ];
 
-    const emitters = [] as Emitter[];
-    const parser = { target: ParserTarget.WebComponent, parse: jest.fn() } as Parser;
+    const emitters = [] as IEmitter[];
+    const parser = { target: ParserTarget.WebComponent, parse: jest.fn() } as IParser;
     const pipelineContext = {
       checker: {} as TypeChecker,
       emitters,
@@ -116,7 +116,7 @@ describe('runConnectPipeline', () => {
       logger,
       io: createMemoryIoAdapter(),
     };
-    const sourceLoad: SourceLoadResult = {
+    const sourceLoad: ISourceLoadResult = {
       context: pipelineContext,
       checker: pipelineContext.checker,
       configPath: '/tmp/tsconfig.json',
@@ -151,7 +151,7 @@ describe('runConnectPipeline', () => {
   });
 
   it('should propagate loader context into batch processing', async () => {
-    const discovered: DiscoveredFile[] = [
+    const discovered: IDiscoveredFile[] = [
       {
         filePath: '/tmp/components/alert.component.ts',
         relativePath: 'alert.component.ts',
@@ -160,8 +160,8 @@ describe('runConnectPipeline', () => {
         dirPath: '/tmp/components',
       },
     ];
-    const emitters = [] as Emitter[];
-    const parser = { target: ParserTarget.WebComponent, parse: jest.fn() } as Parser;
+    const emitters = [] as IEmitter[];
+    const parser = { target: ParserTarget.WebComponent, parse: jest.fn() } as IParser;
     const loaderContext = {
       checker: {} as TypeChecker,
       emitters,
@@ -175,7 +175,7 @@ describe('runConnectPipeline', () => {
       baseImportPath: '@momentum-design/components',
       io: createMemoryIoAdapter(),
     };
-    const sourceLoad: SourceLoadResult = {
+    const sourceLoad: ISourceLoadResult = {
       context: loaderContext,
       checker: loaderContext.checker,
       configPath: undefined,

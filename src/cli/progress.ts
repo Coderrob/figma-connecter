@@ -29,7 +29,7 @@ import type {
 import { ProgressStatus } from "@/src/types/cli";
 
 /** Animation frames for the spinner. */
-const SPINNER_FRAMES = ["-", "\\", "|", "/"];
+const SPINNER_FRAMES = ["-", String.raw`\\`, "|", "/"];
 
 /** Default animation interval in milliseconds. */
 const DEFAULT_INTERVAL_MS = 100;
@@ -83,7 +83,7 @@ function createNoOpIndicator(): IProgressIndicator {
  * ```
  */
 export function createProgressIndicator(
-  options: IProgressIndicatorOptions = {},
+  options: Readonly<IProgressIndicatorOptions> = {},
 ): IProgressIndicator {
   const stream = options.stream ?? process.stdout;
   const enabled = options.enabled ?? stream.isTTY;
@@ -148,7 +148,7 @@ export function createProgressIndicator(
      */
     stop(
       finalLabel?: string,
-      status: ProgressStatus = ProgressStatus.Success,
+      status: Readonly<ProgressStatus> = ProgressStatus.Success,
     ): void {
       if (timer) {
         clearInterval(timer);

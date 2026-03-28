@@ -8,6 +8,16 @@
  */
 import type { ICommandStages } from "@/src/types/cli";
 
+interface ICommandBuilderConfig<Context, IResult> {
+  readonly validate?: () => Context;
+  readonly execute?: (context: Readonly<Context>) => Promise<IResult> | IResult;
+  readonly report?: (
+    context: Readonly<Context>,
+    result: Readonly<IResult>,
+  ) => void;
+  readonly onError?: (context: Readonly<Context>, error: unknown) => void;
+}
+
 /**
  * Fluent builder for constructing a {@link CommandStages} pipeline.
  *
@@ -15,7 +25,7 @@ import type { ICommandStages } from "@/src/types/cli";
  * onError stages of a CLI command in a readable, chainable API.
  *
  * @template Context - The validated context object produced by the validate stage.
- * @template Result - The result object produced by the execute stage.
+ * @template IResult - The result object produced by the execute stage.
  *
  * @example
  * ```typescript
@@ -27,11 +37,17 @@ import type { ICommandStages } from "@/src/types/cli";
  *   .build();
  * ```
  */
-export class CommandBuilder<Context, Result> {
-  private _validate!: () => Context;
-  private _execute!: (context: Context) => Promise<Result> | Result;
-  private _report!: (context: Context, result: Result) => void;
-  private _onError?: (context: Context, error: unknown) => void;
+export class CommandBuilder<Context, IResult> {
+  /**
+   * Creates a new command builder.
+   *
+   * @param config - Builder configuration accumulated across fluent calls.
+   */
+  constructor(
+    private readonly config: Readonly<
+      ICommandBuilderConfig<Context, IResult>
+    > = {},
+  ) {}
 
   /**
    * Sets the validate stage function.
@@ -42,9 +58,11 @@ export class CommandBuilder<Context, Result> {
    * @param fn - Function that validates inputs and returns a context object.
    * @returns This builder instance for chaining.
    */
-  validate(fn: () => Context): this {
-    this._validate = fn;
-    return this;
+  validate(fn: () => Context): CommandBuilder<Context, IResult> {
+    return new CommandBuilder({
+      ...this.config,
+      validate: fn,
+    });
   }
 
   /**
@@ -56,9 +74,13 @@ export class CommandBuilder<Context, Result> {
    * @param fn - Function that executes the command and returns a result.
    * @returns This builder instance for chaining.
    */
-  execute(fn: (context: Context) => Promise<Result> | Result): this {
-    this._execute = fn;
-    return this;
+  execute(
+    fn: (context: Readonly<Context>) => Promise<IResult> | IResult,
+  ): CommandBuilder<Context, IResult> {
+    return new CommandBuilder({
+      ...this.config,
+      execute: fn,
+    });
   }
 
   /**
@@ -70,9 +92,13 @@ export class CommandBuilder<Context, Result> {
    * @param fn - Function that reports the result of the command execution.
    * @returns This builder instance for chaining.
    */
-  report(fn: (context: Context, result: Result) => void): this {
-    this._report = fn;
-    return this;
+  report(
+    fn: (context: Readonly<Context>, result: Readonly<IResult>) => void,
+  ): CommandBuilder<Context, IResult> {
+    return new CommandBuilder({
+      ...this.config,
+      report: fn,
+    });
   }
 
   /**
@@ -84,9 +110,13 @@ export class CommandBuilder<Context, Result> {
    * @param fn - Function that handles errors thrown during execution.
    * @returns This builder instance for chaining.
    */
-  onError(fn: (context: Context, error: unknown) => void): this {
-    this._onError = fn;
-    return this;
+  onError(
+    fn: (context: Readonly<Context>, error: unknown) => void,
+  ): CommandBuilder<Context, IResult> {
+    return new CommandBuilder({
+      ...this.config,
+      onError: fn,
+    });
   }
 
   /**
@@ -96,48 +126,34 @@ export class CommandBuilder<Context, Result> {
    * {@link CommandStages} pipeline ready for execution by the command runner.
    *
    * @returns A {@link CommandStages} object containing the configured pipeline stages.
+   * @throws Error when required stages have not been configured.
    */
-  build(): ICommandStages<Context, Result> {
-    const stages: ICommandStages<Context, Result> = {
-      /**
-       * Validation stage wrapper.
-       *
-       * @returns {Context} Validated context
-       */
-      validate: () => this._validate(),
-      /**
-       * Execution stage wrapper.
-       *
-       * @param {Context} context - Validated context
-       * @returns {Promise<Result>} Execution result
-       */
-      execute: (context: Context) =>
-        Promise.resolve(this._execute(context) as unknown as Result),
-      /**
-       * Report stage wrapper.
-       *
-       * @param {Context} context - Validated context
-       * @param {Result} result - Execution result
-       * @returns {void}
-       */
-      report: (context: Context, result: Result) =>
-        this._report(context, result),
-      ...(this._onError
-        ? {
-            /**
-             * Error handling stage wrapper.
-             *
-             * @param {Context} context - Validated context
-             * @param {unknown} error - Error encountered
-             * @returns {void}
-             */
-            onError: (context: Context, error: unknown) =>
-              this._onError!(context, error),
-          }
-        : {}),
-    };
+  build(): ICommandStages<Context, IResult> {
+    const { execute, onError, report, validate } = this.config;
+    if (!validate || !execute || !report) {
+      throw new Error(
+        "CommandBuilder requires validate, execute, and report stages before build().",
+      );
+    }
+    const executeStageFn = execute;
+    const reportStageFn = report;
+    const validateStageFn = validate;
+    /**
+     * Runs the configured execute stage and normalizes sync returns to a promise.
+     *
+     * @param context - Validated command context.
+     * @returns Execution result as a promise.
+     */
+    async function executeStage(context: Readonly<Context>): Promise<IResult> {
+      return executeStageFn(context);
+    }
 
-    return stages;
+    const stages: ICommandStages<Context, IResult> = {
+      validate: validateStageFn,
+      execute: executeStage,
+      report: reportStageFn,
+    };
+    return onError ? { ...stages, onError } : stages;
   }
 }
 

@@ -23,16 +23,16 @@ import type ts from 'typescript';
 import { createEmptyComponentResult } from '../../src/core/report';
 import { aggregateResults, createResult } from '../../src/core/result';
 import { EmitterTarget } from '../../src/core/types';
-import type { Emitter } from '../../src/emitters/types';
+import type { IEmitter } from '../../src/emitters/types';
 import { createMemoryIoAdapter } from '../../src/io/adapter';
-import type { DiscoveredFile } from '../../src/types/io';
-import type { SourceLoadResult } from '../../src/io/source-loader';
-import type { Parser } from '../../src/parsers/types';
+import type { IDiscoveredFile } from '../../src/types/io';
+import type { ISourceLoadResult } from '../../src/io/source-loader';
+import type { IParser } from '../../src/parsers/types';
 import { ParserTarget } from '../../src/parsers/types';
 import { runConnectPipeline } from '../../src/pipeline/runner';
 
 // Type aliases to avoid indexed access types
-type Emitters = readonly Emitter[];
+type Emitters = readonly IEmitter[];
 type TypeChecker = ts.TypeChecker;
 type Program = ts.Program;
 
@@ -94,7 +94,7 @@ describe('runConnectPipeline (runner)', () => {
   });
 
   it('should include loader errors and emitter warnings in the report', async () => {
-    const discovered: DiscoveredFile[] = [
+    const discovered: IDiscoveredFile[] = [
       {
         filePath: '/tmp/components/button.component.ts',
         relativePath: 'button.component.ts',
@@ -105,7 +105,7 @@ describe('runConnectPipeline (runner)', () => {
     ];
 
     const emitters = [] as Emitters;
-    const parser = { target: ParserTarget.WebComponent, parse: jest.fn() } as Parser;
+    const parser = { target: ParserTarget.WebComponent, parse: jest.fn() } as IParser;
     const pipelineContext = {
       checker: {} as TypeChecker,
       emitters,
@@ -118,7 +118,7 @@ describe('runConnectPipeline (runner)', () => {
       io: createMemoryIoAdapter(),
     };
 
-    const sourceLoad: SourceLoadResult = {
+    const sourceLoad: ISourceLoadResult = {
       context: pipelineContext,
       checker: pipelineContext.checker,
       configPath: '/tmp/tsconfig.json',
@@ -155,7 +155,7 @@ describe('runConnectPipeline (runner)', () => {
   });
 
   it('should not warn when emitters are configured', async () => {
-    const discovered: DiscoveredFile[] = [
+    const discovered: IDiscoveredFile[] = [
       {
         filePath: '/tmp/components/card.component.ts',
         relativePath: 'card.component.ts',
@@ -166,7 +166,7 @@ describe('runConnectPipeline (runner)', () => {
     ];
 
     const emitters = [{ target: EmitterTarget.WebComponent, emit: jest.fn() }] as Emitters;
-    const parser = { target: ParserTarget.WebComponent, parse: jest.fn() } as Parser;
+    const parser = { target: ParserTarget.WebComponent, parse: jest.fn() } as IParser;
     const pipelineContext = {
       checker: {} as TypeChecker,
       emitters,
@@ -179,7 +179,7 @@ describe('runConnectPipeline (runner)', () => {
       io: createMemoryIoAdapter(),
     };
 
-    const sourceLoad: SourceLoadResult = {
+    const sourceLoad: ISourceLoadResult = {
       context: pipelineContext,
       checker: pipelineContext.checker,
       configPath: undefined,

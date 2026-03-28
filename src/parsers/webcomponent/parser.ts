@@ -15,19 +15,19 @@
  */
 
 /**
- * Web Component Parser Module
+ * Web Component IParser Module
  *
- * Parses Web Component source files into ComponentModel representations.
+ * Parses Web Component source files into IComponentModel representations.
  *
  * @module parsers/webcomponent/parser
  */
 
 import { createResult, mergeDiagnostics } from "@/src/core/result";
-import type { ComponentModel } from "@/src/core/types";
+import type { IComponentModel } from "@/src/core/types";
 import { mapComponentModel } from "@/src/mappers/component-model";
-import type { ParseContext, Parser } from "@/src/parsers/types";
+import type { IParseContext, IParser } from "@/src/parsers/types";
 import { ParserTarget } from "@/src/parsers/types";
-import type { WebComponentParseResult } from "@/src/types/parsers-webcomponent";
+import type { IWebComponentParseResult } from "@/src/types/parsers-webcomponent";
 
 import { visitSourceFile } from "./ast-visitor";
 import { discoverComponentClass } from "./component-discovery";
@@ -39,21 +39,21 @@ import { resolveTagName } from "./tagname-resolver";
 // WebComponent parse result type is defined in `src/types/parsers-webcomponent`.
 
 /**
- * Parses a Web Component source file into a ComponentModel.
+ * Parses a Web Component source file into a IComponentModel.
  *
  * @param parseContext - Parse context for the current source file.
  * @returns Parse result with component model, warnings, and errors.
  */
 export function parseWebComponent(
-  parseContext: ParseContext,
-): WebComponentParseResult {
+  parseContext: Readonly<IParseContext>,
+): IWebComponentParseResult {
   // Single AST traversal for all extractors
   const astData = visitSourceFile(parseContext.sourceFile);
 
   const discovery = discoverComponentClass(astData);
   if (!discovery) {
     return mergeDiagnostics(
-      createResult<ComponentModel | undefined>(undefined),
+      createResult<IComponentModel | undefined>(undefined),
       {
         errors: ["No class declaration found in component source file."],
       },
@@ -83,7 +83,7 @@ export function parseWebComponent(
     astData,
   });
 
-  const model: ComponentModel = mapComponentModel({
+  const model: IComponentModel = mapComponentModel({
     className,
     tagName: tagNameResolution.tagName,
     filePath: parseContext.filePath,
@@ -100,7 +100,7 @@ export function parseWebComponent(
       : [];
 
   const result = mergeDiagnostics(
-    createResult<ComponentModel | undefined>(model),
+    createResult<IComponentModel | undefined>(model),
     tagNameResolution,
     inheritance,
     properties,
@@ -119,9 +119,9 @@ export function parseWebComponent(
 }
 
 /**
- * Parser strategy for Web Components.
+ * IParser strategy for Web Components.
  */
-export class WebComponentParser implements Parser {
+export class WebComponentParser implements IParser {
   readonly target = ParserTarget.WebComponent;
 
   /**
@@ -130,7 +130,7 @@ export class WebComponentParser implements Parser {
    * @param parseContext - Parse context for the source file.
    * @returns Parse result for the component.
    */
-  parse(parseContext: ParseContext): WebComponentParseResult {
+  parse(parseContext: Readonly<IParseContext>): IWebComponentParseResult {
     return parseWebComponent(parseContext);
   }
 }

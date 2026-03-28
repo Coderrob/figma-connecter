@@ -15,7 +15,7 @@
  */
 
 /**
- * Web Component Parser Index
+ * Web Component IParser Index
  *
  * Re-exports parser implementation and supporting utilities.
  *

@@ -15,12 +15,12 @@
  */
 
 /**
- * Figma WebComponent Emitter - Helper Functions
+ * Figma WebComponent IEmitter - Helper Functions
  *
  * @module emitters/figma-webcomponent/helpers
  */
 import { DEFAULT_IMPORT_BASE } from "@/src/core/constants";
-import type { ComponentModel, EmitterOptions } from "@/src/core/types";
+import type { IComponentModel, IEmitterOptions } from "@/src/core/types";
 
 /**
  * Builds the imports line for the figma.connect call.
@@ -30,8 +30,8 @@ import type { ComponentModel, EmitterOptions } from "@/src/core/types";
  * @returns The imports line.
  */
 export function buildImportsLine(
-  model: ComponentModel,
-  options: EmitterOptions,
+  model: Readonly<IComponentModel>,
+  options: Readonly<IEmitterOptions>,
 ): string {
   const baseImportPath = options.baseImportPath ?? DEFAULT_IMPORT_BASE;
   const importPath = `${baseImportPath}/${model.importPath}`;

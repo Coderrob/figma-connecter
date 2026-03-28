@@ -28,7 +28,7 @@ import {
   discoverComponentFiles,
   isComponentFile,
 } from '../../src/io/file-discovery';
-import type { FileDiscoveryFileSystem } from '../../src/types/io';
+import type { IFileDiscoveryFileSystem } from '../../src/types/io';
 
 /**
  * Creates a mock Stats object.
@@ -84,7 +84,7 @@ describe('isComponentFile', () => {
 });
 
 describe('discoverComponentFiles', () => {
-  let mockFileSystem: FileDiscoveryFileSystem;
+  let mockFileSystem: IFileDiscoveryFileSystem;
   let mockExistsSync: jest.Mock;
   let mockStatSync: jest.Mock;
   let mockReaddirSync: jest.Mock;

@@ -24,12 +24,12 @@ import path from 'node:path';
 
 import { nodeIoAdapter } from '../../src/io/adapter';
 import { loadSourceProgram, resolveTsconfigPath } from '../../src/io/source-loader';
-import { type Parser, ParserTarget } from '../../src/parsers/types';
+import { type IParser, ParserTarget } from '../../src/parsers/types';
 import type { PipelineContextSeed } from '../../src/pipeline/context';
 
 const createContextSeed = (): PipelineContextSeed => ({
   emitters: [],
-  parser: { target: ParserTarget.WebComponent, parse: jest.fn() } as Parser,
+  parser: { target: ParserTarget.WebComponent, parse: jest.fn() } as IParser,
   dryRun: true,
   strict: false,
   force: false,

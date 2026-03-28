@@ -23,21 +23,21 @@
  * @module emitters/file-builder
  */
 
-import { GENERATED_SECTION_MARKERS } from "../core/constants";
+import { GENERATED_SECTION_MARKERS } from "@/src/core/constants";
 import {
-  type EmitResult,
+  type IEmitResult,
   FileChangeStatus,
-  type GeneratedSectionMarkers,
+  type IGeneratedSectionMarkers,
   GeneratedSectionName,
-  type GeneratedSectionPayload,
-} from "../core/types";
+  type IGeneratedSectionPayload,
+} from "@/src/core/types";
 
 import { indent, indentBlock } from "./formatting";
 
 /**
  * Draft state for building an emitter file payload.
  */
-export interface FilePayloadDraft {
+export interface IFilePayloadDraft {
   /** File path for the emitted payload. */
   readonly filePath: string;
   /** Action for the emitted payload. */
@@ -45,7 +45,7 @@ export interface FilePayloadDraft {
   /** Accumulated file content lines. */
   readonly contentLines: readonly string[];
   /** Accumulated generated section metadata. */
-  readonly sections: readonly GeneratedSectionPayload[];
+  readonly sections: readonly IGeneratedSectionPayload[];
   /** Accumulated warnings. */
   readonly warnings: readonly string[];
 }
@@ -53,22 +53,75 @@ export interface FilePayloadDraft {
 /**
  * Functional builder for updating a file payload draft.
  */
-export type FilePayloadBuilder = (draft: FilePayloadDraft) => FilePayloadDraft;
+export type FilePayloadBuilder = (
+  draft: IFilePayloadDraft,
+) => IFilePayloadDraft;
 
 /**
- * Creates a new file payload draft with default empty values.
- *
- * @param filePath - Target file path.
- * @param action - File action to assign (default: FileChangeStatus.Created).
- * @param draft
- * @param {...any} builders
- * @returns Initialized file payload draft.
+ * Appends import lines to a payload draft.
+ * @param lines - Import lines to append.
+ * @param draft - Current payload draft.
+ * @returns Updated payload draft.
+ */
+function applyImports(
+  lines: readonly string[],
+  draft: Readonly<IFilePayloadDraft>,
+): IFilePayloadDraft {
+  return {
+    ...draft,
+    contentLines: draft.contentLines.concat(lines),
+  };
+}
+
+/**
+ * Appends section lines and metadata to a payload draft.
+ * @param block - Section block to append.
+ * @param draft - Current payload draft.
+ * @returns Updated payload draft.
+ */
+function applySectionBlock(
+  block: Readonly<ISectionBlock>,
+  draft: Readonly<IFilePayloadDraft>,
+): IFilePayloadDraft {
+  return {
+    ...draft,
+    contentLines: draft.contentLines.concat(block.lines),
+    sections: block.sections
+      ? draft.sections.concat(block.sections)
+      : draft.sections,
+  };
+}
+
+/**
+ * Appends warnings to a payload draft.
+ * @param warnings - Warning lines to append.
+ * @param draft - Current payload draft.
+ * @returns Updated payload draft.
+ */
+function applyWarnings(
+  warnings: readonly string[],
+  draft: Readonly<IFilePayloadDraft>,
+): IFilePayloadDraft {
+  return {
+    ...draft,
+    warnings: draft.warnings.concat(warnings),
+  };
+}
+
+/**
+ * buildFilePayload TODO: describe.
+ * @param draft TODO: describe parameter
+ * @param builders TODO: describe parameter
+ * @returns TODO: describe return value
  */
 export const buildFilePayload = (
-  draft: FilePayloadDraft,
-  ...builders: FilePayloadBuilder[]
-): EmitResult => {
-  const built = builders.reduce((acc, builder) => builder(acc), draft);
+  draft: Readonly<IFilePayloadDraft>,
+  ...builders: readonly FilePayloadBuilder[]
+): IEmitResult => {
+  let built = draft;
+  for (const builder of builders) {
+    built = builder(built);
+  }
   return {
     filePath: built.filePath,
     action: built.action,
@@ -79,18 +132,15 @@ export const buildFilePayload = (
 };
 
 /**
- * Builds a finalized emit result from a draft and builder functions.
- *
- * @param draft - Base payload draft.
- * @param builders - Builder functions to apply in order.
- * @param filePath
- * @param action
- * @returns Emit result payload.
+ * createFilePayload TODO: describe.
+ * @param filePath TODO: describe parameter
+ * @param action TODO: describe parameter
+ * @returns TODO: describe return value
  */
 export const createFilePayload = (
   filePath: string,
-  action: FileChangeStatus = FileChangeStatus.Created,
-): FilePayloadDraft => ({
+  action: Readonly<FileChangeStatus> = FileChangeStatus.Created,
+): IFilePayloadDraft => ({
   filePath,
   action,
   contentLines: [],
@@ -99,13 +149,13 @@ export const createFilePayload = (
 });
 
 /**
- * Adds import lines to a payload draft.
- *
- * @param lines - Import lines to append.
- * @param input
- * @returns File payload builder.
+ * withExample TODO: describe.
+ * @param input TODO: describe parameter
+ * @returns TODO: describe return value
  */
-export const withExample = (input: SectionBuilderInput): FilePayloadBuilder => {
+export const withExample = (
+  input: Readonly<ISectionBuilderInput>,
+): FilePayloadBuilder => {
   const {
     content,
     markers,
@@ -118,57 +168,40 @@ export const withExample = (input: SectionBuilderInput): FilePayloadBuilder => {
   });
 };
 
-interface SectionBuilderInput {
+interface ISectionBuilderInput {
   /** The generated section content (without markers). */
   readonly content: string;
   /** Marker strings used to delimit the section. */
-  readonly markers: GeneratedSectionMarkers;
+  readonly markers: IGeneratedSectionMarkers;
   /** Optional name to attach to the generated section metadata. */
   readonly name?: GeneratedSectionName;
   /** Optional indentation depth for the wrapped section. */
   readonly depth?: number;
 }
 
-interface SectionBlock {
+interface ISectionBlock {
   /** Lines to append to content. */
   readonly lines: readonly string[];
   /** Optional sections metadata to append. */
-  readonly sections?: readonly GeneratedSectionPayload[];
+  readonly sections?: readonly IGeneratedSectionPayload[];
 }
 
 /**
- * Wraps content with generated section markers.
- *
- * @param content - The content to wrap.
- * @param markers - Marker strings used to delimit the section.
- * @param depth - The indentation depth for markers.
- * @param block
- * @param lines
- * @returns Array of lines with markers.
+ * withImports TODO: describe.
+ * @param lines TODO: describe parameter
+ * @returns TODO: describe return value
  */
-export const withImports =
-  (lines: readonly string[]): FilePayloadBuilder =>
-  /**
-   * <anonymous> TODO: describe
-   * @param draft TODO: describe parameter
-   * @returns TODO: describe return value
-   */
-  (draft) => ({
-    ...draft,
-    contentLines: draft.contentLines.concat(lines),
-  });
+export const withImports = (lines: readonly string[]): FilePayloadBuilder =>
+  applyImports.bind(undefined, lines);
 
 /**
- * Adds arbitrary content lines and optional section metadata.
- *
- * @param block - Section block containing lines and optional metadata.
- * @param content
- * @param markers
- * @param depth
- * @param input
- * @returns File payload builder.
+ * withProps TODO: describe.
+ * @param input TODO: describe parameter
+ * @returns TODO: describe return value
  */
-export const withProps = (input: SectionBuilderInput): FilePayloadBuilder => {
+export const withProps = (
+  input: Readonly<ISectionBuilderInput>,
+): FilePayloadBuilder => {
   const {
     content,
     markers,
@@ -182,67 +215,40 @@ export const withProps = (input: SectionBuilderInput): FilePayloadBuilder => {
 };
 
 /**
- * Adds a generated props section to the payload.
- *
- * @param input - Section builder input for props.
- * @param content
- * @param markers
- * @param depth
- * @param block
- * @returns File payload builder.
+ * withSections TODO: describe.
+ * @param block TODO: describe parameter
+ * @returns TODO: describe return value
  */
-export const withSections =
-  (block: SectionBlock): FilePayloadBuilder =>
-  /**
-   * <anonymous> TODO: describe
-   * @param draft TODO: describe parameter
-   * @returns TODO: describe return value
-   */
-  (draft) => ({
-    ...draft,
-    contentLines: draft.contentLines.concat(block.lines),
-    sections: block.sections
-      ? draft.sections.concat(block.sections)
-      : draft.sections,
-  });
+export function withSections(
+  block: Readonly<ISectionBlock>,
+): FilePayloadBuilder {
+  return applySectionBlock.bind(undefined, block);
+}
 
 /**
- * Adds a generated example section to the payload.
- *
- * @param input - Section builder input for example.
- * @param content
- * @param markers
- * @param depth
- * @param warnings
- * @returns File payload builder.
+ * withWarnings TODO: describe.
+ * @param warnings TODO: describe parameter
+ * @returns TODO: describe return value
  */
-export const withWarnings =
-  (warnings: readonly string[] = []): FilePayloadBuilder =>
-  /**
-   * <anonymous> TODO: describe
-   * @param draft TODO: describe parameter
-   * @returns TODO: describe return value
-   */
-  (draft) => ({
-    ...draft,
-    warnings: draft.warnings.concat(warnings),
-  });
+export const withWarnings = (
+  warnings: readonly string[] = [],
+): FilePayloadBuilder => applyWarnings.bind(undefined, warnings);
 
 /**
- * Adds warnings to the payload.
- *
- * @param warnings - Warning messages to append.
- * @param content
- * @param markers
- * @param depth
- * @returns File payload builder.
+ * wrapGeneratedSection TODO: describe.
+ * @param content TODO: describe parameter
+ * @param markers TODO: describe parameter
+ * @param depth TODO: describe parameter
+ * @returns TODO: describe return value
  */
-export const wrapGeneratedSection = (
+export function wrapGeneratedSection(
   content: string,
-  markers: GeneratedSectionMarkers = GENERATED_SECTION_MARKERS,
-  depth = 1,
-): string[] => [
-  `${indent(depth)}${markers.start}`,
-  ...indentBlock(content, depth),
-  `${indent(depth)}${markers.end}`,
-];
+  markers: Readonly<IGeneratedSectionMarkers> = GENERATED_SECTION_MARKERS,
+  depth = 0,
+): string[] {
+  return [
+    `${indent(depth)}${markers.start}`,
+    ...indentBlock(content, depth),
+    `${indent(depth)}${markers.end}`,
+  ];
+}

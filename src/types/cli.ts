@@ -35,14 +35,14 @@ export type CommandContext<Options, Resolved = Record<string, unknown>> = {
   readonly progress: IProgressIndicator;
 } & Resolved;
 
-export interface ICommandStages<Context, Result> {
+export interface ICommandStages<Context, IResult> {
   readonly validate: () => Context;
-  readonly execute: (context: Context) => Promise<Result>;
-  readonly report: (context: Context, result: Result) => void;
+  readonly execute: (context: Context) => Promise<IResult>;
+  readonly report: (context: Context, result: IResult) => void;
   readonly onError?: (context: Context, error: unknown) => void;
 }
 
 export type GlobalCliOptions = IGlobalCliOptions;
 export type ProgressIndicator = IProgressIndicator;
 export type ProgressIndicatorOptions = IProgressIndicatorOptions;
-export type CommandStages<Context, Result> = ICommandStages<Context, Result>;
+export type CommandStages<Context, IResult> = ICommandStages<Context, IResult>;

@@ -22,7 +22,7 @@
  * @module utils/merge-by-key
  */
 
-import type { MergeByKeyOptions } from "../types/utils";
+import type { IMergeByKeyOptions } from "@/src/types/utils";
 
 /**
  * Merges a list of items into a Map keyed by the provided selector.
@@ -34,10 +34,10 @@ import type { MergeByKeyOptions } from "../types/utils";
  */
 export function mergeByKey<TItem, TKey>(
   items: readonly TItem[],
-  options: MergeByKeyOptions<TItem, TKey>,
+  options: Readonly<IMergeByKeyOptions<TItem, TKey>>,
 ): Map<TKey, TItem> {
   const map = new Map<TKey, TItem>();
-  const merge = options.merge ?? ((_existing, incoming) => incoming);
+  const merge = options.merge;
 
   for (const item of items) {
     const key = options.getKey(item);
@@ -47,6 +47,11 @@ export function mergeByKey<TItem, TKey>(
         map.set(key, item);
         continue;
       }
+      if (!merge) {
+        map.set(key, item);
+        continue;
+      }
+
       map.set(key, merge(existing, item));
     } else {
       map.set(key, item);

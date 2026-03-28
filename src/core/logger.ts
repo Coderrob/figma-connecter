@@ -36,7 +36,7 @@ export enum LogLevel {
 /**
  * Structured context attached to log entries.
  */
-export interface LogContext {
+export interface ILogContext {
   /** Stage name for pipeline logging. */
   readonly stage?: string;
   /** Component name or identifier. */
@@ -50,7 +50,7 @@ export interface LogContext {
 /**
  * Logger configuration options.
  */
-export interface LoggerOptions {
+export interface ILoggerOptions {
   /** Explicit log level override. */
   readonly level?: LogLevel;
   /** Enable verbose (debug) output. */
@@ -60,17 +60,19 @@ export interface LoggerOptions {
   /** Enable ANSI colors in output. */
   readonly useColors?: boolean;
   /** Base context to apply to every log line. */
-  readonly baseContext?: LogContext;
+  readonly baseContext?: ILogContext;
 }
 
 /**
- * Known keys in the LogContext object.
+ * Known keys in the ILogContext object.
  */
 export enum LogContextKey {
   Stage = "stage",
   Component = "component",
   DurationMs = "durationMs",
 }
+
+const DURATION_CONTEXT_KEY = "durationMs";
 
 /**
  * Keys given priority in context output ordering.
@@ -104,14 +106,14 @@ const LOG_LEVEL_NAMES: Record<LogLevel, string> = {
 /**
  * ANSI color codes for terminal output.
  */
-const COLORS = {
+const COLORS: Readonly<Record<string, string>> = {
   reset: "\x1b[0m",
   red: "\x1b[31m",
   yellow: "\x1b[33m",
   green: "\x1b[32m",
   cyan: "\x1b[36m",
   dim: "\x1b[2m",
-} as const;
+};
 
 /**
  * Logger class for structured CLI output.
@@ -128,12 +130,6 @@ const COLORS = {
  * ```
  */
 export class Logger {
-  private readonly level: LogLevel;
-
-  private readonly useColors: boolean;
-
-  private readonly baseContext: LogContext;
-
   /**
    * Creates a new Logger instance.
    *
@@ -147,26 +143,55 @@ export class Logger {
    *
    * @param options - Logger options object.
    */
-  constructor(options?: LoggerOptions);
+  constructor(options?: ILoggerOptions);
 
   /**
    * Creates a new Logger instance.
    *
    * @param levelOrOptions - Log level or options object.
-   * @param useColors - Whether to enable ANSI colors.
+   * @param useColorsOption - Whether to enable ANSI colors.
    */
   constructor(
-    levelOrOptions: LogLevel | LoggerOptions = LogLevel.INFO,
-    useColors = false,
-  ) {
-    const options: LoggerOptions =
-      typeof levelOrOptions === "object"
-        ? levelOrOptions
-        : { level: levelOrOptions, useColors };
+    private readonly levelOrOptions: LogLevel | ILoggerOptions = LogLevel.INFO,
+    private readonly useColorsOption = false,
+  ) {}
 
-    this.level = resolveLogLevel(options);
-    this.useColors = Boolean(options.useColors) && process.stdout.isTTY;
-    this.baseContext = options.baseContext ?? {};
+  /**
+   * Resolves logger options from constructor inputs.
+   *
+   * @returns Normalized logger options.
+   */
+  private get options(): ILoggerOptions {
+    return typeof this.levelOrOptions === "object"
+      ? this.levelOrOptions
+      : { level: this.levelOrOptions, useColors: this.useColorsOption };
+  }
+
+  /**
+   * Resolves the active logger level.
+   *
+   * @returns Active log level.
+   */
+  private get level(): LogLevel {
+    return resolveLogLevel(this.options);
+  }
+
+  /**
+   * Determines whether colors should be used for output.
+   *
+   * @returns True when ANSI colors are enabled.
+   */
+  private get isColorOutputEnabled(): boolean {
+    return Boolean(this.options.useColors) && process.stdout.isTTY;
+  }
+
+  /**
+   * Returns the base logging context.
+   *
+   * @returns Base context object.
+   */
+  private get baseContext(): ILogContext {
+    return this.options.baseContext ?? {};
   }
 
   /**
@@ -176,7 +201,7 @@ export class Logger {
    * @param context - Optional context data.
    * @returns Nothing.
    */
-  error(message: string, context?: LogContext): void {
+  error(message: string, context?: Readonly<ILogContext>): void {
     this.log(LogLevel.ERROR, message, context);
   }
 
@@ -187,7 +212,7 @@ export class Logger {
    * @param context - Optional context data.
    * @returns Nothing.
    */
-  warn(message: string, context?: LogContext): void {
+  warn(message: string, context?: Readonly<ILogContext>): void {
     this.log(LogLevel.WARN, message, context);
   }
 
@@ -198,7 +223,7 @@ export class Logger {
    * @param context - Optional context data.
    * @returns Nothing.
    */
-  info(message: string, context?: LogContext): void {
+  info(message: string, context?: Readonly<ILogContext>): void {
     this.log(LogLevel.INFO, message, context);
   }
 
@@ -209,7 +234,7 @@ export class Logger {
    * @param context - Optional context data.
    * @returns Nothing.
    */
-  debug(message: string, context?: LogContext): void {
+  debug(message: string, context?: Readonly<ILogContext>): void {
     this.log(LogLevel.DEBUG, message, context);
   }
 
@@ -220,9 +245,9 @@ export class Logger {
    * @param context - Optional context data.
    * @returns Nothing.
    */
-  success(message: string, context?: LogContext): void {
+  success(message: string, context?: Readonly<ILogContext>): void {
     if (this.level >= LogLevel.INFO) {
-      const prefix = this.useColors
+      const prefix = this.isColorOutputEnabled
         ? `${COLORS.green}${SUCCESS_INDICATOR}${COLORS.reset}`
         : SUCCESS_INDICATOR;
       console.log(
@@ -239,7 +264,11 @@ export class Logger {
    * @param context - Optional context data.
    * @returns Nothing.
    */
-  private log(level: LogLevel, message: string, context?: LogContext): void {
+  private log(
+    level: Readonly<LogLevel>,
+    message: string,
+    context?: Readonly<ILogContext>,
+  ): void {
     if (this.level < level) {
       return;
     }
@@ -266,8 +295,8 @@ export class Logger {
    * @param level - Log level used for color selection.
    * @returns Colorized text.
    */
-  private colorize(text: string, level: LogLevel): string {
-    if (!this.useColors) {
+  private colorize(text: string, level: Readonly<LogLevel>): string {
+    if (!this.isColorOutputEnabled) {
       return `[${text}]`;
     }
 
@@ -288,7 +317,7 @@ export class Logger {
    * @param context - Context data to format.
    * @returns Formatted context string.
    */
-  private formatContext(context?: LogContext): string {
+  private formatContext(context?: Readonly<ILogContext>): string {
     if (!context || Object.keys(context).length === 0) {
       return "";
     }
@@ -298,19 +327,9 @@ export class Logger {
       return "";
     }
 
-    const segments: string[] = [];
-    for (const [key, value] of orderedPairs) {
-      if (key === "durationMs" && typeof value === "number") {
-        segments.push(`${key}=${value}${DURATION_UNIT_SUFFIX}`);
-        continue;
-      }
-      const formatted =
-        typeof value === "string" ? value : JSON.stringify(value);
-      segments.push(`${key}=${formatted}`);
-    }
-    const pairs = segments.join(" ");
+    const pairs = orderedPairs.map(formatContextEntry).join(" ");
 
-    return this.useColors
+    return this.isColorOutputEnabled
       ? ` ${COLORS.dim}(${pairs})${COLORS.reset}`
       : ` (${pairs})`;
   }
@@ -321,26 +340,19 @@ export class Logger {
    * @param context - Context data to order.
    * @returns Ordered key-value entries.
    */
-  private orderContextEntries(context: LogContext): [string, unknown][] {
-    const used = new Set<string>();
-    const entries: [string, unknown][] = [];
+  private orderContextEntries(
+    context: Readonly<ILogContext>,
+  ): [string, unknown][] {
+    const priorityEntries = PRIORITY_CONTEXT_KEYS.filter(
+      isDefinedContextKey(context),
+    ).map(toContextEntry(context));
 
-    for (const key of PRIORITY_CONTEXT_KEYS) {
-      const value = context[key];
-      if (value !== undefined) {
-        entries.push([key as string, value]);
-        used.add(key as string);
-      }
-    }
+    const priorityKeys = PRIORITY_CONTEXT_KEYS.map(getContextKeyName);
+    const otherEntries = Object.entries(context).filter(
+      filterDefinedNonPriorityEntries(priorityKeys),
+    );
 
-    for (const [key, value] of Object.entries(context)) {
-      if (value === undefined || used.has(key)) {
-        continue;
-      }
-      entries.push([key, value]);
-    }
-
-    return entries;
+    return [...priorityEntries, ...otherEntries];
   }
 
   /**
@@ -349,7 +361,9 @@ export class Logger {
    * @param context - Context data to merge.
    * @returns Merged context or undefined when empty.
    */
-  private mergeContext(context?: LogContext): LogContext | undefined {
+  private mergeContext(
+    context?: Readonly<ILogContext>,
+  ): ILogContext | undefined {
     if (!context || Object.keys(context).length === 0) {
       return Object.keys(this.baseContext).length > 0
         ? this.baseContext
@@ -367,11 +381,11 @@ export class Logger {
    * @param context - Context data to merge.
    * @returns New logger instance with merged context.
    */
-  withContext(context: LogContext): Logger {
+  withContext(context: Readonly<ILogContext>): Logger {
     const merged = { ...this.baseContext, ...context };
     return new Logger({
       level: this.level,
-      useColors: this.useColors,
+      useColors: this.isColorOutputEnabled,
       baseContext: merged,
     });
   }
@@ -385,10 +399,13 @@ export class Logger {
  * @param scope - Prefix label to apply to messages.
  * @returns Scoped logger proxy.
  */
-export function createScopedLogger(logger: Logger, scope: string): Logger {
+export function createScopedLogger(
+  logger: Readonly<Logger>,
+  scope: string,
+): Logger {
   return new Proxy(logger, {
     /**
-     * Intercepts log method access to add a prefix.
+     * Returns scoped logger methods and passthrough properties.
      *
      * @param target - Target logger instance.
      * @param prop - Property being accessed.
@@ -398,20 +415,15 @@ export function createScopedLogger(logger: Logger, scope: string): Logger {
       const value = target[prop];
       if (typeof value === "function") {
         /**
-         * Prefixes log messages with the scoped label.
+         * Prepends the scope label before delegating to the underlying logger.
          *
          * @param message - Log message text.
          * @param context - Optional log context.
          * @returns Nothing.
          */
-        function scopedLogMethod(message: string, context?: LogContext): void {
-          (value as (msg: string, ctx?: LogContext) => void).call(
-            target,
-            `[${scope}] ${message}`,
-            context,
-          );
+        function scopedLogMethod(message: string, context?: Readonly<ILogContext>): void {
+          Reflect.apply(value, target, [`[${scope}] ${message}`, context]);
         }
-
         return scopedLogMethod;
       }
       return value;
@@ -420,12 +432,106 @@ export function createScopedLogger(logger: Logger, scope: string): Logger {
 }
 
 /**
+ * Filters non-priority context entries that still have values.
+ *
+ * @param priorityKeys - Set of keys already emitted.
+ * @returns Predicate for filtering `Object.entries()` output.
+ */
+function filterDefinedNonPriorityEntries(
+  priorityKeys: readonly string[],
+): (entry: readonly [string, unknown]) => boolean {
+  return isDefinedNonPriorityEntry.bind(undefined, priorityKeys);
+}
+
+/**
+ * Formats a context entry for log output.
+ *
+ * @param entry - Context entry tuple.
+ * @returns Formatted key/value segment.
+ */
+function formatContextEntry(entry: readonly [string, unknown]): string {
+  const [key, value] = entry;
+  if (key === DURATION_CONTEXT_KEY && typeof value === "number") {
+    return `${key}=${value}${DURATION_UNIT_SUFFIX}`;
+  }
+  const formatted = typeof value === "string" ? value : JSON.stringify(value);
+  return `${key}=${formatted}`;
+}
+
+/**
+ * Returns the string representation of a log context key.
+ *
+ * @param key - Context key enum value.
+ * @returns Key name as used in output.
+ */
+function getContextKeyName(key: Readonly<LogContextKey>): string {
+  return key;
+}
+
+/**
+ * Returns true when a prioritized context key has a defined value.
+ *
+ * @param context - Context to inspect.
+ * @param key - Candidate prioritized context key.
+ * @returns True when the key has a defined value.
+ */
+function hasDefinedContextKey(
+  context: Readonly<ILogContext>,
+  key: Readonly<LogContextKey>,
+): boolean {
+  return context[key] !== undefined;
+}
+
+/**
+ * Filters prioritized context keys that have a defined value.
+ *
+ * @param context - Context to inspect.
+ * @returns Predicate for filtering defined priority keys.
+ */
+function isDefinedContextKey(
+  context: Readonly<ILogContext>,
+): (key: LogContextKey) => boolean {
+  return hasDefinedContextKey.bind(undefined, context);
+}
+
+/**
+ * Returns true when a context entry is defined and not already prioritized.
+ *
+ * @param priorityKeys - Keys already emitted in priority order.
+ * @param entry - Context entry tuple.
+ * @returns True when the entry should be included in non-priority output.
+ */
+function isDefinedNonPriorityEntry(
+  priorityKeys: readonly string[],
+  entry: readonly [string, unknown],
+): boolean {
+  const [key, value] = entry;
+  return value !== undefined && !priorityKeys.includes(key);
+}
+
+/**
+ * Converts a prioritized context key into a key/value tuple.
+ *
+ * @param context - Context providing the values.
+ * @param key - Prioritized context key to convert.
+ * @returns Context entry tuple.
+ */
+function mapContextEntry(
+  context: Readonly<ILogContext>,
+  key: Readonly<LogContextKey>,
+): [string, unknown] {
+  return [getContextKeyName(key), context[key]];
+}
+
+/**
  * Resolves a log level from a set of options.
  *
  * @param options - Logger options to evaluate.
  * @returns Resolved log level.
  */
-export function resolveLogLevel(options: LoggerOptions = {}): LogLevel {
+export function resolveLogLevel(
+  options: Readonly<ILoggerOptions> = {},
+): LogLevel {
   if (options.quiet) {
     return LogLevel.ERROR;
   }
@@ -436,4 +542,16 @@ export function resolveLogLevel(options: LoggerOptions = {}): LogLevel {
     return LogLevel.DEBUG;
   }
   return LogLevel.INFO;
+}
+
+/**
+ * Converts prioritized context keys into key/value tuples.
+ *
+ * @param context - Context providing the values.
+ * @returns Mapper that produces context entries.
+ */
+function toContextEntry(
+  context: Readonly<ILogContext>,
+): (key: LogContextKey) => [string, unknown] {
+  return mapContextEntry.bind(undefined, context);
 }

@@ -15,7 +15,7 @@
  */
 
 /**
- * Emitter Utilities Module
+ * IEmitter Utilities Module
  *
  * Barrel export module that consolidates emitter utilities.
  * Functionality extracted into focused modules for better maintainability.
@@ -27,7 +27,7 @@
 export { formatPropAccessor, formatPropKey, indent, indentBlock, isValidIdentifier, toTitleCase } from './formatting';
 
 // Re-export from figma-mapper module
-export { getComponentBaseName, mapPropToFigma, sortByName, type FigmaPropMapping } from './figma-mapper';
+export { getComponentBaseName, mapPropToFigma, sortByName, type IFigmaPropMapping } from './figma-mapper';
 
 // Re-export from section-builder module
 export {
@@ -35,7 +35,7 @@ export {
   buildExampleTemplate,
   buildPropsSection,
   buildReactExampleSection,
-  type ExampleTemplate,
+  type IExampleTemplate,
 } from './section-builder';
 
 // Re-export from file-builder module
@@ -49,5 +49,5 @@ export {
   withWarnings,
   wrapGeneratedSection,
   type FilePayloadBuilder,
-  type FilePayloadDraft,
+  type IFilePayloadDraft,
 } from './file-builder';

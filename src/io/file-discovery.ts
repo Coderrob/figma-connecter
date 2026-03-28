@@ -25,11 +25,11 @@ import fs from "node:fs";
 
 import path from "node:path";
 import type {
-  DiscoveredFile,
-  FileDiscoveryOptions,
-  FileDiscoveryFileSystem,
-} from "../types/io";
-import { POSIX_PATH_SEPARATOR } from "../utils";
+  IDiscoveredFile,
+  IFileDiscoveryOptions,
+  IFileDiscoveryFileSystem,
+} from "@/src/types/io";
+import { POSIX_PATH_SEPARATOR } from "@/src/utils";
 
 /** File suffix for component source files. */
 export const COMPONENT_SUFFIX = ".component.ts";
@@ -38,7 +38,7 @@ export const COMPONENT_SUFFIX = ".component.ts";
 export const COMPONENT_GLOB = `**/*${COMPONENT_SUFFIX}`;
 
 /** Default directory names to exclude from traversal. */
-export const DEFAULT_EXCLUDE_DIRS = ["node_modules", "dist"] as const;
+export const DEFAULT_EXCLUDE_DIRS: readonly string[] = ["node_modules", "dist"];
 
 /** Metadata for a discovered component file. */
 
@@ -47,7 +47,7 @@ export const DEFAULT_EXCLUDE_DIRS = ["node_modules", "dist"] as const;
 /** File system provider interface for discovery. */
 
 /** Default file system provider using Node.js fs. */
-const defaultFileSystem: FileDiscoveryFileSystem = {
+const defaultFileSystem: IFileDiscoveryFileSystem = {
   existsSync: fs.existsSync,
   statSync: fs.statSync,
   /**
@@ -61,17 +61,28 @@ const defaultFileSystem: FileDiscoveryFileSystem = {
 };
 
 /**
- * Determines if a file path matches the component pattern.
- *
- * @param filePath - File path to check.
- * @param inputPath
- * @param options
- * @returns True when the path ends with the component suffix.
+ * Sorts discovered files by file path for deterministic output.
+ * @param left - Left discovered file.
+ * @param right - Right discovered file.
+ * @returns Comparison result.
+ */
+function compareDiscoveredFiles(
+  left: Readonly<IDiscoveredFile>,
+  right: Readonly<IDiscoveredFile>,
+): number {
+  return left.filePath.localeCompare(right.filePath);
+}
+
+/**
+ * discoverComponentFiles TODO: describe.
+ * @param inputPath TODO: describe parameter
+ * @param options TODO: describe parameter
+ * @returns TODO: describe return value
  */
 export function discoverComponentFiles(
   inputPath: string,
-  options: FileDiscoveryOptions = {},
-): DiscoveredFile[] {
+  options: Readonly<IFileDiscoveryOptions> = {},
+): IDiscoveredFile[] {
   if (!inputPath) {
     return [];
   }
@@ -84,12 +95,10 @@ export function discoverComponentFiles(
   }
 
   const excludeDirs = new Set(
-    (options.excludeDirs ?? DEFAULT_EXCLUDE_DIRS).map((dir) =>
-      dir.toLowerCase(),
-    ),
+    (options.excludeDirs ?? DEFAULT_EXCLUDE_DIRS).map(normalizeDirectoryName),
   );
   const recursive = options.recursive ?? false;
-  const results: DiscoveredFile[] = [];
+  let results: IDiscoveredFile[] = [];
 
   const stats = fileSystem.statSync(targetPath);
   const rootDir = stats.isDirectory() ? targetPath : path.dirname(targetPath);
@@ -110,13 +119,16 @@ export function discoverComponentFiles(
     const dirPath = path.dirname(filePath);
     const relativePath = path.relative(rootDir, filePath) || fileName;
 
-    results.push({
-      filePath,
-      relativePath,
-      fileName,
-      componentName,
-      dirPath,
-    });
+    results = [
+      ...results,
+      {
+        filePath,
+        relativePath,
+        fileName,
+        componentName,
+        dirPath,
+      },
+    ];
   };
 
   /**
@@ -153,16 +165,24 @@ export function discoverComponentFiles(
     traverse(targetPath);
   }
 
-  return results.sort((a, b) => a.filePath.localeCompare(b.filePath));
+  return results.toSorted(compareDiscoveredFiles);
 }
 
 /**
- * Discovers component files from a file or directory path.
+ * Checks whether the provided file path matches the component suffix.
  *
- * @param inputPath - File or directory path to scan.
- * @param options - Discovery options.
- * @param filePath
- * @returns Array of discovered component metadata.
+ * @param filePath - File path to evaluate.
+ * @returns True when the file path ends with the component suffix.
  */
-export const isComponentFile = (filePath: string): boolean =>
-  filePath.toLowerCase().endsWith(COMPONENT_SUFFIX);
+export function isComponentFile(filePath: string): boolean {
+  return filePath.toLowerCase().endsWith(COMPONENT_SUFFIX);
+}
+
+/**
+ * Normalizes directory names for exclusion checks.
+ * @param directoryName - Directory name to normalize.
+ * @returns Normalized lowercase directory name.
+ */
+function normalizeDirectoryName(directoryName: string): string {
+  return directoryName.toLowerCase();
+}
