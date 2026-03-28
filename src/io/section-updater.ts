@@ -335,44 +335,6 @@ export function replaceGeneratedSection(
 }
 
 /**
- * Builds the update result for an inserted generated section.
- * @param content - Original content before insertion.
- * @param appended - Content after insertion.
- * @returns Section update result.
- */
-function toInsertedResult(
-  content: string,
-  appended: string,
-): ISectionUpdateResult {
-  return {
-    content: appended,
-    status:
-      appended === content
-        ? SectionUpdateStatus.Unchanged
-        : SectionUpdateStatus.Inserted,
-  };
-}
-
-/**
- * Builds the update result for a replaced generated section.
- * @param content - Original content before replacement.
- * @param updated - Content after replacement.
- * @returns Section update result.
- */
-function toReplacedResult(
-  content: string,
-  updated: string,
-): ISectionUpdateResult {
-  return {
-    content: updated,
-    status:
-      updated === content
-        ? SectionUpdateStatus.Unchanged
-        : SectionUpdateStatus.Replaced,
-  };
-}
-
-/**
  * Resolves section markers from explicit markers or a generated section name.
  * @param section - Generated section payload to resolve markers for.
  * @returns Section markers associated with the payload.
@@ -413,4 +375,42 @@ function resolveSections(
   sections: readonly IGeneratedSectionPayload[],
 ): IResolvedSection[] {
   return sections.map(resolveSection);
+}
+
+/**
+ * Builds the update result for an inserted generated section.
+ * @param content - Original content before insertion.
+ * @param appended - Content after insertion.
+ * @returns Section update result.
+ */
+function toInsertedResult(
+  content: string,
+  appended: string,
+): ISectionUpdateResult {
+  return {
+    content: appended,
+    status:
+      appended === content
+        ? SectionUpdateStatus.Unchanged
+        : SectionUpdateStatus.Inserted,
+  };
+}
+
+/**
+ * Builds the update result for a replaced generated section.
+ * @param content - Original content before replacement.
+ * @param updated - Content after replacement.
+ * @returns Section update result.
+ */
+function toReplacedResult(
+  content: string,
+  updated: string,
+): ISectionUpdateResult {
+  return {
+    content: updated,
+    status:
+      updated === content
+        ? SectionUpdateStatus.Unchanged
+        : SectionUpdateStatus.Replaced,
+  };
 }

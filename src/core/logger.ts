@@ -75,6 +75,21 @@ export enum LogContextKey {
 const DURATION_CONTEXT_KEY = "durationMs";
 
 /**
+ * Logger methods that support scoped message prefixing.
+ */
+enum ScopedLogMethodName {
+  Debug = "debug",
+  Error = "error",
+  Info = "info",
+  Success = "success",
+  Warn = "warn",
+}
+
+const SCOPED_LOG_METHOD_NAMES: readonly string[] = Object.values(
+  ScopedLogMethodName,
+);
+
+/**
  * Keys given priority in context output ordering.
  */
 const PRIORITY_CONTEXT_KEYS: readonly LogContextKey[] = [
@@ -402,33 +417,40 @@ export class Logger {
 export function createScopedLogger(
   logger: Readonly<Logger>,
   scope: string,
-): Logger {
-  return new Proxy(logger, {
-    /**
-     * Returns scoped logger methods and passthrough properties.
-     *
-     * @param target - Target logger instance.
-     * @param prop - Property being accessed.
-     * @returns Wrapped logger method or property value.
-     */
-    get: function getScopedLoggerProperty(target, prop: keyof Logger) {
-      const value = target[prop];
-      if (typeof value === "function") {
-        /**
-         * Prepends the scope label before delegating to the underlying logger.
-         *
-         * @param message - Log message text.
-         * @param context - Optional log context.
-         * @returns Nothing.
-         */
-        function scopedLogMethod(message: string, context?: Readonly<ILogContext>): void {
-          Reflect.apply(value, target, [`[${scope}] ${message}`, context]);
-        }
-        return scopedLogMethod;
-      }
-      return value;
-    },
-  });
+): Readonly<Logger> {
+  return new Proxy(logger, createScopedLoggerHandler(scope));
+}
+
+/**
+ * Creates the proxy handler used by scoped loggers.
+ *
+ * @param scope - Scope label to prepend to log messages.
+ * @returns Proxy handler for a logger instance.
+ */
+function createScopedLoggerHandler(
+  scope: string,
+): ProxyHandler<Readonly<Logger>> {
+  return {
+    get: handleScopedLoggerProxyGet.bind(undefined, scope),
+  };
+}
+
+/**
+ * Creates a scoped log method that prefixes the message label.
+ *
+ * @param target - Underlying logger instance.
+ * @param value - Original logger method.
+ * @param scope - Scope label to prepend to log messages.
+ * @returns Scoped logger method.
+ */
+function createScopedLogMethod(
+  target: Readonly<Logger>,
+  value: (message: string, context?: Readonly<ILogContext>) => void,
+  scope: string,
+): (message: string, context?: Readonly<ILogContext>) => void {
+  return (message: string, context?: Readonly<ILogContext>): void => {
+    Reflect.apply(value, target, [`[${scope}] ${message}`, context]);
+  };
 }
 
 /**
@@ -466,6 +488,51 @@ function formatContextEntry(entry: readonly [string, unknown]): string {
  */
 function getContextKeyName(key: Readonly<LogContextKey>): string {
   return key;
+}
+
+/**
+ * Returns a scoped property value from the underlying logger.
+ *
+ * @param target - Underlying logger instance.
+ * @param prop - Property being accessed.
+ * @param scope - Scope label to prepend to log messages.
+ * @returns Wrapped logger method or original property value.
+ */
+function getScopedLoggerProperty(
+  target: Readonly<Logger>,
+  prop: keyof Logger,
+  scope: string,
+): unknown {
+  if (isScopedLogMethod(prop)) {
+    return createScopedLogMethod(target, target[prop], scope);
+  }
+  return target[prop];
+}
+
+/**
+ * Resolves a proxied property read for a scoped logger.
+ *
+ * @param scope - Scope label to prepend to log messages.
+ * @param target - Underlying logger instance.
+ * @param prop - Property being accessed.
+ * @returns Wrapped logger method or original property value.
+ */
+function handleScopedLoggerProxyGet(
+  scope: string,
+  target: Readonly<Logger>,
+  prop: keyof Logger,
+): unknown {
+  return getScopedLoggerProperty(target, prop, scope);
+}
+
+/**
+ * Returns true when a logger property is a scopeable log method.
+ *
+ * @param prop - Logger property name.
+ * @returns True when the property is a log method that accepts message/context.
+ */
+function isScopedLogMethod(prop: keyof Logger): prop is ScopedLogMethodName {
+  return SCOPED_LOG_METHOD_NAMES.includes(prop);
 }
 
 /**

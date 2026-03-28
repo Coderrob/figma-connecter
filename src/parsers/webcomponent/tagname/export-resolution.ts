@@ -13,6 +13,14 @@ const CONSTANTS_MODULE_BASENAME = "constants";
 const CONSTANTS_SUFFIX = ".constants.ts";
 const CONSTRUCT_TAG_NAME_FUNCTION = "constructTagName";
 
+interface IExportResolutionContext {
+  readonly componentDir: string;
+  readonly exportName: string;
+  readonly resolvedPath: string;
+  readonly sourceFile: Readonly<ts.SourceFile>;
+  readonly visited: Readonly<Set<string>>;
+}
+
 /**
  * Creates a TypeScript source file from raw text.
  *
@@ -73,8 +81,52 @@ function resolveExportedValue(
   }
 
   const sourceFile = createSourceFile(resolvedPath, contents);
+  const context: IExportResolutionContext = {
+    componentDir,
+    exportName,
+    resolvedPath,
+    sourceFile,
+    visited,
+  };
+  const localMatch = findLocalVariableDeclaration(sourceFile, exportName);
 
-  let localMatch: ts.VariableDeclaration | undefined;
+  if (localMatch?.initializer) {
+    return resolveTagNameInitializer(localMatch.initializer, componentDir);
+  }
+
+  for (const exportDecl of getExportDeclarations(sourceFile)) {
+    const resolved = resolveFromExportDeclaration(exportDecl, context);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Returns export declarations from a source file.
+ *
+ * @param sourceFile - Source file to inspect.
+ * @returns Export declarations from the source file.
+ */
+function getExportDeclarations(
+  sourceFile: Readonly<ts.SourceFile>,
+): readonly ts.ExportDeclaration[] {
+  return sourceFile.statements.filter(ts.isExportDeclaration);
+}
+
+/**
+ * Finds a local variable declaration by name.
+ *
+ * @param sourceFile - Source file to inspect.
+ * @param identifierName - Variable name to find.
+ * @returns Matching variable declaration, if present.
+ */
+function findLocalVariableDeclaration(
+  sourceFile: Readonly<ts.SourceFile>,
+  identifierName: string,
+): ts.VariableDeclaration | undefined {
   for (const statement of sourceFile.statements) {
     if (!ts.isVariableStatement(statement)) {
       continue;
@@ -82,103 +134,157 @@ function resolveExportedValue(
     for (const declaration of statement.declarationList.declarations) {
       if (
         ts.isIdentifier(declaration.name) &&
-        declaration.name.text === exportName
+        declaration.name.text === identifierName
       ) {
-        localMatch = declaration;
-        break;
+        return declaration;
       }
     }
-    if (localMatch) {
-      break;
-    }
   }
+  return undefined;
+}
 
-  if (localMatch?.initializer) {
-    return resolveTagNameInitializer(localMatch.initializer, componentDir);
-  }
+/**
+ * Finds an export specifier by exported name.
+ *
+ * @param exportClause - Named export clause to inspect.
+ * @param exportName - Exported symbol name to match.
+ * @returns Matching export specifier, if present.
+ */
+function findExportSpecifier(
+  exportClause: Readonly<ts.NamedExports>,
+  exportName: string,
+): ts.ExportSpecifier | undefined {
+  return exportClause.elements.find((element) => element.name.text === exportName);
+}
 
-  const exportDeclarations = sourceFile.statements.filter(
-    ts.isExportDeclaration,
+/**
+ * Resolves an export declaration to a tag-name value.
+ *
+ * @param exportDecl - Export declaration to inspect.
+ * @param context - Shared export resolution context.
+ * @returns Resolved tag-name string or null when unresolved.
+ */
+function resolveFromExportDeclaration(
+  exportDecl: Readonly<ts.ExportDeclaration>,
+  context: Readonly<IExportResolutionContext>,
+): string | null {
+  const localResolution = resolveFromLocalExportDeclaration(
+    exportDecl,
+    context,
   );
-  for (const exportDecl of exportDeclarations) {
-    const { moduleSpecifier } = exportDecl;
-    const { exportClause } = exportDecl;
-
-    if (!moduleSpecifier && exportClause && ts.isNamedExports(exportClause)) {
-      let match: ts.ExportSpecifier | undefined;
-      for (const element of exportClause.elements) {
-        if (element.name.text === exportName) {
-          match = element;
-          break;
-        }
-      }
-      if (match) {
-        const localName = match.propertyName?.text ?? match.name.text;
-        const resolved = resolveIdentifierNameValue(
-          sourceFile,
-          localName,
-          componentDir,
-          visited,
-        );
-        if (resolved) {
-          return resolved;
-        }
-      }
-      continue;
-    }
-
-    if (!moduleSpecifier || !ts.isStringLiteral(moduleSpecifier)) {
-      continue;
-    }
-
-    const targetPath = resolveModulePath(
-      path.dirname(resolvedPath),
-      moduleSpecifier.text,
-      componentDir,
-    );
-    if (!targetPath) {
-      continue;
-    }
-
-    if (!exportClause) {
-      const resolved = resolveExportedValue(
-        targetPath,
-        exportName,
-        componentDir,
-        visited,
-      );
-      if (resolved) {
-        return resolved;
-      }
-      continue;
-    }
-
-    if (ts.isNamedExports(exportClause)) {
-      let match: ts.ExportSpecifier | undefined;
-      for (const element of exportClause.elements) {
-        if (element.name.text === exportName) {
-          match = element;
-          break;
-        }
-      }
-      if (!match) {
-        continue;
-      }
-
-      const forwardedName = match.propertyName?.text ?? match.name.text;
-      const resolved = resolveExportedValue(
-        targetPath,
-        forwardedName,
-        componentDir,
-        visited,
-      );
-      if (resolved) {
-        return resolved;
-      }
-    }
+  if (localResolution !== undefined) {
+    return localResolution;
   }
 
-  return null;
+  const targetPath = resolveExportTargetPath(
+    exportDecl,
+    context.resolvedPath,
+    context.componentDir,
+  );
+  if (!targetPath) {
+    return null;
+  }
+
+  return resolveFromForwardedExport(
+    exportDecl,
+    targetPath,
+    context,
+  );
+}
+
+/**
+ * Resolves a local `export { ... }` declaration.
+ *
+ * @param exportDecl - Export declaration to inspect.
+ * @param context - Shared export resolution context.
+ * @returns Resolved tag-name string, null when unresolved, or undefined when not applicable.
+ */
+function resolveFromLocalExportDeclaration(
+  exportDecl: Readonly<ts.ExportDeclaration>,
+  context: Readonly<IExportResolutionContext>,
+): string | null | undefined {
+  const { exportClause, moduleSpecifier } = exportDecl;
+  if (moduleSpecifier || !exportClause || !ts.isNamedExports(exportClause)) {
+    return undefined;
+  }
+
+  const match = findExportSpecifier(exportClause, context.exportName);
+  if (!match) {
+    return null;
+  }
+
+  const localName = match.propertyName?.text ?? match.name.text;
+  return resolveIdentifierNameValue(
+    context.sourceFile,
+    localName,
+    context.componentDir,
+    context.visited,
+  );
+}
+
+/**
+ * Resolves the target file for a forwarded export declaration.
+ *
+ * @param exportDecl - Export declaration to inspect.
+ * @param resolvedPath - Absolute file path for the source file.
+ * @param componentDir - Component directory used for namespace resolution.
+ * @returns Resolved forwarded target path or null.
+ */
+function resolveExportTargetPath(
+  exportDecl: Readonly<ts.ExportDeclaration>,
+  resolvedPath: string,
+  componentDir: string,
+): string | null {
+  const { moduleSpecifier } = exportDecl;
+  if (!moduleSpecifier || !ts.isStringLiteral(moduleSpecifier)) {
+    return null;
+  }
+
+  return resolveModulePath(
+    path.dirname(resolvedPath),
+    moduleSpecifier.text,
+    componentDir,
+  );
+}
+
+/**
+ * Resolves a forwarded export declaration.
+ *
+ * @param exportDecl - Export declaration to inspect.
+ * @param targetPath - Resolved target file path.
+ * @param context - Shared export resolution context.
+ * @returns Resolved tag-name string or null when unresolved.
+ */
+function resolveFromForwardedExport(
+  exportDecl: Readonly<ts.ExportDeclaration>,
+  targetPath: string,
+  context: Readonly<IExportResolutionContext>,
+): string | null {
+  const { exportClause } = exportDecl;
+  if (!exportClause) {
+    return resolveExportedValue(
+      targetPath,
+      context.exportName,
+      context.componentDir,
+      context.visited,
+    );
+  }
+  if (!ts.isNamedExports(exportClause)) {
+    return null;
+  }
+
+  const match = findExportSpecifier(exportClause, context.exportName);
+  if (!match) {
+    return null;
+  }
+
+  const forwardedName = match.propertyName?.text ?? match.name.text;
+  return resolveExportedValue(
+    targetPath,
+    forwardedName,
+    context.componentDir,
+    context.visited,
+  );
 }
 
 /**

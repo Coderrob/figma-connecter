@@ -6,6 +6,7 @@
  *
  * @module commands/command-builder
  */
+import assert from "node:assert/strict";
 import type { ICommandStages } from "@/src/types/cli";
 
 interface ICommandBuilderConfig<Context, IResult> {
@@ -130,11 +131,10 @@ export class CommandBuilder<Context, IResult> {
    */
   build(): ICommandStages<Context, IResult> {
     const { execute, onError, report, validate } = this.config;
-    if (!validate || !execute || !report) {
-      throw new Error(
-        "CommandBuilder requires validate, execute, and report stages before build().",
-      );
-    }
+    assert(
+      validate && execute && report,
+      "CommandBuilder requires validate, execute, and report stages before build().",
+    );
     const executeStageFn = execute;
     const reportStageFn = report;
     const validateStageFn = validate;

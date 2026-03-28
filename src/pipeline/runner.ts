@@ -56,7 +56,7 @@ import { processComponentBatch } from "./batch";
 
 interface IRunnerContext {
   readonly options: IConnectOptions;
-  readonly logger: Logger;
+  readonly logger: Readonly<Logger>;
   readonly timer: IReportTimer;
   readonly discovered: readonly IDiscoveredFile[];
   readonly emitters: readonly IEmitter[];
@@ -363,10 +363,9 @@ export function runConnectPipeline(
  */
 function runRunnerStep(
   state: Readonly<IResult<IRunnerContext>>,
-  step: Readonly<RunnerStep>,
+  step: RunnerStep,
 ): IResult<IRunnerContext> {
-  const runStep: RunnerStep = step;
-  return runStep(state);
+  return step(state);
 }
 
 /**

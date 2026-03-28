@@ -22,6 +22,7 @@
  * @module io/adapter
  */
 
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import type { IIoAdapter } from "@/src/types/io";
@@ -112,7 +113,7 @@ export class MemoryIoAdapter implements IIoAdapter {
   readFile(filePath: string): string {
     const content = this.files.get(filePath);
     if (content === undefined) {
-      throw new Error(`File not found: ${filePath}`);
+      assert.fail(`File not found: ${filePath}`);
     }
     return content;
   }

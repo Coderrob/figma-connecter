@@ -22,6 +22,7 @@
  * @module cli/validators
  */
 
+import assert from "node:assert/strict";
 import path from "node:path";
 import { nodeIoAdapter } from "@/src/io/adapter";
 import type { IGlobalCliOptions } from "@/src/types/cli";
@@ -40,9 +41,7 @@ export function validateConfigPath(value?: string): string | undefined {
 
   const resolved = path.resolve(process.cwd(), value);
 
-  if (!nodeIoAdapter.exists(resolved)) {
-    throw new Error(`Config file not found: ${value}`);
-  }
+  assert(nodeIoAdapter.exists(resolved), `Config file not found: ${value}`);
 
   const stats = nodeIoAdapter.stat
     ? nodeIoAdapter.stat(resolved)
@@ -54,9 +53,7 @@ export function validateConfigPath(value?: string): string | undefined {
          */
         isFile: () => true,
       };
-  if (!stats.isFile()) {
-    throw new Error(`Config path is not a file: ${value}`);
-  }
+  assert(stats.isFile(), `Config path is not a file: ${value}`);
 
   return resolved;
 }
@@ -68,9 +65,10 @@ export function validateConfigPath(value?: string): string | undefined {
  * @throws Error if options contain incompatible combinations.
  */
 export function validateGlobalOptions(options: Readonly<IGlobalCliOptions>): void {
-  if (options.verbose && options.quiet) {
-    throw new Error("Cannot use --verbose and --quiet together.");
-  }
+  assert(
+    !(options.verbose && options.quiet),
+    "Cannot use --verbose and --quiet together.",
+  );
 }
 
 /**
@@ -85,15 +83,11 @@ export function validatePathOption(
   value: string,
   optionName = "--path",
 ): string {
-  if (!value || value.trim().length === 0) {
-    throw new Error(`Missing required value for ${optionName}.`);
-  }
+  assert(value?.trim().length > 0, `Missing required value for ${optionName}.`);
 
   const resolved = path.resolve(process.cwd(), value);
 
-  if (!nodeIoAdapter.exists(resolved)) {
-    throw new Error(`Path not found: ${value}`);
-  }
+  assert(nodeIoAdapter.exists(resolved), `Path not found: ${value}`);
 
   return resolved;
 }

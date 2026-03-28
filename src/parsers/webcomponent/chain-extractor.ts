@@ -74,9 +74,14 @@ export function extractFromChain<TItem>(
   classChain: readonly ts.ClassLikeDeclaration[],
   options: Readonly<IChainExtractorOptions<TItem>>,
 ): IChainExtractionResult<TItem> {
-  const results = classChain.map(extractForClassNode.bind(undefined, options));
-  const collected = results.flatMap(selectExtractedItems);
-  const warnings = results.flatMap(selectWarnings);
+  let collected: TItem[] = [];
+  let warnings: string[] = [];
+
+  for (const classNode of classChain) {
+    const result = extractForClassNode(options, classNode);
+    collected = [...collected, ...selectExtractedItems(result)];
+    warnings = [...warnings, ...selectWarnings(result)];
+  }
 
   const merged = mergeByKey(collected, {
     getKey: options.getKey,

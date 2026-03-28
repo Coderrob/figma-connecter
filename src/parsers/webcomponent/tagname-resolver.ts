@@ -151,12 +151,18 @@ const resolveFromJSDoc = (
 export const resolveTagName = (
   options: Readonly<ITagNameResolverOptions>,
 ): ITagNameResolution => {
-  const jsdocTagName = resolveFromJSDoc(options.classDeclaration, options.astData);
+  const jsdocTagName = resolveFromJSDoc(
+    options.classDeclaration,
+    options.astData,
+  );
   if (jsdocTagName) {
     return { tagName: jsdocTagName, source: TagNameSource.JSDoc, warnings: [] };
   }
 
-  const indexResult = resolveFromIndexFile(options.componentDir, options.className);
+  const indexResult = resolveFromIndexFile(
+    options.componentDir,
+    options.className,
+  );
   if (indexResult.tagName) {
     return {
       tagName: indexResult.tagName,
@@ -166,7 +172,10 @@ export const resolveTagName = (
   }
 
   return {
-    tagName: resolveFromFilename(options.componentFilePath, options.componentDir),
+    tagName: resolveFromFilename(
+      options.componentFilePath,
+      options.componentDir,
+    ),
     source: TagNameSource.Filename,
     warnings: [...indexResult.warnings],
   };

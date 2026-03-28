@@ -148,7 +148,14 @@ export class FigmaReactEmitter implements IEmitter {
       warnings: readonly string[];
     }>,
   ): IEmitResult {
-    const { filePath, className, importPath, figmaUrl, propsSection, propsMarkers } = emitOptions;
+    const {
+      filePath,
+      className,
+      importPath,
+      figmaUrl,
+      propsSection,
+      propsMarkers,
+    } = emitOptions;
     const { exampleSection, exampleMarkers, warnings } = emitOptions;
     return buildFilePayload(
       createFilePayload(filePath, FileChangeStatus.Created),
@@ -158,8 +165,18 @@ export class FigmaReactEmitter implements IEmitter {
         "",
       ]),
       withSections({ lines: [`figma.connect('${figmaUrl}', {`] }),
-      withProps({ content: propsSection, markers: propsMarkers, name: GeneratedSectionName.Props, depth: 1 }),
-      withExample({ content: exampleSection, markers: exampleMarkers, name: GeneratedSectionName.Example, depth: 1 }),
+      withProps({
+        content: propsSection,
+        markers: propsMarkers,
+        name: GeneratedSectionName.Props,
+        depth: 1,
+      }),
+      withExample({
+        content: exampleSection,
+        markers: exampleMarkers,
+        name: GeneratedSectionName.Example,
+        depth: 1,
+      }),
       withSections({ lines: ["});", ""] }),
       withWarnings(warnings),
     );

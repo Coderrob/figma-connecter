@@ -20,12 +20,6 @@ import importPlugin from "eslint-plugin-import";
 import jsdocPlugin from "eslint-plugin-jsdoc";
 import globals from "globals";
 
-// Custom Rules
-import noInlineRequireTypeof from "./eslint/rules/no-inline-require-typeof.mjs";
-import requireClassImplementsInterface from "./eslint/rules/require-class-implements-interface.mjs";
-import requireItShould from "./eslint/rules/require-it-should.mjs";
-import requireZodDescribe from "./eslint/rules/require-zod-describe.mjs";
-
 // ============================================================================
 // CONFIGURATION CONSTANTS
 // ============================================================================
@@ -286,17 +280,9 @@ const codeQualityRules = {
  */
 const zeroToleranceRules = {
   // Enable ALL plugin rules as warnings (not just recommended)
-  ...Object.fromEntries(
-    Object.keys(zeroTolerancePlugin.rules ?? {}).map((ruleName) => [
-      `zero-tolerance/${ruleName}`,
-      "warn",
-    ]),
-  ),
+  ...zeroTolerancePlugin.rules.strict,
   // BDD sidecar files are not used in this repository.
   "zero-tolerance/require-bdd-spec": "off",
-  // Override specific rules to be errors
-  "zero-tolerance/prefer-string-raw": "error",
-  "zero-tolerance/no-parent-imports": "error",
 };
 
 // ============================================================================
@@ -436,14 +422,6 @@ export default [
       "zero-tolerance": zeroTolerancePlugin,
       import: importPlugin,
       jsdoc: jsdocPlugin,
-      custom: {
-        rules: {
-          "no-inline-require-typeof": noInlineRequireTypeof,
-          "require-class-implements-interface": requireClassImplementsInterface,
-          "require-it-should": requireItShould,
-          "require-zod-describe": requireZodDescribe,
-        },
-      },
     },
     rules: {
       ...typescriptRules,
@@ -452,7 +430,6 @@ export default [
       ...importRules,
       ...codeQualityRules,
       ...zeroToleranceRules,
-      "custom/no-inline-require-typeof": "error",
     },
     settings: {
       "import/resolver": {

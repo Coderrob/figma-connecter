@@ -148,7 +148,7 @@ export const buildExampleTemplate = (
 export const buildPropsSection = (
   props: readonly IPropertyDescriptor[],
   depth = 1,
-): { lines: string[]; warnings: string[] } => {
+): { readonly lines: readonly string[]; readonly warnings: readonly string[] } => {
   if (props.length === 0) {
     return {
       lines: [`${indent(depth)}props: {},`],

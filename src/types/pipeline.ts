@@ -27,7 +27,7 @@ export interface IPipelineContext {
   readonly baseImportPath?: string;
 
   // Runtime services
-  readonly logger?: Logger;
+  readonly logger?: Readonly<Logger>;
   readonly io: IIoAdapter;
 }
 

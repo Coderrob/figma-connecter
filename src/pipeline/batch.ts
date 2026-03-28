@@ -126,12 +126,11 @@ function addFileChange(
  */
 function applyComponentUpdate(
   state: Readonly<IResult<IFileContext>>,
-  updater: Readonly<ComponentUpdater>,
+  updater: ComponentUpdater,
 ): IResult<IFileContext> {
-  const applyUpdater: ComponentUpdater = updater;
   return setFileValue(state, {
     ...state.value,
-    component: applyUpdater(state.value.component),
+    component: updater(state.value.component),
   });
 }
 
@@ -531,10 +530,9 @@ function resolveSourceFileStep(
  */
 function runFileStep(
   state: Readonly<IResult<IFileContext>>,
-  step: Readonly<FileStep>,
+  step: FileStep,
 ): IResult<IFileContext> {
-  const runStep: FileStep = step;
-  return runStep(state);
+  return step(state);
 }
 
 /**
@@ -654,7 +652,7 @@ function shouldWriteFullContent(
  */
 function updateComponent(
   state: Readonly<IResult<IFileContext>>,
-  updater: Readonly<ComponentUpdater>,
+  updater: ComponentUpdater,
 ): IResult<IFileContext> {
   return applyComponentUpdate(state, updater);
 }

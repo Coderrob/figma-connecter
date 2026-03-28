@@ -92,22 +92,34 @@ export function createProgressIndicator(
     return createNoOpIndicator();
   }
 
-  const intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
+  return createActiveProgressIndicator(
+    stream,
+    options.intervalMs ?? DEFAULT_INTERVAL_MS,
+  );
+}
+
+/**
+ * Creates a live terminal progress indicator.
+ *
+ * @param stream - Output stream receiving spinner updates.
+ * @param intervalMs - Spinner animation interval in milliseconds.
+ * @returns Progress indicator backed by closure state.
+ */
+function createActiveProgressIndicator(
+  stream: Readonly<NodeJS.WriteStream>,
+  intervalMs: number,
+): IProgressIndicator {
   let timer: NodeJS.Timeout | number | undefined;
   let frameIndex = 0;
   let label = "";
 
   /**
-   * Renders the spinner frame and current label.
+   * Renders the next spinner frame.
    *
    * @returns Nothing.
    */
   const render = (): void => {
-    const frame = SPINNER_FRAMES[frameIndex % SPINNER_FRAMES.length];
-    frameIndex += 1;
-    stream.write(`\r${frame} ${label}`);
-    // Clear to end of line
-    stream.write("\x1b[0K");
+    frameIndex = renderProgressFrame(stream, label, frameIndex);
   };
 
   return {
@@ -125,7 +137,6 @@ export function createProgressIndicator(
       render();
       timer = setInterval(render, intervalMs);
     },
-
     /**
      * Updates the label for the running indicator.
      *
@@ -138,27 +149,51 @@ export function createProgressIndicator(
         render();
       }
     },
-
     /**
      * Stops the spinner with an optional final label and status.
      *
-     * @param finalLabel - Final label to display before stopping.
-     * @param status - Final status label for success or error output.
+     * @param finalLabel - Final label to display.
+     * @param status - Final status label.
      * @returns Nothing.
      */
-    stop(
-      finalLabel?: string,
-      status: Readonly<ProgressStatus> = ProgressStatus.Success,
-    ): void {
+    stop(finalLabel?: string, status: Readonly<ProgressStatus> = ProgressStatus.Success): void {
       if (timer) {
         clearInterval(timer);
-        timer = undefined;
       }
+      timer = undefined;
       if (finalLabel) {
         label = finalLabel;
       }
-      const prefix = status === ProgressStatus.Error ? "x" : "ok";
-      stream.write(`\r${prefix} ${label}\n`);
+      stream.write(`\r${getStatusPrefix(status)} ${label}\n`);
     },
   };
+}
+
+/**
+ * Returns the printable prefix for a final progress status.
+ *
+ * @param status - Final status value.
+ * @returns Status prefix.
+ */
+function getStatusPrefix(status: Readonly<ProgressStatus>): string {
+  return status === ProgressStatus.Error ? "x" : "ok";
+}
+
+/**
+ * Renders the current spinner frame and returns the next frame index.
+ *
+ * @param stream - Output stream receiving spinner updates.
+ * @param label - Current label text.
+ * @param frameIndex - Current frame index.
+ * @returns Next frame index after rendering.
+ */
+function renderProgressFrame(
+  stream: Readonly<NodeJS.WriteStream>,
+  label: string,
+  frameIndex: number,
+): number {
+  const frame = SPINNER_FRAMES[frameIndex % SPINNER_FRAMES.length];
+  stream.write(`\r${frame} ${label}`);
+  stream.write("\x1b[0K");
+  return frameIndex + 1;
 }

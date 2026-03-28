@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import assert from "node:assert/strict";
+
 /**
  * Generic Registry Factory Module
  *
@@ -60,7 +62,7 @@ let registryEntriesStore = new Map<object, readonly unknown[]>();
  * @param target - Target identifier to format.
  * @returns String representation safe for diagnostics.
  */
-function formatTargetIdentifier<TTarget>(target: Readonly<TTarget>): string {
+function formatTargetIdentifier(target: unknown): string {
   if (
     typeof target === "string" ||
     typeof target === "number" ||
@@ -210,11 +212,10 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
     options: Readonly<IPluginOptions<TTarget, TInstance, TMetadata>>,
   ): void {
     const registry = new Map(this.entries);
-    if (registry.has(options.target)) {
-      throw new Error(
-        `${this.factoryTypeName} plugin already registered for target: ${formatTargetIdentifier(options.target)}`,
-      );
-    }
+    assert(
+      !registry.has(options.target),
+      `${this.factoryTypeName} plugin already registered for target: ${formatTargetIdentifier(options.target)}`,
+    );
 
     setStoredRegistryEntries(this, [
       ...this.entries,
@@ -256,11 +257,10 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
    */
   getMetadata(target: Readonly<TTarget>): TMetadata {
     const entry = new Map(this.entries).get(target);
-    if (!entry) {
-      throw new Error(
-        `No ${getFactoryLabel(this.factoryTypeName)} registered for target: ${formatTargetIdentifier(target)}`,
-      );
-    }
+    assert(
+      entry,
+      `No ${getFactoryLabel(this.factoryTypeName)} registered for target: ${formatTargetIdentifier(target)}`,
+    );
     return entry.metadata;
   }
 
@@ -282,11 +282,10 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
    */
   createInstance(target: Readonly<TTarget>): TInstance {
     const entry = new Map(this.entries).get(target);
-    if (!entry) {
-      throw new Error(
-        `No ${getFactoryLabel(this.factoryTypeName)} registered for target: ${formatTargetIdentifier(target)}`,
-      );
-    }
+    assert(
+      entry,
+      `No ${getFactoryLabel(this.factoryTypeName)} registered for target: ${formatTargetIdentifier(target)}`,
+    );
     return entry.factory();
   }
 
@@ -298,11 +297,10 @@ export abstract class RegistryFactory<TTarget, TInstance, TMetadata> {
    */
   getDefaultTarget(): TTarget {
     const targets = this.listTargets();
-    if (targets.length === 0) {
-      throw new Error(
-        `No ${getFactoryLabel(this.factoryTypeName)} targets registered.`,
-      );
-    }
+    assert(
+      targets.length > 0,
+      `No ${getFactoryLabel(this.factoryTypeName)} targets registered.`,
+    );
     return targets[0];
   }
 

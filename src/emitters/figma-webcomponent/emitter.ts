@@ -129,7 +129,8 @@ export class FigmaWebComponentEmitter implements IEmitter {
       warnings: readonly string[];
     }>,
   ): IEmitResult {
-    const { filePath, figmaUrl, propsSection, propsMarkers, exampleSection } = emitOptions;
+    const { filePath, figmaUrl, propsSection, propsMarkers, exampleSection } =
+      emitOptions;
     const { exampleMarkers, importsLine, warnings } = emitOptions;
     return buildFilePayload(
       createFilePayload(filePath, FileChangeStatus.Created),
@@ -139,8 +140,18 @@ export class FigmaWebComponentEmitter implements IEmitter {
         "",
       ]),
       withSections({ lines: [`figma.connect('${figmaUrl}', {`] }),
-      withProps({ content: propsSection, markers: propsMarkers, name: GeneratedSectionName.Props, depth: 1 }),
-      withExample({ content: exampleSection, markers: exampleMarkers, name: GeneratedSectionName.Example, depth: 1 }),
+      withProps({
+        content: propsSection,
+        markers: propsMarkers,
+        name: GeneratedSectionName.Props,
+        depth: 1,
+      }),
+      withExample({
+        content: exampleSection,
+        markers: exampleMarkers,
+        name: GeneratedSectionName.Example,
+        depth: 1,
+      }),
       withSections({ lines: [`${indent(1)}${importsLine}`, "});", ""] }),
       withWarnings(warnings),
     );
