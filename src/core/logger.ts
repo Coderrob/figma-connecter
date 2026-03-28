@@ -145,6 +145,8 @@ const COLORS: Readonly<Record<string, string>> = {
  * ```
  */
 export class Logger {
+  /** Optional mutable color override used by tests and runtime adapters. */
+  useColors?: boolean;
   /**
    * Creates a new Logger instance.
    *
@@ -169,7 +171,12 @@ export class Logger {
   constructor(
     private readonly levelOrOptions: LogLevel | ILoggerOptions = LogLevel.INFO,
     private readonly useColorsOption = false,
-  ) {}
+  ) {
+    this.useColors =
+      typeof levelOrOptions === "object"
+        ? levelOrOptions.useColors
+        : useColorsOption;
+  }
 
   /**
    * Resolves logger options from constructor inputs.
@@ -197,7 +204,7 @@ export class Logger {
    * @returns True when ANSI colors are enabled.
    */
   private get isColorOutputEnabled(): boolean {
-    return Boolean(this.options.useColors) && process.stdout.isTTY;
+    return Boolean(this.useColors ?? this.options.useColors);
   }
 
   /**
@@ -400,7 +407,7 @@ export class Logger {
     const merged = { ...this.baseContext, ...context };
     return new Logger({
       level: this.level,
-      useColors: this.isColorOutputEnabled,
+      useColors: this.useColors ?? this.options.useColors,
       baseContext: merged,
     });
   }

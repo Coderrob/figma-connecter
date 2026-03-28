@@ -47,6 +47,14 @@ const UNIX_WRITE_PERMISSION_MASK = 0o222;
 /** Platform identifier for Windows. */
 const WINDOWS_PLATFORM = "win32";
 
+interface IParsedTsconfigFileSuccess {
+  readonly config: Readonly<Record<string, unknown>>;
+}
+
+interface IParsedTsconfigFileError {
+  readonly error: string;
+}
+
 /**
  * Formats a TypeScript diagnostic into a human-readable string.
  *
@@ -150,23 +158,14 @@ export function loadSourceProgram(
   let compilerOptions = ts.getDefaultCompilerOptions();
 
   if (configPath) {
-    const normalizedConfigPath = configPath.replaceAll(String.raw`\\`, "/");
-    /**
-     * Reads a file from the file system.
-     *
-     * @param {string} filePath - Path to the file to read.
-     * @returns {string | undefined} File contents as a string, or undefined if the file cannot be read.
-     */
-    const readFile = (filePath: string): string | undefined =>
-      ts.sys.readFile(filePath);
-    const configFile = ts.readConfigFile(normalizedConfigPath, readFile);
-    if (configFile.error) {
-      errors = [...errors, formatDiagnostic(configFile.error)];
+    const configFile = readTsconfigFile(configPath);
+    if ("error" in configFile) {
+      errors = [...errors, configFile.error];
     } else {
       const parsed = ts.parseJsonConfigFileContent(
         configFile.config,
         ts.sys,
-        path.dirname(normalizedConfigPath),
+        path.dirname(configPath),
       );
       compilerOptions = parsed.options;
       errors = [...errors, ...parsed.errors.map(formatDiagnostic)];
@@ -225,6 +224,44 @@ export function loadSourceProgram(
     sourceFiles,
     sourceFileMap,
   };
+}
+
+/**
+ * Reads and parses a TypeScript config file using the native filesystem path.
+ *
+ * @param configPath - Absolute tsconfig path.
+ * @returns Parsed tsconfig object or a diagnostic error.
+ */
+function readTsconfigFile(
+  configPath: string,
+): IParsedTsconfigFileSuccess | IParsedTsconfigFileError {
+  const contents = fs.readFileSync(configPath, "utf8");
+  try {
+    const parsed: unknown = JSON.parse(contents);
+    if (!isJsonObject(parsed)) {
+      return {
+        error: `${configPath}: tsconfig root must be a JSON object.`,
+      };
+    }
+
+    return { config: parsed };
+  } catch (error) {
+    return {
+      error: `${configPath}: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
+ * Returns true when a parsed JSON value is an object suitable for tsconfig content.
+ *
+ * @param value - Parsed JSON value.
+ * @returns True when the value is a non-null object and not an array.
+ */
+function isJsonObject(
+  value: unknown,
+): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**

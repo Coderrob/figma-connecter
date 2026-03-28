@@ -27,6 +27,48 @@ import path from "node:path";
 
 /** POSIX path separator character. */
 export const POSIX_PATH_SEPARATOR = "/";
+const WINDOWS_PATH_SEPARATOR_PATTERN = /\\/g;
+const WINDOWS_DRIVE_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:\//;
+
+/**
+ * Converts Windows path separators to POSIX separators.
+ *
+ * @param value - Path string to normalize.
+ * @returns Path string using forward slashes.
+ */
+function toPosixSeparators(value: string): string {
+  return value.replaceAll(WINDOWS_PATH_SEPARATOR_PATTERN, POSIX_PATH_SEPARATOR);
+}
+
+/**
+ * Returns true when a path is already POSIX-absolute.
+ *
+ * @param value - Path string to inspect.
+ * @returns True when the path starts at a POSIX root.
+ */
+function isPosixAbsolutePath(value: string): boolean {
+  return value.startsWith(POSIX_PATH_SEPARATOR);
+}
+
+/**
+ * Returns true when a path is Windows-drive absolute after slash normalization.
+ *
+ * @param value - Normalized path string to inspect.
+ * @returns True when the path includes a drive prefix.
+ */
+function isWindowsDriveAbsolutePath(value: string): boolean {
+  return WINDOWS_DRIVE_ABSOLUTE_PATH_PATTERN.test(value);
+}
+
+/**
+ * Normalizes a path without forcing it to become absolute.
+ *
+ * @param value - Input path string.
+ * @returns POSIX-style normalized path.
+ */
+function normalizePortablePath(value: string): string {
+  return path.posix.normalize(toPosixSeparators(value));
+}
 
 /**
  * Builds the output path for a generated Code Connect file.
@@ -39,7 +81,7 @@ export const buildCodeConnectFilePath = (
   fileName: string,
 ): string =>
   path.posix.join(
-    componentDir.replaceAll(String.raw`\\`, "/"),
+    normalizePortablePath(componentDir),
     "code-connect",
     fileName,
   );
@@ -62,7 +104,15 @@ export function normalizePath(value: string): string {
     return "";
   }
 
-  return path.resolve(value).replaceAll(String.raw`\\`, "/");
+  const portablePath = normalizePortablePath(value);
+  if (
+    isPosixAbsolutePath(portablePath) ||
+    isWindowsDriveAbsolutePath(portablePath)
+  ) {
+    return portablePath;
+  }
+
+  return toPosixSeparators(path.resolve(value));
 }
 
 /**
