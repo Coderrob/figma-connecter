@@ -356,10 +356,3 @@ export function mergeWarnings<T>(
     warnings: [...result.warnings, ...warnings],
   };
 }
-
-/**
- * Backward-compatible alias for {@link map}.
- *
- * @deprecated Use map instead.
- */
-export const mapResult = map;

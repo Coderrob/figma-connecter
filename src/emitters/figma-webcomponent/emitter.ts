@@ -28,16 +28,10 @@ import {
 import type { IEmitter, IEmitterContext } from "@/src/emitters/types";
 import {
   buildExampleTemplate,
-  buildFilePayload,
+  buildCodeConnectPayload,
   buildPropsSection,
-  createFilePayload,
   getComponentBaseName,
   indent,
-  withExample,
-  withImports,
-  withProps,
-  withSections,
-  withWarnings,
 } from "@/src/emitters/shared/utils";
 import { buildCodeConnectFilePath } from "@/src/utils/paths";
 
@@ -132,28 +126,21 @@ export class FigmaWebComponentEmitter implements IEmitter {
     const { filePath, figmaUrl, propsSection, propsMarkers, exampleSection } =
       emitOptions;
     const { exampleMarkers, importsLine, warnings } = emitOptions;
-    return buildFilePayload(
-      createFilePayload(filePath, FileChangeStatus.Created),
-      withImports([
+    return buildCodeConnectPayload({
+      action: FileChangeStatus.Created,
+      exampleMarkers,
+      exampleSection,
+      filePath,
+      footerLines: [`${indent(1)}${importsLine}`, "});", ""],
+      headerLines: [`figma.connect('${figmaUrl}', {`],
+      importLines: [
         "// @ts-ignore",
         `import figma, { html } from '${FIGMA_PACKAGE_HTML}';`,
         "",
-      ]),
-      withSections({ lines: [`figma.connect('${figmaUrl}', {`] }),
-      withProps({
-        content: propsSection,
-        markers: propsMarkers,
-        name: GeneratedSectionName.Props,
-        depth: 1,
-      }),
-      withExample({
-        content: exampleSection,
-        markers: exampleMarkers,
-        name: GeneratedSectionName.Example,
-        depth: 1,
-      }),
-      withSections({ lines: [`${indent(1)}${importsLine}`, "});", ""] }),
-      withWarnings(warnings),
-    );
+      ],
+      propsMarkers,
+      propsSection,
+      warnings,
+    });
   }
 }

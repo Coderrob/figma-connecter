@@ -23,6 +23,7 @@
  */
 
 export {
+  buildCodeConnectPayload,
   buildFilePayload,
   createFilePayload,
   withExample,
@@ -31,6 +32,7 @@ export {
   withSections,
   withWarnings,
   wrapGeneratedSection,
+  type ICodeConnectPayloadInput,
   type FilePayloadBuilder,
   type IFilePayloadDraft,
 } from "./file-builder";

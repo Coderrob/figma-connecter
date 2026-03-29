@@ -174,6 +174,19 @@ interface ISectionBlock {
   readonly sections?: readonly IGeneratedSectionPayload[];
 }
 
+export interface ICodeConnectPayloadInput {
+  readonly action?: FileChangeStatus;
+  readonly exampleMarkers: IGeneratedSectionMarkers;
+  readonly exampleSection: string;
+  readonly filePath: string;
+  readonly footerLines: readonly string[];
+  readonly headerLines: readonly string[];
+  readonly importLines: readonly string[];
+  readonly propsMarkers: IGeneratedSectionMarkers;
+  readonly propsSection: string;
+  readonly warnings?: readonly string[];
+}
+
 /**
  * Adds import lines to a payload draft.
  *
@@ -225,6 +238,50 @@ export function withSections(
 export const withWarnings = (
   warnings: readonly string[] = [],
 ): FilePayloadBuilder => applyWarnings.bind(undefined, warnings);
+
+/**
+ * Builds a standard Code Connect file payload with imports, generated sections,
+ * footer content, and warnings.
+ *
+ * @param input - Precomputed content blocks for a Code Connect file.
+ * @returns Emit result with generated content, sections, and warnings.
+ */
+export function buildCodeConnectPayload(
+  input: Readonly<ICodeConnectPayloadInput>,
+): IEmitResult {
+  const {
+    action = FileChangeStatus.Created,
+    exampleMarkers,
+    exampleSection,
+    filePath,
+    footerLines,
+    headerLines,
+    importLines,
+    propsMarkers,
+    propsSection,
+    warnings = [],
+  } = input;
+
+  return buildFilePayload(
+    createFilePayload(filePath, action),
+    withImports(importLines),
+    withSections({ lines: headerLines }),
+    withProps({
+      content: propsSection,
+      markers: propsMarkers,
+      name: GeneratedSectionName.Props,
+      depth: 1,
+    }),
+    withExample({
+      content: exampleSection,
+      markers: exampleMarkers,
+      name: GeneratedSectionName.Example,
+      depth: 1,
+    }),
+    withSections({ lines: footerLines }),
+    withWarnings(warnings),
+  );
+}
 
 /**
  * Wraps content in generated-section markers with optional indentation.

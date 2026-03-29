@@ -27,16 +27,10 @@ import {
 } from "@/src/core/types";
 import type { IEmitter, IEmitterContext } from "@/src/emitters/types";
 import {
-  buildFilePayload,
+  buildCodeConnectPayload,
   buildPropsSection,
   buildReactExampleSection,
-  createFilePayload,
   getComponentBaseName,
-  withExample,
-  withImports,
-  withProps,
-  withSections,
-  withWarnings,
 } from "@/src/emitters/shared/utils";
 import {
   buildCodeConnectFilePath,
@@ -157,28 +151,21 @@ export class FigmaReactEmitter implements IEmitter {
       propsMarkers,
     } = emitOptions;
     const { exampleSection, exampleMarkers, warnings } = emitOptions;
-    return buildFilePayload(
-      createFilePayload(filePath, FileChangeStatus.Created),
-      withImports([
+    return buildCodeConnectPayload({
+      action: FileChangeStatus.Created,
+      exampleMarkers,
+      exampleSection,
+      filePath,
+      footerLines: ["});", ""],
+      headerLines: [`figma.connect('${figmaUrl}', {`],
+      importLines: [
         `import { ${className} } from '${importPath}';`,
         `import figma from '${FIGMA_PACKAGE_REACT}';`,
         "",
-      ]),
-      withSections({ lines: [`figma.connect('${figmaUrl}', {`] }),
-      withProps({
-        content: propsSection,
-        markers: propsMarkers,
-        name: GeneratedSectionName.Props,
-        depth: 1,
-      }),
-      withExample({
-        content: exampleSection,
-        markers: exampleMarkers,
-        name: GeneratedSectionName.Example,
-        depth: 1,
-      }),
-      withSections({ lines: ["});", ""] }),
-      withWarnings(warnings),
-    );
+      ],
+      propsMarkers,
+      propsSection,
+      warnings,
+    });
   }
 }

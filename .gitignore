@@ -31,6 +31,9 @@ yarn-error.log*
 .nyc_output/
 __tests__/__output__/
 .lint-report.json
+.jscpd-report/
+.jscpd-repo/
+.jscpd-tmp/
 
 # Temporary files
 tmp/

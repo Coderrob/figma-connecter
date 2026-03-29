@@ -107,7 +107,7 @@ The architecture depends on a few central contracts.
 
 ### 5.1 Component Model
 
-Parsers produce a normalized `IComponentModel` in `src/core/types.ts`. Emitters consume that model without depending on parser internals. This is the main seam that keeps parsing and code generation decoupled.
+Parsers produce a normalized `IComponentModel` from the core contracts in `src/core/`. Emitters consume that model without depending on parser internals. This is the main seam that keeps parsing and code generation decoupled.
 
 Typical model contents:
 
@@ -376,11 +376,17 @@ Main scripts from `package.json`:
 
 - `npm run build`
 - `npm run clean`
+- `npm run duplication`
 - `npm run lint`
 - `npm run lint:fix`
+- `npm run quality:gate`
+- `npm run repo:hygiene`
 - `npm run test`
 - `npm run test:coverage`
 - `npm run tsc`
+
+Duplication control is enforced with `jscpd` over `src/` and `bin/` with a hard threshold below `1%`. Generated output and dependency directories are excluded from that gate.
+Repository hygiene is enforced with `repo:hygiene`, which requires a single uppercase `CHANGELOG.md`, rejects stale placeholder markers such as `TBD` and `pending`, and verifies there is exactly one `[Unreleased]` section.
 
 ## 14. Source Tree Structure
 

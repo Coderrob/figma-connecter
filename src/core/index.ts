@@ -75,7 +75,6 @@ export {
   hasErrors,
   hasWarnings,
   map,
-  mapResult,
   mergeDiagnostics,
   mergeErrors,
   mergeWarnings,

@@ -31,6 +31,13 @@ import {
 } from "./internal-registry";
 import type { IPluginInfo, IPluginOptions } from "./types";
 
+type PluginInfoEntry = readonly [
+  string,
+  { readonly displayName: string; readonly description: string },
+];
+
+type PluginInfoTuple = [string, { displayName: string; description: string }];
+
 /**
  * Gets information about all registered plugins.
  * Useful for debugging and displaying available extensions.
@@ -43,9 +50,9 @@ export function getPluginInfo(): IPluginInfo {
   const emitters = new Map<
     string,
     { displayName: string; description: string }
-  >(Array.from(emitterMetadata, mapEmitterMetadataEntry));
+  >(Array.from(emitterMetadata, mapPluginMetadataEntry));
   const parsers = new Map<string, { displayName: string; description: string }>(
-    Array.from(parserMetadata, mapParserMetadataEntry),
+    Array.from(parserMetadata, mapPluginMetadataEntry),
   );
 
   return {
@@ -77,39 +84,12 @@ export function registerPlugin(options: Readonly<IPluginOptions>): void {
 }
 
 /**
- * Builds a normalized plugin info tuple from emitter metadata.
+ * Builds a normalized plugin info tuple from plugin metadata.
  *
- * @param entry - Emitter metadata map entry.
+ * @param entry - Plugin metadata map entry.
  * @returns Key/value tuple for plugin info map construction.
  */
-function mapEmitterMetadataEntry(
-  entry: readonly [
-    string,
-    { readonly displayName: string; readonly description: string },
-  ],
-): [string, { displayName: string; description: string }] {
-  const [target, meta] = entry;
-  return [
-    target,
-    {
-      displayName: meta.displayName,
-      description: meta.description,
-    },
-  ];
-}
-
-/**
- * Builds a normalized plugin info tuple from parser metadata.
- *
- * @param entry - Parser metadata map entry.
- * @returns Key/value tuple for plugin info map construction.
- */
-function mapParserMetadataEntry(
-  entry: readonly [
-    string,
-    { readonly displayName: string; readonly description: string },
-  ],
-): [string, { displayName: string; description: string }] {
+function mapPluginMetadataEntry(entry: PluginInfoEntry): PluginInfoTuple {
   const [target, meta] = entry;
   return [
     target,

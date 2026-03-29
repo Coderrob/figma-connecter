@@ -31,7 +31,7 @@ import {
   type IAggregateResult,
   aggregateResults,
   createResult,
-  map as mapResult,
+  map,
   type IResult,
 } from "@/src/core/result";
 import type {
@@ -435,7 +435,7 @@ function extractComponentResult(
 const finalizeFileOutcome = (
   state: Readonly<IResult<IFileContext>>,
 ): IFileProcessOutcome => ({
-  result: mapResult(state, extractComponentResult),
+  result: map(state, extractComponentResult),
   shouldContinue: state.value.shouldContinue,
 });
 

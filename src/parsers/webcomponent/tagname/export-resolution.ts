@@ -302,24 +302,7 @@ function resolveIdentifierNameValue(
   componentDir: string,
   visited: Readonly<Set<string>>,
 ): string | null {
-  let localMatch: ts.VariableDeclaration | undefined;
-  for (const statement of sourceFile.statements) {
-    if (!ts.isVariableStatement(statement)) {
-      continue;
-    }
-    for (const declaration of statement.declarationList.declarations) {
-      if (
-        ts.isIdentifier(declaration.name) &&
-        declaration.name.text === identifierName
-      ) {
-        localMatch = declaration;
-        break;
-      }
-    }
-    if (localMatch) {
-      break;
-    }
-  }
+  const localMatch = findLocalVariableDeclaration(sourceFile, identifierName);
 
   if (localMatch?.initializer) {
     return resolveTagNameInitializer(localMatch.initializer, componentDir);
