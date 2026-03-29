@@ -3,6 +3,12 @@ import path from "node:path";
 
 const projectRoot = process.cwd();
 const changelogPath = path.join(projectRoot, "CHANGELOG.md");
+const docPaths = [
+  "README.md",
+  "CONTRIBUTING.md",
+  "ARCHITECTURE.md",
+  path.join("__tests__", "AGENTS.md"),
+];
 
 /**
  * Throws when a required file is missing.
@@ -43,6 +49,25 @@ function assertHeadingCount(changelog, pattern, expectedCount, message) {
   }
 }
 
+/**
+ * Throws when a documentation file contains a forbidden pattern.
+ *
+ * @param {string} relativePath - Project-relative file path.
+ * @param {RegExp} pattern - Forbidden pattern.
+ * @param {string} message - Error message to throw.
+ */
+function assertDocPatternAbsent(relativePath, pattern, message) {
+  const filePath = path.join(projectRoot, relativePath);
+  if (!fs.existsSync(filePath)) {
+    return;
+  }
+
+  const content = fs.readFileSync(filePath, "utf8");
+  if (pattern.test(content)) {
+    throw new Error(`${message} (${relativePath})`);
+  }
+}
+
 assertFileExists(changelogPath);
 if (fs.readdirSync(projectRoot).includes("changelog.md")) {
   throw new Error("Use CHANGELOG.md only; remove lowercase changelog.md.");
@@ -66,5 +91,18 @@ assertHeadingCount(
   1,
   "CHANGELOG.md must contain exactly one [Unreleased] section.",
 );
+
+for (const docPath of docPaths) {
+  assertDocPatternAbsent(
+    docPath,
+    /\byarn\b/i,
+    "Documentation must use npm commands only.",
+  );
+  assertDocPatternAbsent(
+    docPath,
+    /â/,
+    "Documentation contains mojibake and must be normalized to plain ASCII text.",
+  );
+}
 
 console.log("Repository hygiene checks passed.");

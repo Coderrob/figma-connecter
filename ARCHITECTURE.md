@@ -320,7 +320,7 @@ The tests validate:
 - TypeScript `5.9.x`
 - Node.js `>=20`
 - npm `>=8`
-- Yarn `3.2.4` declared as package manager
+- npm `>=8` declared as the supported package manager for local development
 
 ### 13.2 Build
 
@@ -474,3 +474,4 @@ Useful extension references already in the repo:
 - plugin seams for future targets without rewriting the pipeline
 
 That combination gives the project deterministic generation behavior, clear extension points, and a code structure that can scale beyond the initial Web Component and React targets.
+

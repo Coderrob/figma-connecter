@@ -36,12 +36,12 @@ module/
 **Example:**
 
 ```typescript
-// ❌ BAD: index.ts with implementations
+// BAD: index.ts with implementations
 export const DEFAULT_VALUE = 'foo';
 export interface Options { ... }
 export function create() { ... }
 
-// ✅ GOOD: Separate files
+// GOOD: Separate files
 // constants.ts
 export const DEFAULT_VALUE = 'foo';
 
