@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GeneratedSectionName, GeneratedSectionPayload } from '../src/core/types';
+import { GeneratedSectionName, IGeneratedSectionPayload } from '../src/core/types';
 import { applyGeneratedSectionUpdates } from '../src/io/section-updater';
 
 describe('applyGeneratedSectionUpdates', () => {
@@ -36,7 +36,7 @@ figma.connect('<FIGMA_ALERTCHIP_URL>', {
 });
 `;
 
-    const sections: GeneratedSectionPayload[] = [
+    const sections: IGeneratedSectionPayload[] = [
       {
         name: GeneratedSectionName.Props,
         content: `  props: {

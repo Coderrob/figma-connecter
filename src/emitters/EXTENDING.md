@@ -176,5 +176,5 @@ The plugin API supports:
 
 - Dynamic target discovery at runtime
 - Conditional emitter loading based on project config
-- Emitter versioning and compatibility checks
+- Emitter capability metadata and registration-time validation
 - Hot-reloading of emitter implementations

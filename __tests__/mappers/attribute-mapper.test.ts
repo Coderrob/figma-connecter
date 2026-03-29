@@ -18,11 +18,11 @@
  * @fileoverview Tests for attribute mapper utilities.
  */
 
-import { FigmaPropertyType, type PropertyDescriptor, PropertyVisibility } from '../../src/core/types';
+import { FigmaPropertyType, type IPropertyDescriptor, PropertyVisibility } from '../../src/core/types';
 import { mapPropertiesToAttributes, mapPropertyToAttribute } from '../../src/mappers/attribute-mapper';
 
 describe('mapPropertyToAttribute', () => {
-  const baseProperty: PropertyDescriptor = {
+  const baseProperty: IPropertyDescriptor = {
     name: 'expanded',
     attribute: 'expanded',
     type: FigmaPropertyType.Boolean,
@@ -70,7 +70,7 @@ describe('mapPropertyToAttribute', () => {
 });
 
 describe('mapPropertiesToAttributes', () => {
-  const baseProperty: PropertyDescriptor = {
+  const baseProperty: IPropertyDescriptor = {
     name: 'expanded',
     attribute: 'expanded',
     type: FigmaPropertyType.Boolean,

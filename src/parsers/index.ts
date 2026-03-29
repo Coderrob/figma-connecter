@@ -29,5 +29,5 @@ export {
   getParserMetadata,
   listParserTargets,
 } from './factory';
-export type { ParseContext, Parser, ParserResult, ParserTarget } from './types';
+export type { IParseContext, IParser, ParserResult, ParserTarget } from './types';
 export * from './webcomponent';

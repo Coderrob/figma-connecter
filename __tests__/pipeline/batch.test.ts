@@ -26,11 +26,11 @@ import ts from 'typescript';
 
 import type { Logger } from '../../src/core/logger';
 import { applyAggregateDiagnostics, createResult } from '../../src/core/result';
-import { type EmitResult, EmitterTarget, GeneratedSectionName } from '../../src/core/types';
-import type { Emitter } from '../../src/emitters/types';
+import { type IEmitResult, EmitterTarget, GeneratedSectionName } from '../../src/core/types';
+import type { IEmitter } from '../../src/emitters/types';
 import { createMemoryIoAdapter } from '../../src/io/adapter';
-import type { DiscoveredFile } from '../../src/io/file-discovery';
-import type { Parser } from '../../src/parsers/types';
+import type { IDiscoveredFile } from '../../src/io/types';
+import type { IParser } from '../../src/parsers/types';
 import { ParserTarget } from '../../src/parsers/types';
 import { processComponentBatch } from '../../src/pipeline/batch';
 import { createMockComponentModel, createMockPipelineContext } from '../helpers/fixtures';
@@ -49,7 +49,7 @@ describe('processComponentBatch', () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  const createDiscoveredFile = (filePath: string): DiscoveredFile => ({
+  const createDiscoveredFile = (filePath: string): IDiscoveredFile => ({
     filePath,
     relativePath: path.basename(filePath),
     fileName: path.basename(filePath),
@@ -63,10 +63,10 @@ describe('processComponentBatch', () => {
       createDiscoveredFile(path.join(tempDir, 'ignored.component.ts')),
     ];
 
-    const parser: Parser = {
+    const parser: IParser = {
       target: ParserTarget.WebComponent,
       parse: () => createResult(undefined),
-    } as Parser;
+    } as IParser;
 
     const context = createMockPipelineContext({
       parser,
@@ -94,10 +94,10 @@ describe('processComponentBatch', () => {
       ts.ScriptKind.TS,
     );
 
-    const parser: Parser = {
+    const parser: IParser = {
       target: ParserTarget.WebComponent,
       parse: () => createResult(undefined, ['parse warning'], ['parse error']),
-    } as Parser;
+    } as IParser;
 
     const context = createMockPipelineContext({
       parser,
@@ -138,13 +138,13 @@ describe('processComponentBatch', () => {
       ts.ScriptKind.TS,
     );
 
-    const parser: Parser = {
+    const parser: IParser = {
       target: ParserTarget.WebComponent,
       parse: jest
         .fn()
         .mockReturnValueOnce(createResult(undefined))
         .mockReturnValueOnce(createResult(createMockComponentModel({ className: 'Second' }))),
-    } as Parser;
+    } as IParser;
 
     const context = createMockPipelineContext({
       parser,
@@ -200,12 +200,12 @@ describe('processComponentBatch', () => {
       componentDir: tempDir,
     });
 
-    const parser: Parser = {
+    const parser: IParser = {
       target: ParserTarget.WebComponent,
       parse: () => createResult(model, ['parser warning'], ['parser error']),
-    } as Parser;
+    } as IParser;
 
-    const emitters: Emitter[] = [
+    const emitters: IEmitter[] = [
       {
         target: EmitterTarget.WebComponent,
         emit: () =>
@@ -213,7 +213,7 @@ describe('processComponentBatch', () => {
             filePath: path.join(tempDir, 'new-file.ts'),
             content: 'export const generated = true;\n',
             action: 'created',
-          }) as EmitResult,
+          }) as IEmitResult,
       },
       {
         target: EmitterTarget.WebComponent,
@@ -226,7 +226,7 @@ describe('processComponentBatch', () => {
               { name: GeneratedSectionName.Props, content: 'props: {}' },
               { name: GeneratedSectionName.Example, content: 'example: () => null' },
             ],
-          }) as EmitResult,
+          }) as IEmitResult,
       },
       {
         target: EmitterTarget.WebComponent,
@@ -239,7 +239,7 @@ describe('processComponentBatch', () => {
               { name: GeneratedSectionName.Props, content: 'props: { updated: true }' },
               { name: GeneratedSectionName.Example, content: 'example: () => null' },
             ],
-          }) as EmitResult,
+          }) as IEmitResult,
       },
       {
         target: EmitterTarget.WebComponent,
@@ -250,7 +250,7 @@ describe('processComponentBatch', () => {
             action: 'created',
             warnings: ['emit warning'],
             section: { name: GeneratedSectionName.Props, content: 'props: {}' },
-          }) as EmitResult,
+          }) as IEmitResult,
       },
       {
         target: EmitterTarget.WebComponent,
@@ -263,7 +263,7 @@ describe('processComponentBatch', () => {
               { name: GeneratedSectionName.Props, content: 'props: {}' },
               { name: GeneratedSectionName.Example, content: 'example: () => null' },
             ],
-          }) as EmitResult,
+          }) as IEmitResult,
       },
     ];
 
@@ -313,12 +313,12 @@ describe('processComponentBatch', () => {
       componentDir: tempDir,
     });
 
-    const parser: Parser = {
+    const parser: IParser = {
       target: ParserTarget.WebComponent,
       parse: () => createResult(model),
-    } as Parser;
+    } as IParser;
 
-    const emitters: Emitter[] = [
+    const emitters: IEmitter[] = [
       {
         target: EmitterTarget.WebComponent,
         emit: () =>
@@ -326,7 +326,7 @@ describe('processComponentBatch', () => {
             filePath: targetPath,
             content: 'export const value = 2;',
             action: 'updated',
-          }) as EmitResult,
+          }) as IEmitResult,
       },
     ];
 
@@ -369,12 +369,12 @@ describe('processComponentBatch', () => {
       componentDir: tempDir,
     });
 
-    const parser: Parser = {
+    const parser: IParser = {
       target: ParserTarget.WebComponent,
       parse: () => createResult(model),
-    } as Parser;
+    } as IParser;
 
-    const emitters: Emitter[] = [
+    const emitters: IEmitter[] = [
       {
         target: EmitterTarget.WebComponent,
         emit: () =>
@@ -383,7 +383,7 @@ describe('processComponentBatch', () => {
             content: 'figma.connect("url", {});',
             action: 'updated',
             sections: [{ name: GeneratedSectionName.Props, content: 'props: {}' }],
-          }) as EmitResult,
+          }) as IEmitResult,
       },
     ];
 
@@ -425,12 +425,12 @@ describe('processComponentBatch', () => {
       componentDir: tempDir,
     });
 
-    const parser: Parser = {
+    const parser: IParser = {
       target: ParserTarget.WebComponent,
       parse: () => createResult(model),
-    } as Parser;
+    } as IParser;
 
-    const emitters: Emitter[] = [
+    const emitters: IEmitter[] = [
       {
         target: EmitterTarget.WebComponent,
         emit: () =>
@@ -442,7 +442,7 @@ describe('processComponentBatch', () => {
               { name: GeneratedSectionName.Props, content: 'props: {}' },
               { name: GeneratedSectionName.Example, content: 'example: () => null' },
             ],
-          }) as EmitResult,
+          }) as IEmitResult,
       },
     ];
 

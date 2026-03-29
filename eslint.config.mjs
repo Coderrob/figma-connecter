@@ -13,17 +13,12 @@
 // IMPORTS
 // ============================================================================
 
-import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
-import importPlugin from 'eslint-plugin-import';
-import jsdocPlugin from 'eslint-plugin-jsdoc';
-import globals from 'globals';
-
-// Custom Rules
-import noInlineRequireTypeof from './eslint/rules/no-inline-require-typeof.mjs';
-import requireClassImplementsInterface from './eslint/rules/require-class-implements-interface.mjs';
-import requireItShould from './eslint/rules/require-it-should.mjs';
-import requireZodDescribe from './eslint/rules/require-zod-describe.mjs';
+import eslint from "@eslint/js";
+import zeroTolerancePlugin from "@coderrob/eslint-plugin-zero-tolerance";
+import tseslint from "typescript-eslint";
+import importPlugin from "eslint-plugin-import";
+import jsdocPlugin from "eslint-plugin-jsdoc";
+import globals from "globals";
 
 // ============================================================================
 // CONFIGURATION CONSTANTS
@@ -32,26 +27,26 @@ import requireZodDescribe from './eslint/rules/require-zod-describe.mjs';
 /**
  * TypeScript project configuration path.
  */
-const TS_PROJECT_PATH = './tsconfig.json';
+const TS_PROJECT_PATH = "./tsconfig.json";
 
 /**
  * Glob patterns matching all TypeScript file extensions.
  */
-const TS_FILE_PATTERNS = ['**/*.ts', '**/*.tsx', '**/*.mts', '**/*.cts'];
+const TS_FILE_PATTERNS = ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"];
 
 /**
  * Glob patterns for source files (excluding tests).
  */
-const SOURCE_FILE_GLOBS = ['src/**/*.ts', 'src/**/*.tsx', 'bin/**/*.ts'];
+const SOURCE_FILE_GLOBS = ["src/**/*.ts", "src/**/*.tsx", "bin/**/*.ts"];
 
 /**
  * Glob patterns for test and mock files.
  */
 const TEST_FILE_GLOBS = [
-  '**/__tests__/**/*.ts',
-  '**/__mocks__/**/*.ts',
-  '**/*.test.ts',
-  '**/*.spec.ts',
+  "**/__tests__/**/*.ts",
+  "**/__mocks__/**/*.ts",
+  "**/*.test.ts",
+  "**/*.spec.ts",
 ];
 
 /**
@@ -82,12 +77,12 @@ const PARSER_COMPLEXITY_LIMITS = {
  * Allows underscore-prefixed variables to be intentionally unused.
  */
 const UNUSED_VARS_CONFIG = {
-  argsIgnorePattern: '^_',
-  caughtErrors: 'all',
-  caughtErrorsIgnorePattern: '^_',
-  destructuredArrayIgnorePattern: '^_',
+  argsIgnorePattern: "^_",
+  caughtErrors: "all",
+  caughtErrorsIgnorePattern: "^_",
+  destructuredArrayIgnorePattern: "^_",
   ignoreRestSiblings: true,
-  varsIgnorePattern: '^_',
+  varsIgnorePattern: "^_",
 };
 
 /**
@@ -96,7 +91,7 @@ const UNUSED_VARS_CONFIG = {
 const RESTRICTED_SYNTAX_PATTERNS = [
   {
     message:
-      'Do not use ReturnType; prefer explicit function return types or exported interfaces.',
+      "Do not use ReturnType; prefer explicit function return types or exported interfaces.",
     selector: 'TSTypeReference[typeName.name="ReturnType"]',
   },
   {
@@ -107,33 +102,33 @@ const RESTRICTED_SYNTAX_PATTERNS = [
   },
   {
     message:
-      'Do not re-export from parent directories (../). Re-exports should only reference sibling or child modules to prevent circular dependencies.',
-    selector: 'ExportAllDeclaration[source.value=/^[.][.]/]',
+      "Do not re-export from parent directories (../). Re-exports should only reference sibling or child modules to prevent circular dependencies.",
+    selector: "ExportAllDeclaration[source.value=/^[.][.]/]",
   },
   {
     message:
-      'Do not re-export from parent directories (../). Re-exports should only reference sibling or child modules to prevent circular dependencies.',
-    selector: 'ExportNamedDeclaration[source.value=/^[.][.]/]',
+      "Do not re-export from parent directories (../). Re-exports should only reference sibling or child modules to prevent circular dependencies.",
+    selector: "ExportNamedDeclaration[source.value=/^[.][.]/]",
   },
   {
-    message: 'Do not use unions of literal types. Use an enum instead.',
+    message: "Do not use unions of literal types. Use an enum instead.",
     selector:
       'TSTypeAliasDeclaration[typeAnnotation.type="TSUnionType"] > TSUnionType > TSLiteralType',
   },
   {
-    selector: 'ForInStatement',
+    selector: "ForInStatement",
     message:
-      'for..in loops iterate over the entire prototype chain. Use Object.{keys,values,entries} instead.',
+      "for..in loops iterate over the entire prototype chain. Use Object.{keys,values,entries} instead.",
   },
   {
-    selector: 'LabeledStatement',
+    selector: "LabeledStatement",
     message:
-      'Labels are a form of GOTO; using them makes code confusing and hard to maintain and understand.',
+      "Labels are a form of GOTO; using them makes code confusing and hard to maintain and understand.",
   },
   {
-    selector: 'WithStatement',
+    selector: "WithStatement",
     message:
-      '`with` is disallowed in strict mode because it makes code impossible to predict and optimize.',
+      "`with` is disallowed in strict mode because it makes code impossible to predict and optimize.",
   },
 ];
 
@@ -146,15 +141,15 @@ const RESTRICTED_SYNTAX_PATTERNS = [
  */
 const typescriptRules = {
   // Type Safety
-  '@typescript-eslint/await-thenable': 'error',
-  '@typescript-eslint/no-explicit-any': 'warn',
-  '@typescript-eslint/no-floating-promises': 'error',
-  '@typescript-eslint/no-misused-promises': 'error',
-  '@typescript-eslint/no-unnecessary-type-assertion': 'error',
-  '@typescript-eslint/no-unused-vars': ['error', UNUSED_VARS_CONFIG],
-  '@typescript-eslint/explicit-function-return-type': 'off',
-  '@typescript-eslint/no-use-before-define': [
-    'error',
+  "@typescript-eslint/await-thenable": "error",
+  "@typescript-eslint/no-explicit-any": "warn",
+  "@typescript-eslint/no-floating-promises": "error",
+  "@typescript-eslint/no-misused-promises": "error",
+  "@typescript-eslint/no-unnecessary-type-assertion": "error",
+  "@typescript-eslint/no-unused-vars": ["error", UNUSED_VARS_CONFIG],
+  "@typescript-eslint/explicit-function-return-type": "off",
+  "@typescript-eslint/no-use-before-define": [
+    "error",
     {
       allowNamedExports: true,
       classes: true,
@@ -164,21 +159,27 @@ const typescriptRules = {
   ],
 
   // Disable base rule in favor of TypeScript version
-  'no-duplicate-imports': 'off',
-  'no-undef': 'off', // TypeScript handles this
-  'no-use-before-define': 'off',
+  "no-duplicate-imports": "off",
+  "no-undef": "off", // TypeScript handles this
+  "no-use-before-define": "off",
 };
 
 /**
  * Code complexity and maintainability rules.
  */
 const complexityRules = {
-  complexity: ['warn', { max: COMPLEXITY_LIMITS.cyclomatic }],
-  'max-depth': ['warn', { max: COMPLEXITY_LIMITS.maxDepth }],
-  'max-len': ['error', { code: 120, ignorePattern: '^\\s*(//|/\\*|\\*)' }],
-  'max-nested-callbacks': ['error', { max: COMPLEXITY_LIMITS.maxNestedCallbacks }],
-  'max-params': ['error', { max: COMPLEXITY_LIMITS.maxParams }],
-  'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX_PATTERNS],
+  complexity: ["warn", { max: COMPLEXITY_LIMITS.cyclomatic }],
+  "max-depth": ["warn", { max: COMPLEXITY_LIMITS.maxDepth }],
+  "max-len": [
+    "error",
+    { code: 120, ignorePattern: String.raw`^\s*(//|/\*|\*)` },
+  ],
+  "max-nested-callbacks": [
+    "error",
+    { max: COMPLEXITY_LIMITS.maxNestedCallbacks },
+  ],
+  "max-params": ["error", { max: COMPLEXITY_LIMITS.maxParams }],
+  "no-restricted-syntax": ["error", ...RESTRICTED_SYNTAX_PATTERNS],
 };
 
 /**
@@ -186,14 +187,14 @@ const complexityRules = {
  */
 const jsdocRules = {
   // Required Documentation
-  'jsdoc/require-jsdoc': [
-    'error',
+  "jsdoc/require-jsdoc": [
+    "error",
     {
       contexts: [
-        'FunctionDeclaration',
-        'FunctionExpression',
-        'ArrowFunctionExpression',
-        'MethodDefinition',
+        "FunctionDeclaration",
+        "FunctionExpression",
+        "ArrowFunctionExpression",
+        "MethodDefinition",
       ],
       publicOnly: false,
       require: {
@@ -207,70 +208,81 @@ const jsdocRules = {
   ],
 
   // Validation Rules
-  'jsdoc/check-alignment': 'error',
-  'jsdoc/check-indentation': 'off', // Too strict for license headers
-  'jsdoc/check-line-alignment': ['error', 'never'],
-  'jsdoc/check-param-names': 'error',
-  'jsdoc/check-tag-names': 'error',
-  'jsdoc/no-blank-blocks': 'error',
+  "jsdoc/check-alignment": "error",
+  "jsdoc/check-indentation": "off", // Too strict for license headers
+  "jsdoc/check-line-alignment": ["error", "never"],
+  "jsdoc/check-param-names": "error",
+  "jsdoc/check-tag-names": "error",
+  "jsdoc/no-blank-blocks": "error",
 
   // Required Documentation Components
-  'jsdoc/require-description': 'error',
-  'jsdoc/require-param': 'error',
-  'jsdoc/require-param-description': 'error',
-  'jsdoc/require-returns': 'error',
-  'jsdoc/require-returns-description': 'error',
+  "jsdoc/require-description": "error",
+  "jsdoc/require-param": "error",
+  "jsdoc/require-param-description": "error",
+  "jsdoc/require-returns": "error",
+  "jsdoc/require-returns-description": "error",
 
   // Disabled Rules (TypeScript handles types)
-  'jsdoc/check-types': 'off',
-  'jsdoc/no-blank-block-descriptions': 'off',
-  'jsdoc/no-undefined-types': 'off',
-  'jsdoc/require-param-type': 'off',
-  'jsdoc/require-returns-type': 'off',
-  'jsdoc/tag-lines': 'off',
-  'jsdoc/valid-types': 'off',
+  "jsdoc/check-types": "off",
+  "jsdoc/no-blank-block-descriptions": "off",
+  "jsdoc/no-undefined-types": "off",
+  "jsdoc/require-param-type": "off",
+  "jsdoc/require-returns-type": "off",
+  "jsdoc/tag-lines": "off",
+  "jsdoc/valid-types": "off",
 };
 
 /**
  * Import organization and validation rules.
  */
 const importRules = {
-  'import/default': 'error',
-  'import/export': 'off', // TypeScript handles duplicate exports
-  'import/first': 'error',
-  'import/named': 'error',
-  'import/namespace': 'error',
-  'import/newline-after-import': 'error',
-  'import/no-cycle': 'error',
-  'import/no-duplicates': 'error',
-  'import/no-extraneous-dependencies': 'off',
-  'import/no-mutable-exports': 'error',
-  'import/no-unresolved': 'off', // TypeScript handles module resolution
-  'import/order': 'off', // Using simple-import-sort instead
-  'sort-imports': 'off', // Using simple-import-sort instead
+  "import/default": "error",
+  "import/export": "off", // TypeScript handles duplicate exports
+  "import/first": "error",
+  "import/named": "error",
+  "import/namespace": "error",
+  "import/newline-after-import": "error",
+  "import/no-cycle": "error",
+  "import/no-duplicates": "error",
+  "import/no-extraneous-dependencies": "off",
+  "import/no-mutable-exports": "error",
+  "import/no-unresolved": "off", // TypeScript handles module resolution
+  "import/order": "off", // Using simple-import-sort instead
+  "sort-imports": "off", // Using simple-import-sort instead
 };
 
 /**
  * Code quality and style rules.
  */
 const codeQualityRules = {
-  camelcase: ['error', { ignoreDestructuring: true, properties: 'never' }],
-  curly: ['error', 'all'],
-  eqeqeq: ['error', 'always', { null: 'ignore' }],
-  'global-require': 'off',
-  'implicit-arrow-linebreak': 'off', // Conflicts with max-len and Prettier
-  'no-alert': 'error',
-  'no-bitwise': 'off', // Allow bitwise ops for TypeScript modifier flags
-  'no-console': ['warn', { allow: ['warn', 'error'] }],
-  'no-continue': 'off', // Allow continue in loops
-  'no-debugger': 'error',
-  'no-nested-ternary': 'off', // Allow for concise conditional expressions
-  'no-param-reassign': ['error', { props: false }],
-  'no-var': 'error',
-  'object-shorthand': 'error',
-  'prefer-arrow-callback': 'error',
-  'prefer-const': 'error',
-  'prefer-template': 'error',
+  camelcase: ["error", { ignoreDestructuring: true, properties: "never" }],
+  curly: ["error", "all"],
+  eqeqeq: ["error", "always", { null: "ignore" }],
+  "global-require": "off",
+  "implicit-arrow-linebreak": "off", // Conflicts with max-len and Prettier
+  "no-alert": "error",
+  "no-bitwise": "off", // Allow bitwise ops for TypeScript modifier flags
+  "no-console": ["warn", { allow: ["warn", "error"] }],
+  "no-continue": "off", // Allow continue in loops
+  "no-debugger": "error",
+  "no-nested-ternary": "off", // Allow for concise conditional expressions
+  "no-param-reassign": ["error", { props: false }],
+  "no-var": "error",
+  "object-shorthand": "error",
+  "prefer-arrow-callback": "error",
+  "prefer-const": "error",
+  "prefer-template": "error",
+};
+
+/**
+ * Zero-tolerance rules (all rules enabled as warnings for gradual adoption).
+ * Includes all 36 rules from the plugin, not just the recommended preset.
+ */
+const zeroToleranceRules = {
+  // Enable ALL plugin rules as warnings (not just recommended)
+  ...zeroTolerancePlugin.rules.strict,
+  // BDD sidecar files are not used in this repository.
+  "zero-tolerance/require-bdd-spec": "off",
 };
 
 // ============================================================================
@@ -280,24 +292,26 @@ const codeQualityRules = {
 /**
  * Type-checked TypeScript configuration for source files.
  */
-const typeCheckedConfigs = tseslint.configs.recommendedTypeChecked.map((config) => ({
-  ...config,
-  files: SOURCE_FILE_GLOBS,
-  languageOptions: {
-    ...config.languageOptions,
-    globals: {
-      ...globals.node,
-      ...config.languageOptions?.globals,
+const typeCheckedConfigs = tseslint.configs.recommendedTypeChecked.map(
+  (config) => ({
+    ...config,
+    files: SOURCE_FILE_GLOBS,
+    languageOptions: {
+      ...config.languageOptions,
+      globals: {
+        ...globals.node,
+        ...config.languageOptions?.globals,
+      },
+      parserOptions: {
+        ...config.languageOptions?.parserOptions,
+        ecmaVersion: "latest",
+        projectService: true,
+        sourceType: "module",
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
-    parserOptions: {
-      ...config.languageOptions?.parserOptions,
-      ecmaVersion: 'latest',
-      projectService: true,
-      sourceType: 'module',
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-}));
+  }),
+);
 
 /**
  * Basic TypeScript configuration for all TypeScript files (no type checking).
@@ -316,32 +330,32 @@ const basicTsConfigs = tseslint.configs.recommended.map((config) => ({
  */
 const testFileRuleOverrides = {
   // Complexity Rules - Disabled
-  complexity: 'off',
-  'max-depth': 'off',
-  'max-nested-callbacks': 'off',
-  'max-params': 'off',
+  complexity: "off",
+  "max-depth": "off",
+  "max-nested-callbacks": "off",
+  "max-params": "off",
 
   // Documentation Rules - Disabled
-  'jsdoc/require-description': 'off',
-  'jsdoc/require-jsdoc': 'off',
-  'jsdoc/require-param': 'off',
-  'jsdoc/require-param-description': 'off',
-  'jsdoc/require-returns': 'off',
-  'jsdoc/require-returns-description': 'off',
+  "jsdoc/require-description": "off",
+  "jsdoc/require-jsdoc": "off",
+  "jsdoc/require-param": "off",
+  "jsdoc/require-param-description": "off",
+  "jsdoc/require-returns": "off",
+  "jsdoc/require-returns-description": "off",
 
   // Type Safety Rules - Relaxed for mocking
-  '@typescript-eslint/no-explicit-any': 'off',
-  '@typescript-eslint/no-unsafe-argument': 'off',
-  '@typescript-eslint/no-unsafe-assignment': 'off',
-  '@typescript-eslint/no-unsafe-call': 'off',
-  '@typescript-eslint/no-unsafe-member-access': 'off',
-  '@typescript-eslint/no-unsafe-return': 'off',
-  '@typescript-eslint/no-unused-vars': ['error', UNUSED_VARS_CONFIG],
+  "@typescript-eslint/no-explicit-any": "off",
+  "@typescript-eslint/no-unsafe-argument": "off",
+  "@typescript-eslint/no-unsafe-assignment": "off",
+  "@typescript-eslint/no-unsafe-call": "off",
+  "@typescript-eslint/no-unsafe-member-access": "off",
+  "@typescript-eslint/no-unsafe-return": "off",
+  "@typescript-eslint/no-unused-vars": ["error", UNUSED_VARS_CONFIG],
 
   // Other Rules - Relaxed
-  'import/no-extraneous-dependencies': 'off',
-  'no-console': 'off',
-  'no-magic-numbers': 'off',
+  "import/no-extraneous-dependencies": "off",
+  "no-console": "off",
+  "no-magic-numbers": "off",
 };
 
 // ============================================================================
@@ -352,21 +366,21 @@ const testFileRuleOverrides = {
  * Paths to completely ignore from linting.
  */
 const IGNORED_PATHS = [
-  '**/node_modules/**',
-  '**/dist/**',
-  '**/build/**',
-  '**/coverage/**',
-  '**/__fixtures__/**',
-  '**/__tests__/__output__/**',
-  '**/.cache/**',
-  '**/tmp/**',
-  '**/temp/**',
-  '**/*.min.js',
-  '**/*.d.ts',
-  '**/*.js',
-  '**/*.cjs',
-  '**/*.mjs',
-  '!eslint.config.mjs',
+  "**/node_modules/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/coverage/**",
+  "**/__fixtures__/**",
+  "**/__tests__/__output__/**",
+  "**/.cache/**",
+  "**/tmp/**",
+  "**/temp/**",
+  "**/*.min.js",
+  "**/*.d.ts",
+  "**/*.js",
+  "**/*.cjs",
+  "**/*.mjs",
+  "!eslint.config.mjs",
 ];
 
 // ============================================================================
@@ -398,21 +412,16 @@ export default [
         ...globals.node,
       },
       parserOptions: {
-        ecmaVersion: 'latest',
+        ecmaVersion: "latest",
         projectService: true,
-        sourceType: 'module',
+        sourceType: "module",
         tsconfigRootDir: import.meta.dirname,
       },
     },
     plugins: {
+      "zero-tolerance": zeroTolerancePlugin,
       import: importPlugin,
       jsdoc: jsdocPlugin,
-      custom: {
-        'no-inline-require-typeof': noInlineRequireTypeof,
-        'require-class-implements-interface': requireClassImplementsInterface,
-        'require-it-should': requireItShould,
-        'require-zod-describe': requireZodDescribe,
-      },
     },
     rules: {
       ...typescriptRules,
@@ -420,10 +429,10 @@ export default [
       ...jsdocRules,
       ...importRules,
       ...codeQualityRules,
-      'custom/no-inline-require-typeof': 'error',
+      ...zeroToleranceRules,
     },
     settings: {
-      'import/resolver': {
+      "import/resolver": {
         node: true,
         typescript: {
           alwaysTryTypes: true,
@@ -431,7 +440,7 @@ export default [
         },
       },
       jsdoc: {
-        mode: 'typescript',
+        mode: "typescript",
       },
     },
   },
@@ -440,10 +449,10 @@ export default [
   // Parser and Emitter Files Configuration (complex AST traversal)
   // ──────────────────────────────────────────────────────────────────────────
   {
-    files: ['src/parsers/**/*.ts', 'src/emitters/**/*.ts'],
+    files: ["src/parsers/**/*.ts", "src/emitters/**/*.ts"],
     rules: {
-      complexity: ['warn', { max: PARSER_COMPLEXITY_LIMITS.cyclomatic }],
-      'max-depth': ['warn', { max: PARSER_COMPLEXITY_LIMITS.maxDepth }],
+      complexity: ["warn", { max: PARSER_COMPLEXITY_LIMITS.cyclomatic }],
+      "max-depth": ["warn", { max: PARSER_COMPLEXITY_LIMITS.maxDepth }],
     },
   },
 
@@ -451,9 +460,9 @@ export default [
   // CLI Entry Point Configuration
   // ──────────────────────────────────────────────────────────────────────────
   {
-    files: ['bin/**/*.ts'],
+    files: ["bin/**/*.ts"],
     rules: {
-      'no-console': 'off',
+      "no-console": "off",
     },
   },
 
@@ -461,9 +470,9 @@ export default [
   // Logger Configuration (console is the primary output mechanism)
   // ──────────────────────────────────────────────────────────────────────────
   {
-    files: ['src/core/logger.ts'],
+    files: ["src/core/logger.ts"],
     rules: {
-      'no-console': 'off',
+      "no-console": "off",
     },
   },
 
@@ -478,9 +487,9 @@ export default [
         ...globals.jest,
       },
       parserOptions: {
-        ecmaVersion: 'latest',
+        ecmaVersion: "latest",
         projectService: true,
-        sourceType: 'module',
+        sourceType: "module",
         tsconfigRootDir: import.meta.dirname,
       },
     },

@@ -23,7 +23,7 @@
 /**
  * Options passed from Commander to the connect command.
  */
-export interface ConnectCommandOptions {
+export interface IConnectCommandOptions {
   readonly path: string;
   readonly recursive: boolean;
   readonly dryRun?: boolean;

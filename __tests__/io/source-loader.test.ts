@@ -24,12 +24,12 @@ import path from 'node:path';
 
 import { nodeIoAdapter } from '../../src/io/adapter';
 import { loadSourceProgram, resolveTsconfigPath } from '../../src/io/source-loader';
-import { type Parser, ParserTarget } from '../../src/parsers/types';
+import { type IParser, ParserTarget } from '../../src/parsers/types';
 import type { PipelineContextSeed } from '../../src/pipeline/context';
 
 const createContextSeed = (): PipelineContextSeed => ({
   emitters: [],
-  parser: { target: ParserTarget.WebComponent, parse: jest.fn() } as Parser,
+  parser: { target: ParserTarget.WebComponent, parse: jest.fn() } as IParser,
   dryRun: true,
   strict: false,
   force: false,
@@ -73,6 +73,20 @@ describe('source-loader', () => {
     fs.writeFileSync(filePath, 'export class Sample {}', 'utf8');
 
     expect(resolveTsconfigPath(undefined, filePath)).toBe(configPath);
+  });
+
+  it('should resolves a custom-named tsconfig file by configFileName', () => {
+    const configPath = path.join(tempDir, 'tsconfig.base.json');
+    fs.writeFileSync(configPath, '{"compilerOptions": {}}', 'utf8');
+
+    expect(resolveTsconfigPath(undefined, tempDir, 'tsconfig.base.json')).toBe(configPath);
+  });
+
+  it('should not find tsconfig.json when configFileName is tsconfig.base.json', () => {
+    const configPath = path.join(tempDir, 'tsconfig.json');
+    fs.writeFileSync(configPath, '{"compilerOptions": {}}', 'utf8');
+
+    expect(resolveTsconfigPath(undefined, tempDir, 'tsconfig.base.json')).toBeUndefined();
   });
 
   it('should merges program data into the provided context', () => {
@@ -125,7 +139,15 @@ describe('source-loader', () => {
 
     const result = loadSourceProgram([filePath], { context: createContextSeed() });
 
-    expect(result.errors.some((error) => error.includes('Source file is not readable'))).toBe(true);
+    const hasUnreadableError = result.errors.some((error) =>
+      error.includes('Source file is not readable'),
+    );
+
+    if (process.platform === 'win32') {
+      expect(hasUnreadableError).toBe(false);
+    } else {
+      expect(hasUnreadableError).toBe(true);
+    }
 
     fs.chmodSync(filePath, 0o644);
   });
@@ -141,6 +163,23 @@ describe('source-loader', () => {
     });
 
     expect(result.errors.some((error) => error.includes('tsconfig.json not found'))).toBe(true);
+  });
+
+  it('should use a custom tsconfigFileName when searching for tsconfig', () => {
+    const filePath = path.join(tempDir, 'sample.component.ts');
+    fs.writeFileSync(filePath, 'export const sample = 1;', 'utf8');
+
+    const configPath = path.join(tempDir, 'tsconfig.base.json');
+    fs.writeFileSync(configPath, '{"compilerOptions": {}}', 'utf8');
+
+    const result = loadSourceProgram([filePath], {
+      context: createContextSeed(),
+      searchPath: tempDir,
+      tsconfigFileName: 'tsconfig.base.json',
+    });
+
+    expect(result.configPath).toBe(configPath);
+    expect(result.errors).toHaveLength(0);
   });
 
   it('should reports invalid tsconfig files', () => {

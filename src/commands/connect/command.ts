@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { Command } from 'commander';
+import { DEFAULT_CONNECT_OPTIONS } from '@/src/core/constants';
 
-import { DEFAULT_CONNECT_OPTIONS } from '../../core/constants';
+import { Command } from 'commander';
 
 import { EMIT_TARGET_OPTIONS } from './constants';
 import { runConnectCommand } from './handler';

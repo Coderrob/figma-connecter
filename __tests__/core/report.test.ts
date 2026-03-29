@@ -30,7 +30,7 @@ import {
   formatReportSummary,
   mergeResults,
 } from '../../src/core/report';
-import type { ComponentResult, GenerationReport } from '../../src/core/types';
+import type { IComponentResult, IGenerationReport } from '../../src/core/types';
 import { GenerationStatus } from '../../src/core/types';
 
 describe('createEmptyReport', () => {
@@ -116,7 +116,7 @@ describe('createEmptyComponentResult', () => {
 
 describe('formatReportSummary', () => {
   it('should format basic report summary', () => {
-    const report: GenerationReport = {
+    const report: IGenerationReport = {
       status: GenerationStatus.Success,
       created: ['file1.ts'],
       updated: ['file2.ts', 'file3.ts'],
@@ -136,7 +136,7 @@ describe('formatReportSummary', () => {
   });
 
   it('should include warnings count when present', () => {
-    const report: GenerationReport = {
+    const report: IGenerationReport = {
       status: GenerationStatus.Warning,
       created: [],
       updated: [],
@@ -152,7 +152,7 @@ describe('formatReportSummary', () => {
   });
 
   it('should include errors count when present', () => {
-    const report: GenerationReport = {
+    const report: IGenerationReport = {
       status: GenerationStatus.Error,
       created: [],
       updated: [],
@@ -168,7 +168,7 @@ describe('formatReportSummary', () => {
   });
 
   it('should excludes warnings line when no warnings', () => {
-    const report: GenerationReport = {
+    const report: IGenerationReport = {
       status: GenerationStatus.Success,
       created: [],
       updated: [],
@@ -187,7 +187,7 @@ describe('formatReportSummary', () => {
 describe('mergeResults', () => {
   describe('positive cases', () => {
     it('should merge multiple results into single report', () => {
-      const results: ComponentResult[] = [
+      const results: IComponentResult[] = [
         { model: undefined, created: ['a.ts'], updated: [], unchanged: [], warnings: [], errors: [] },
         { model: undefined, created: ['b.ts'], updated: ['c.ts'], unchanged: [], warnings: [], errors: [] },
       ];
@@ -200,7 +200,7 @@ describe('mergeResults', () => {
     });
 
     it('should merge warnings from all results', () => {
-      const results: ComponentResult[] = [
+      const results: IComponentResult[] = [
         { model: undefined, created: [], updated: [], unchanged: [], warnings: ['warn1'], errors: [] },
         { model: undefined, created: [], updated: [], unchanged: [], warnings: ['warn2'], errors: [] },
       ];
@@ -213,7 +213,7 @@ describe('mergeResults', () => {
 
   describe('status determination', () => {
     it('should return success status when no errors or warnings', () => {
-      const results: ComponentResult[] = [
+      const results: IComponentResult[] = [
         { model: undefined, created: ['a.ts'], updated: [], unchanged: [], warnings: [], errors: [] },
       ];
 
@@ -223,7 +223,7 @@ describe('mergeResults', () => {
     });
 
     it('should return warning status when only warnings present', () => {
-      const results: ComponentResult[] = [
+      const results: IComponentResult[] = [
         { model: undefined, created: [], updated: [], unchanged: [], warnings: ['warn'], errors: [] },
       ];
 
@@ -233,7 +233,7 @@ describe('mergeResults', () => {
     });
 
     it('should return error status when errors present', () => {
-      const results: ComponentResult[] = [
+      const results: IComponentResult[] = [
         { model: undefined, created: [], updated: [], unchanged: [], warnings: [], errors: ['err'] },
       ];
 
@@ -243,7 +243,7 @@ describe('mergeResults', () => {
     });
 
     it('should return error status when both errors and warnings present', () => {
-      const results: ComponentResult[] = [
+      const results: IComponentResult[] = [
         { model: undefined, created: [], updated: [], unchanged: [], warnings: ['warn'], errors: ['err'] },
       ];
 
@@ -275,7 +275,7 @@ describe('immutable result operations', () => {
     });
 
     it('should append to existing warnings', () => {
-      const original: ComponentResult = {
+      const original: IComponentResult = {
         ...createEmptyComponentResult(),
         warnings: ['first'],
       };

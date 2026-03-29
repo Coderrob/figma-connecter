@@ -32,9 +32,9 @@ import {
   isValidIdentifier,
   toTitleCase,
   wrapGeneratedSection,
-} from '../../src/emitters/utils';
+} from '../../src/emitters/shared/utils';
 import { createMockComponentModel } from '../helpers/fixtures';
-import type { EventDescriptor } from '../../src/core/types';
+import type { IEventDescriptor } from '../../src/core/types';
 
 describe('getComponentBaseName', () => {
   it('should return file-based component name when pattern matches', () => {
@@ -169,7 +169,7 @@ describe('buildEventsSection', () => {
   });
 
   it('should build events section with multiple events', () => {
-    const events: EventDescriptor[] = [
+    const events: IEventDescriptor[] = [
       { name: 'click', reactHandler: 'onClick' },
       { name: 'change', reactHandler: 'onChange' },
     ];
@@ -181,14 +181,14 @@ describe('buildEventsSection', () => {
   });
 
   it('should handle events with custom depth', () => {
-    const events: EventDescriptor[] = [{ name: 'click', reactHandler: 'onClick' }];
+    const events: IEventDescriptor[] = [{ name: 'click', reactHandler: 'onClick' }];
     const result = buildEventsSection(events, 2);
 
     expect(result[0]).toContain('    events: {');
   });
 
   it('should properly close events object with closing brace', () => {
-    const events: EventDescriptor[] = [
+    const events: IEventDescriptor[] = [
       { name: 'click', reactHandler: 'onClick' },
       { name: 'change', reactHandler: 'onChange' },
     ];
@@ -210,7 +210,7 @@ describe('buildEventsSection', () => {
   });
 
   it('should sort events by name', () => {
-    const events: EventDescriptor[] = [
+    const events: IEventDescriptor[] = [
       { name: 'zChange', reactHandler: 'onZChange' },
       { name: 'aClick', reactHandler: 'onAClick' },
       { name: 'mMove', reactHandler: 'onMMove' },
@@ -225,7 +225,7 @@ describe('buildEventsSection', () => {
   });
 
   it('should handle special character event names with proper quoting', () => {
-    const events: EventDescriptor[] = [
+    const events: IEventDescriptor[] = [
       { name: 'data-change', reactHandler: 'onDataChange' },
       { name: 'custom-event', reactHandler: 'onCustomEvent' },
     ];
@@ -237,7 +237,7 @@ describe('buildEventsSection', () => {
   });
 
   it('should generate syntactically valid JavaScript object', () => {
-    const events: EventDescriptor[] = [
+    const events: IEventDescriptor[] = [
       { name: 'click', reactHandler: 'onClick' },
       { name: 'change', reactHandler: 'onChange' },
     ];
@@ -255,7 +255,7 @@ describe('buildEventsSection', () => {
 
 describe('file payload builders', () => {
   it('should create a file payload with default action', () => {
-    const { createFilePayload } = require('../../src/emitters/utils');
+    const { createFilePayload } = require('../../src/emitters/shared/utils');
     const payload = createFilePayload('/path/to/file.ts');
 
     expect(payload.filePath).toBe('/path/to/file.ts');
@@ -266,14 +266,14 @@ describe('file payload builders', () => {
   });
 
   it('should create a file payload with custom action', () => {
-    const { createFilePayload } = require('../../src/emitters/utils');
+    const { createFilePayload } = require('../../src/emitters/shared/utils');
     const payload = createFilePayload('/path/to/file.ts', 'updated');
 
     expect(payload.action).toBe('updated');
   });
 
   it('should build file payload from draft', () => {
-    const { createFilePayload, buildFilePayload } = require('../../src/emitters/utils');
+    const { createFilePayload, buildFilePayload } = require('../../src/emitters/shared/utils');
     const draft = createFilePayload('/path/to/file.ts');
     const result = buildFilePayload(draft);
 
@@ -284,7 +284,7 @@ describe('file payload builders', () => {
   });
 
   it('should apply builders in order', () => {
-    const { createFilePayload, buildFilePayload } = require('../../src/emitters/utils');
+    const { createFilePayload, buildFilePayload } = require('../../src/emitters/shared/utils');
     const draft = createFilePayload('/path/to/file.ts');
     
     const builder1 = (d: any) => ({ ...d, contentLines: [...d.contentLines, 'line1'] });
@@ -296,7 +296,7 @@ describe('file payload builders', () => {
   });
 
   it('should include sections when present', () => {
-    const { createFilePayload, buildFilePayload } = require('../../src/emitters/utils');
+    const { createFilePayload, buildFilePayload } = require('../../src/emitters/shared/utils');
     const draft = createFilePayload('/path/to/file.ts');
     
     const builder = (d: any) => ({ 
@@ -311,7 +311,7 @@ describe('file payload builders', () => {
   });
 
   it('should add imports with withImports builder', () => {
-    const { createFilePayload, buildFilePayload, withImports } = require('../../src/emitters/utils');
+    const { createFilePayload, buildFilePayload, withImports } = require('../../src/emitters/shared/utils');
     const draft = createFilePayload('/path/to/file.ts');
     
     const result = buildFilePayload(draft, withImports(['import { A } from "a";']));
@@ -320,7 +320,7 @@ describe('file payload builders', () => {
   });
 
   it('should add sections with withSections builder', () => {
-    const { createFilePayload, buildFilePayload, withSections } = require('../../src/emitters/utils');
+    const { createFilePayload, buildFilePayload, withSections } = require('../../src/emitters/shared/utils');
     const draft = createFilePayload('/path/to/file.ts');
     
     const result = buildFilePayload(
@@ -336,7 +336,7 @@ describe('file payload builders', () => {
   });
 
   it('should add props with withProps builder', () => {
-    const { createFilePayload, buildFilePayload, withProps } = require('../../src/emitters/utils');
+    const { createFilePayload, buildFilePayload, withProps } = require('../../src/emitters/shared/utils');
     const draft = createFilePayload('/path/to/file.ts');
     
     const result = buildFilePayload(
@@ -348,7 +348,7 @@ describe('file payload builders', () => {
   });
 
   it('should add example with withExample builder', () => {
-    const { createFilePayload, buildFilePayload, withExample } = require('../../src/emitters/utils');
+    const { createFilePayload, buildFilePayload, withExample } = require('../../src/emitters/shared/utils');
     const draft = createFilePayload('/path/to/file.ts');
     
     const result = buildFilePayload(
@@ -360,7 +360,7 @@ describe('file payload builders', () => {
   });
 
   it('should add warnings with withWarnings builder', () => {
-    const { createFilePayload, buildFilePayload, withWarnings } = require('../../src/emitters/utils');
+    const { createFilePayload, buildFilePayload, withWarnings } = require('../../src/emitters/shared/utils');
     const draft = createFilePayload('/path/to/file.ts');
     
     const result = buildFilePayload(
@@ -372,7 +372,7 @@ describe('file payload builders', () => {
   });
 
   it('should handle withWarnings with default empty array', () => {
-    const { createFilePayload, buildFilePayload, withWarnings } = require('../../src/emitters/utils');
+    const { createFilePayload, buildFilePayload, withWarnings } = require('../../src/emitters/shared/utils');
     const draft = createFilePayload('/path/to/file.ts');
     
     const result = buildFilePayload(draft, withWarnings());

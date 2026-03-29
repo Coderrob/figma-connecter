@@ -22,26 +22,18 @@
  * @module io/section-updater
  */
 
-import { buildGeneratedSectionMarkers, GENERATED_SECTION_MARKERS } from '../core/constants';
-import type { GeneratedSectionName, GeneratedSectionPayload } from '../core/types';
+import {
+  buildGeneratedSectionMarkers,
+  GENERATED_SECTION_MARKERS,
+} from "@/src/core/constants";
+import type {
+  GeneratedSectionName,
+  IGeneratedSectionPayload,
+} from "@/src/core/types";
+import type { ISectionMarkers, ISectionUpdateResult } from "@/src/io/types";
+import { SectionUpdateStatus } from "@/src/io/types";
 
-// ============================================================================
-// Types
-// ============================================================================
-
-/** Section markers for generated content. */
-export interface SectionMarkers {
-  readonly start: string;
-  readonly end: string;
-}
-
-/** Result of a section update operation. */
-export interface SectionUpdateResult {
-  readonly content: string;
-  readonly status: 'replaced' | 'inserted' | 'unchanged';
-}
-
-interface SectionRange {
+interface ISectionRange {
   readonly endLineEnd: number;
   readonly indent: string;
   readonly innerEnd: number;
@@ -53,8 +45,14 @@ interface SectionRange {
 // Constants
 // ============================================================================
 
+/** Windows-style carriage-return + line-feed line ending. */
+const CRLF = "\r\n";
+
+/** Unix-style line-feed line ending. */
+const LF = "\n";
+
 /** Default markers for generated sections. */
-export const DEFAULT_SECTION_MARKERS: SectionMarkers = {
+export const DEFAULT_SECTION_MARKERS: ISectionMarkers = {
   end: GENERATED_SECTION_MARKERS.end,
   start: GENERATED_SECTION_MARKERS.start,
 };
@@ -64,164 +62,108 @@ export const DEFAULT_SECTION_MARKERS: SectionMarkers = {
 // ============================================================================
 
 /**
- * Detects the line ending used in a file's content.
- *
- * @param content - File contents to inspect.
- * @returns The detected line ending string.
- */
-const detectLineEnding = (content: string): string => (content.includes('\r\n') ? '\r\n' : '\n');
-
-/**
- * Normalizes all line endings to the specified line ending.
- *
- * @param content - File contents to normalize.
- * @param lineEnding - Line ending to apply.
- * @returns Normalized content with consistent line endings.
- */
-const normalizeLineEndings = (content: string, lineEnding: string): string =>
-  content.replace(/\r\n|\r|\n/g, lineEnding);
-
-/**
- * Finds the previous line break before a given index.
- *
- * @param content - File contents to search.
- * @param fromIndex - Index to search backward from.
- * @returns Index of the previous line break or -1.
- */
-const lastLineBreak = (content: string, fromIndex: number): number => content.lastIndexOf('\n', fromIndex);
-
-/**
- * Finds the next line break after a given index.
- *
- * @param content - File contents to search.
- * @param fromIndex - Index to search forward from.
- * @param includeLineBreak - Whether to include the line break in the returned index.
- * @returns Index of the next line break or -1.
- */
-const nextLineBreak = (content: string, fromIndex: number, includeLineBreak = false): number => {
-  const index = content.indexOf('\n', fromIndex);
-  if (index === -1) {
-    return -1;
-  }
-  return includeLineBreak ? index + 1 : index;
-};
-
-/**
- * Locates a generated section in the content and returns its indices.
- *
- * @param content - File contents to search.
- * @param markers - Section markers to locate.
- * @returns The section range if found, otherwise null.
- */
-const findSectionRange = (content: string, markers: SectionMarkers): SectionRange | null => {
-  const startIndex = content.indexOf(markers.start);
-  if (startIndex === -1) {
-    return null;
-  }
-
-  const endIndex = content.indexOf(markers.end, startIndex + markers.start.length);
-  if (endIndex === -1 || endIndex < startIndex) {
-    return null;
-  }
-
-  const startLineStart = lastLineBreak(content, startIndex) + 1;
-  const startLineEnd = nextLineBreak(content, startIndex);
-  const endLineStart = lastLineBreak(content, endIndex) + 1;
-  const endLineEnd = nextLineBreak(content, endIndex, true);
-
-  const indent = content.slice(startLineStart, startIndex);
-  const innerStart = startLineEnd === -1 ? content.length : startLineEnd + 1;
-  const innerEnd = endLineStart;
-
-  return {
-    endLineEnd: endLineEnd === -1 ? content.length : endLineEnd,
-    indent,
-    innerEnd,
-    innerStart,
-    startLineStart,
-  };
-};
-
-/**
- * Appends a generated section to the end of the content.
- *
- * @param content - Existing file contents.
- * @param section - Generated section block to append.
- * @param lineEnding - Line ending to use for appended content.
+ * Appends a generated section to the end of file content.
+ * @param content - Existing file content.
+ * @param section - Fully formatted generated section to append.
+ * @param lineEnding - Line ending to preserve when appending.
  * @returns Updated content with the section appended.
  */
-const appendSection = (content: string, section: string, lineEnding: string): string => {
+const appendSection = (
+  content: string,
+  section: string,
+  lineEnding: string,
+): string => {
   if (!content) {
     return section;
   }
 
   const needsLineEnding = !content.endsWith(lineEnding);
-  const separator = needsLineEnding ? lineEnding : '';
+  const separator = needsLineEnding ? lineEnding : "";
 
   return `${content}${separator}${section}${lineEnding}`;
 };
 
-interface ResolvedSection {
-  readonly name?: GeneratedSectionName;
-  readonly content: string;
-  readonly markers: SectionMarkers;
+/**
+ * Applies a set of generated section replacements to existing content.
+ * @param content - Existing file content to update.
+ * @param sections - Generated sections keyed by marker metadata.
+ * @returns Updated content, or null when any required markers are missing.
+ */
+export function applyGeneratedSectionUpdates(
+  content: string,
+  sections: readonly IGeneratedSectionPayload[],
+): string | null {
+  if (sections.length === 0) {
+    return null;
+  }
+
+  const resolved = resolveSections(sections);
+  const hasMarkers = hasResolvedSectionMarkers.bind(undefined, content);
+  const allMarkersPresent = resolved.every(hasMarkers);
+
+  if (!allMarkersPresent) {
+    return null;
+  }
+
+  let updated = content;
+  for (const section of resolved) {
+    updated = replaceGeneratedSection(
+      updated,
+      section.content,
+      section.markers,
+    ).content;
+  }
+  return updated;
 }
 
 /**
- * Resolves section markers for a payload, defaulting when absent.
- *
- * @param section - Generated section payload.
- * @returns Resolved marker pair for the section.
+ * Wraps generated content with section markers and indentation.
+ * @param generatedSection - Inner generated content to wrap.
+ * @param markers - Section markers delimiting generated content.
+ * @param indent - Indentation prefix to apply to each emitted line.
+ * @param lineEnding - Line ending to use in the generated block.
+ * @returns Formatted generated section block.
  */
-const resolveSectionMarkers = (section: GeneratedSectionPayload): SectionMarkers => {
-  if (section.markers) {
-    return section.markers;
-  }
-  if (section.name) {
-    return buildGeneratedSectionMarkers(section.name);
-  }
-  return DEFAULT_SECTION_MARKERS;
-};
+export function buildGeneratedSection(
+  generatedSection: string,
+  markers: Readonly<ISectionMarkers> = DEFAULT_SECTION_MARKERS,
+  indent = "",
+  lineEnding = LF,
+): string {
+  const normalized = normalizeLineEndings(
+    generatedSection,
+    lineEnding,
+  ).trimEnd();
+  const lines = normalized ? normalized.split(lineEnding) : [];
+  const indentLine = indentGeneratedLine.bind(undefined, indent);
+  const indentedLines = lines.map(indentLine);
+
+  return (
+    [
+      `${indent}${markers.start}`,
+      ...indentedLines,
+      `${indent}${markers.end}`,
+    ].join(lineEnding) + lineEnding
+  );
+}
 
 /**
- * Normalizes section payloads into resolved sections with markers.
- *
- * @param sections - Payloads to normalize.
- * @returns Resolved section metadata.
+ * Detects the preferred line ending used by file content.
+ * @param content - File content to inspect.
+ * @returns `CRLF` when present, otherwise `LF`.
  */
-const resolveSections = (sections: readonly GeneratedSectionPayload[]): ResolvedSection[] =>
-  sections.map((section) => ({
-    content: section.content,
-    markers: resolveSectionMarkers(section),
-    name: section.name,
-  }));
-
-// ============================================================================
-// Public API
-// ============================================================================
+const detectLineEnding = (content: string): string =>
+  content.includes(CRLF) ? CRLF : LF;
 
 /**
- * Determines whether a file contains a generated section.
- *
- * @param content - File contents to inspect.
+ * Extracts the inner generated content between section markers.
+ * @param content - File content containing the generated section.
  * @param markers - Section markers to search for.
- * @returns True when both start and end markers are present.
- */
-export function hasGeneratedSection(content: string, markers: SectionMarkers = DEFAULT_SECTION_MARKERS): boolean {
-  return content.includes(markers.start) && content.includes(markers.end);
-}
-
-/**
- * Extracts the generated section contents from a file.
- * Returns null if markers are missing.
- *
- * @param content - File contents to inspect.
- * @param markers - Section markers to locate.
- * @returns The section content or null when missing.
+ * @returns Trimmed inner generated content, or null when markers are absent.
  */
 export function extractGeneratedSection(
   content: string,
-  markers: SectionMarkers = DEFAULT_SECTION_MARKERS,
+  markers: Readonly<ISectionMarkers> = DEFAULT_SECTION_MARKERS,
 ): string | null {
   const range = findSectionRange(content, markers);
   if (!range) {
@@ -232,92 +174,243 @@ export function extractGeneratedSection(
 }
 
 /**
- * Builds a generated section block with markers and indentation.
- *
- * @param generatedSection - Raw content for the generated section.
- * @param markers - Section markers to use.
- * @param indent - Indentation to apply to each line.
- * @param lineEnding - Line ending to use for joins.
- * @returns Generated section block with markers.
+ * Locates the line and content boundaries for a generated section.
+ * @param content - File content to search.
+ * @param markers - Section markers delimiting the generated block.
+ * @returns Section range metadata, or null when the markers are invalid or missing.
  */
-export function buildGeneratedSection(
-  generatedSection: string,
-  markers: SectionMarkers = DEFAULT_SECTION_MARKERS,
-  indent = '',
-  lineEnding = '\n',
-): string {
-  const normalized = normalizeLineEndings(generatedSection, lineEnding).trimEnd();
-  const lines = normalized ? normalized.split(lineEnding) : [];
-  const indentedLines = lines.map((line) => `${indent}${line}`);
+function findSectionRange(
+  content: string,
+  markers: Readonly<ISectionMarkers>,
+): ISectionRange | null {
+  const startIndex = content.indexOf(markers.start);
+  if (startIndex === -1) {
+    return null;
+  }
+  const endIndex = content.indexOf(
+    markers.end,
+    startIndex + markers.start.length,
+  );
+  if (endIndex === -1 || endIndex < startIndex) {
+    return null;
+  }
+  const startLineStart = lastLineBreak(content, startIndex) + 1;
+  const startLineEnd = nextLineBreak(content, startIndex);
+  const endLineStart = lastLineBreak(content, endIndex) + 1;
+  const endLineEnd = nextLineBreak(content, endIndex, true);
 
-  return [`${indent}${markers.start}`, ...indentedLines, `${indent}${markers.end}`].join(lineEnding) + lineEnding;
+  const indent = content.slice(startLineStart, startIndex);
+  const innerStart = startLineEnd === -1 ? content.length : startLineEnd + 1;
+  const innerEnd = endLineStart;
+  return {
+    endLineEnd: endLineEnd === -1 ? content.length : endLineEnd,
+    indent,
+    innerEnd,
+    innerStart,
+    startLineStart,
+  };
+}
+
+interface IResolvedSection {
+  readonly name?: GeneratedSectionName;
+  readonly content: string;
+  readonly markers: ISectionMarkers;
 }
 
 /**
- * Replaces or inserts the generated section within a file.
- *
- * @param content - File contents to update.
- * @param generatedSection - Raw section content to insert.
- * @param markers - Section markers to use.
- * @returns Updated content and update status.
+ * Returns whether content contains both start and end markers for a section.
+ * @param content - File content to inspect.
+ * @param markers - Section markers to search for.
+ * @returns True when both markers are present.
+ */
+export function hasGeneratedSection(
+  content: string,
+  markers: Readonly<ISectionMarkers> = DEFAULT_SECTION_MARKERS,
+): boolean {
+  return content.includes(markers.start) && content.includes(markers.end);
+}
+
+/**
+ * Returns whether a resolved section's markers exist in file content.
+ * @param content - File content to inspect.
+ * @param section - Resolved section metadata to verify.
+ * @returns True when the section markers are present.
+ */
+function hasResolvedSectionMarkers(
+  content: string,
+  section: Readonly<IResolvedSection>,
+): boolean {
+  return hasGeneratedSection(content, section.markers);
+}
+
+/**
+ * Applies indentation to a generated content line.
+ * @param indent - Indentation prefix for the section.
+ * @param line - Generated content line to indent.
+ * @returns Indented line content.
+ */
+function indentGeneratedLine(indent: string, line: string): string {
+  return `${indent}${line}`;
+}
+
+/**
+ * Finds the previous line break before a given index.
+ * @param content - File content to inspect.
+ * @param fromIndex - Index to search backward from.
+ * @returns Index of the previous line-feed character, or `-1` when absent.
+ */
+function lastLineBreak(content: string, fromIndex: number): number {
+  return content.lastIndexOf(LF, fromIndex);
+}
+
+// ============================================================================
+// Public API
+// ============================================================================
+
+/**
+ * Finds the next line break after a given index.
+ * @param content - File content to inspect.
+ * @param fromIndex - Index to search forward from.
+ * @param includeLineBreak - Whether to return the position after the line break.
+ * @returns Index of the next line break, adjusted when requested, or `-1`.
+ */
+function nextLineBreak(
+  content: string,
+  fromIndex: number,
+  includeLineBreak = false,
+): number {
+  const index = content.indexOf(LF, fromIndex);
+  if (index === -1) {
+    return -1;
+  }
+  return includeLineBreak ? index + 1 : index;
+}
+
+/**
+ * Normalizes all line endings in content to a single style.
+ * @param content - Text content to normalize.
+ * @param lineEnding - Target line ending sequence.
+ * @returns Content with normalized line endings.
+ */
+function normalizeLineEndings(content: string, lineEnding: string): string {
+  return content.replaceAll(/\r\n|\r|\n/g, lineEnding);
+}
+
+/**
+ * Replaces an existing generated section or appends it when missing.
+ * @param content - Existing file content to update.
+ * @param generatedSection - Inner generated content to write.
+ * @param markers - Section markers delimiting the generated block.
+ * @returns Updated content and status describing the applied change.
  */
 export function replaceGeneratedSection(
   content: string,
   generatedSection: string,
-  markers: SectionMarkers = DEFAULT_SECTION_MARKERS,
-): SectionUpdateResult {
+  markers: Readonly<ISectionMarkers> = DEFAULT_SECTION_MARKERS,
+): ISectionUpdateResult {
   const lineEnding = detectLineEnding(content);
-  const normalizedGenerated = normalizeLineEndings(generatedSection, lineEnding).trimEnd();
+  const normalizedGenerated = normalizeLineEndings(
+    generatedSection,
+    lineEnding,
+  ).trimEnd();
   const range = findSectionRange(content, markers);
-
   if (!range) {
-    const appended = appendSection(
-      content,
-      buildGeneratedSection(normalizedGenerated, markers, '', lineEnding),
+    const generated = buildGeneratedSection(
+      normalizedGenerated,
+      markers,
+      "",
       lineEnding,
     );
-
-    return {
-      content: appended,
-      status: appended === content ? 'unchanged' : 'inserted',
-    };
+    const appended = appendSection(content, generated, lineEnding);
+    return toInsertedResult(content, appended);
   }
-
-  const section = buildGeneratedSection(normalizedGenerated, markers, range.indent, lineEnding);
+  const section = buildGeneratedSection(
+    normalizedGenerated,
+    markers,
+    range.indent,
+    lineEnding,
+  );
   const updated = `${content.slice(0, range.startLineStart)}${section}${content.slice(range.endLineEnd)}`;
+  return toReplacedResult(content, updated);
+}
 
+/**
+ * Resolves section markers from explicit markers or a generated section name.
+ * @param section - Generated section payload to resolve markers for.
+ * @returns Section markers associated with the payload.
+ */
+function resolveSection(
+  section: Readonly<IGeneratedSectionPayload>,
+): IResolvedSection {
   return {
-    content: updated,
-    status: updated === content ? 'unchanged' : 'replaced',
+    content: section.content,
+    markers: resolveSectionMarkers(section),
+    name: section.name,
   };
 }
 
 /**
- * Applies multiple generated section updates within a file.
- * Returns null if markers are not present.
- *
- * @param content - File contents to update.
- * @param sections - Generated sections to apply.
- * @returns Updated content or null when markers are not found.
+ * Resolves section markers from explicit markers or a generated section name.
+ * @param section - Generated section payload to resolve markers for.
+ * @returns Section markers associated with the payload.
  */
-export function applyGeneratedSectionUpdates(
+function resolveSectionMarkers(
+  section: Readonly<IGeneratedSectionPayload>,
+): ISectionMarkers {
+  if (section.markers) {
+    return section.markers;
+  }
+  if (section.name) {
+    return buildGeneratedSectionMarkers(section.name);
+  }
+  return DEFAULT_SECTION_MARKERS;
+}
+
+/**
+ * Normalizes generated section payloads into resolved section metadata.
+ * @param sections - Generated section payloads to normalize.
+ * @returns Resolved section metadata with explicit markers.
+ */
+function resolveSections(
+  sections: readonly IGeneratedSectionPayload[],
+): IResolvedSection[] {
+  return sections.map(resolveSection);
+}
+
+/**
+ * Builds the update result for an inserted generated section.
+ * @param content - Original content before insertion.
+ * @param appended - Content after insertion.
+ * @returns Section update result.
+ */
+function toInsertedResult(
   content: string,
-  sections: readonly GeneratedSectionPayload[],
-): string | null {
-  if (sections.length === 0) {
-    return null;
-  }
+  appended: string,
+): ISectionUpdateResult {
+  return {
+    content: appended,
+    status:
+      appended === content
+        ? SectionUpdateStatus.Unchanged
+        : SectionUpdateStatus.Inserted,
+  };
+}
 
-  const resolved = resolveSections(sections);
-  const allMarkersPresent = resolved.every((section) => hasGeneratedSection(content, section.markers));
-
-  if (!allMarkersPresent) {
-    return null;
-  }
-
-  let updated = content;
-  for (const section of resolved) {
-    updated = replaceGeneratedSection(updated, section.content, section.markers).content;
-  }
-  return updated;
+/**
+ * Builds the update result for a replaced generated section.
+ * @param content - Original content before replacement.
+ * @param updated - Content after replacement.
+ * @returns Section update result.
+ */
+function toReplacedResult(
+  content: string,
+  updated: string,
+): ISectionUpdateResult {
+  return {
+    content: updated,
+    status:
+      updated === content
+        ? SectionUpdateStatus.Unchanged
+        : SectionUpdateStatus.Replaced,
+  };
 }

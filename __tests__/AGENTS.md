@@ -417,7 +417,7 @@ describe('<FunctionOrClassName>', () => {
 
 ```bash
 # Run tests with coverage
-yarn test:coverage
+npm run test:coverage
 
 # View coverage report
 open coverage/lcov-report/index.html
@@ -427,7 +427,7 @@ open coverage/lcov-report/index.html
 
 ## Anti-Patterns to Avoid
 
-### ❌ Shared Mutable State
+### Shared Mutable State
 
 ```typescript
 // BAD - Shared state between tests
@@ -482,3 +482,4 @@ const inputFiles = ['a.ts', 'b.ts', 'c.ts'];
 const result = discoverFiles(inputFiles);
 expect(result).toHaveLength(inputFiles.length);
 ```
+

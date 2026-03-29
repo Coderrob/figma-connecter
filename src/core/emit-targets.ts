@@ -22,16 +22,30 @@
  * @module core/emit-targets
  */
 
-import { EmitterTarget } from './types';
+import assert from "node:assert/strict";
+import { EmitterTarget } from "./types";
 
 const ALL_TARGETS = Object.values(EmitterTarget);
 
 /**
- * Returns all registered emit targets.
+ * Validates tokens against the allowed target set.
  *
- * @returns Array of supported emit targets.
+ * @param tokens - Parsed user tokens.
+ * @param normalizedTargets - Allowed targets for messaging.
+ * @param allowed - Allowed target lookup set.
+ * @returns Nothing.
  */
-export const listEmitTargets = (): EmitterTarget[] => [...ALL_TARGETS];
+function assertValidTargetTokens(
+  tokens: readonly string[],
+  normalizedTargets: readonly EmitterTarget[],
+  allowed: Readonly<Set<string>>,
+): void {
+  const invalid = tokens.filter(isInvalidTarget.bind(undefined, allowed));
+  assert(
+    invalid.length === 0,
+    `Invalid emit targets: ${invalid.join(", ")}. Valid targets are: ${formatEmitTargetOptions(normalizedTargets)}.`,
+  );
+}
 
 /**
  * Formats the emit target list for CLI help text.
@@ -39,8 +53,82 @@ export const listEmitTargets = (): EmitterTarget[] => [...ALL_TARGETS];
  * @param targets - Emit targets to format for display.
  * @returns Comma-separated list of targets plus "all".
  */
-export const formatEmitTargetOptions = (targets: readonly EmitterTarget[] = listEmitTargets()): string =>
-  [...targets, 'all'].join(', ');
+export function formatEmitTargetOptions(
+  targets: readonly EmitterTarget[] = listEmitTargets(),
+): string {
+  return [...targets, "all"].join(", ");
+}
+
+/**
+ * Returns true when a normalized token has content.
+ *
+ * @param token - Token to check.
+ * @returns True when the token is non-empty.
+ */
+function hasContent(token: string): boolean {
+  return Boolean(token);
+}
+
+/**
+ * Returns true when a token is unsupported.
+ *
+ * @param allowed - Allowed target names.
+ * @param token - Token to evaluate.
+ * @returns True when the token is unsupported.
+ */
+function isInvalidTarget(
+  allowed: Readonly<Set<string>>,
+  token: string,
+): boolean {
+  return !allowed.has(token);
+}
+
+/**
+ * Narrows a token to a known emit target.
+ *
+ * @param allowed - Allowed target names.
+ * @param token - Token to evaluate.
+ * @returns True when the token is allowed.
+ */
+function isKnownTarget(
+  allowed: Readonly<Set<string>>,
+  token: string,
+): token is EmitterTarget {
+  return allowed.has(token);
+}
+
+/**
+ * Returns all registered emit targets.
+ *
+ * @returns Array of supported emit targets.
+ */
+export function listEmitTargets(): EmitterTarget[] {
+  return [...ALL_TARGETS];
+}
+
+/**
+ * Normalizes allowed targets and ensures at least one exists.
+ *
+ * @param allowedTargets - Targets accepted by the parser.
+ * @returns Deduplicated normalized targets.
+ */
+function normalizeAllowedTargets(
+  allowedTargets: readonly EmitterTarget[],
+): EmitterTarget[] {
+  const normalizedTargets = Array.from(new Set(allowedTargets));
+  assert(normalizedTargets.length > 0, "No emit targets registered.");
+  return normalizedTargets;
+}
+
+/**
+ * Normalizes a raw emit target token.
+ *
+ * @param token - Raw token from user input.
+ * @returns Normalized token.
+ */
+function normalizeToken(token: string): string {
+  return token.trim().toLowerCase();
+}
 
 /**
  * Parses and validates emit targets from a comma-separated string.
@@ -54,37 +142,47 @@ export function parseEmitTargets(
   raw: string,
   allowedTargets: readonly EmitterTarget[] = listEmitTargets(),
 ): EmitterTarget[] {
-  if (!raw || raw.trim().length === 0) {
-    throw new Error('Emit targets cannot be empty.');
-  }
+  assert(raw.trim().length > 0, "Emit targets cannot be empty.");
 
-  const normalizedTargets = Array.from(new Set(allowedTargets));
-  if (normalizedTargets.length === 0) {
-    throw new Error('No emit targets registered.');
-  }
+  const normalizedTargets = normalizeAllowedTargets(allowedTargets);
+  const tokens = parseTargetTokens(raw);
 
-  const tokens = raw
-    .split(',')
-    .map((token) => token.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (tokens.includes('all')) {
+  if (tokens.includes("all")) {
     return normalizedTargets;
   }
 
   const allowed = new Set<string>(normalizedTargets);
-  const invalid = tokens.filter((token) => !allowed.has(token));
+  assertValidTargetTokens(tokens, normalizedTargets, allowed);
+  return resolveUniqueTargets(tokens, allowed);
+}
 
-  if (invalid.length > 0) {
-    throw new Error(
-      `Invalid emit targets: ${invalid.join(', ')}. Valid targets are: ${formatEmitTargetOptions(normalizedTargets)}.`,
-    );
+/**
+ * Parses and normalizes raw target tokens.
+ *
+ * @param raw - Raw comma-separated target string.
+ * @returns Non-empty normalized tokens.
+ */
+function parseTargetTokens(raw: string): string[] {
+  return raw.split(",").map(normalizeToken).filter(hasContent);
+}
+
+/**
+ * Returns deduplicated validated targets.
+ *
+ * @param tokens - Parsed user tokens.
+ * @param allowed - Allowed target lookup set.
+ * @returns Unique validated emit targets.
+ */
+function resolveUniqueTargets(
+  tokens: readonly string[],
+  allowed: Readonly<Set<string>>,
+): EmitterTarget[] {
+  const unique: EmitterTarget[] = [];
+  for (const token of new Set(tokens)) {
+    if (isKnownTarget(allowed, token)) {
+      unique.push(token);
+    }
   }
-
-  const unique = [...new Set(tokens)] as EmitterTarget[];
-  if (unique.length === 0) {
-    throw new Error('No valid emit targets found.');
-  }
-
+  assert(unique.length > 0, "No valid emit targets found.");
   return unique;
 }

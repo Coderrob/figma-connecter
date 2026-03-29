@@ -26,9 +26,9 @@ import {
   COMPONENT_SUFFIX,
   DEFAULT_EXCLUDE_DIRS,
   discoverComponentFiles,
-  type FileDiscoveryFileSystem,
   isComponentFile,
 } from '../../src/io/file-discovery';
+import type { IFileDiscoveryFileSystem } from '../../src/io/types';
 
 /**
  * Creates a mock Stats object.
@@ -84,7 +84,7 @@ describe('isComponentFile', () => {
 });
 
 describe('discoverComponentFiles', () => {
-  let mockFileSystem: FileDiscoveryFileSystem;
+  let mockFileSystem: IFileDiscoveryFileSystem;
   let mockExistsSync: jest.Mock;
   let mockStatSync: jest.Mock;
   let mockReaddirSync: jest.Mock;

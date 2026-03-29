@@ -23,34 +23,24 @@
  * @module io/file-writer
  */
 
-import { type IoAdapter, nodeIoAdapter } from './adapter';
-import { DEFAULT_SECTION_MARKERS, replaceGeneratedSection, type SectionMarkers } from './section-updater';
+import {
+  WriteStatus,
+  type IFileWriteOptions,
+  type IFileWriteResult,
+} from "@/src/io/types";
+import { nodeIoAdapter } from "./adapter";
+import {
+  DEFAULT_SECTION_MARKERS,
+  replaceGeneratedSection,
+} from "./section-updater";
 
-/** Status of a write operation. */
-export enum WriteStatus {
-  Created = 'created',
-  Updated = 'updated',
-  Unchanged = 'unchanged',
-}
-
-/** Result of a write operation. */
-export interface FileWriteResult {
-  readonly filePath: string;
-  readonly status: WriteStatus;
-}
-
-/** Options for write operations. */
-export interface FileWriteOptions {
-  /** Preview changes without writing. */
-  readonly dryRun?: boolean;
-  /** IO adapter for file operations. */
-  readonly io?: IoAdapter;
-  /** Optional section update configuration. */
-  readonly section?: {
-    readonly content: string;
-    readonly markers?: SectionMarkers;
-  };
-}
+export type {
+  FileWriteOptions,
+  FileWriteResult,
+  IFileWriteOptions,
+  IFileWriteResult,
+} from "@/src/io/types";
+export { WriteStatus } from "@/src/io/types";
 
 /**
  * Writes a file to disk, updating generated sections if configured.
@@ -60,35 +50,34 @@ export interface FileWriteOptions {
  * @param options - Write options.
  * @returns Write result with status and file path.
  */
-export function writeFile(filePath: string, content: string, options: FileWriteOptions = {}): FileWriteResult {
+export function writeFile(
+  filePath: string,
+  content: string,
+  options: Readonly<IFileWriteOptions> = {},
+): IFileWriteResult {
   const dryRun = options.dryRun ?? false;
   const io = options.io ?? nodeIoAdapter;
-  const exists = io.exists(filePath);
-
-  if (!exists) {
+  if (!io.exists(filePath)) {
     if (!dryRun) {
       io.writeFile(filePath, content);
     }
-
     return { filePath, status: WriteStatus.Created };
   }
 
   const existingContent = io.readFile(filePath);
-  let updatedContent = content;
-
-  if (options.section) {
-    const markers = options.section.markers ?? DEFAULT_SECTION_MARKERS;
-    const result = replaceGeneratedSection(existingContent, options.section.content, markers);
-    updatedContent = result.content;
-  }
+  const updatedContent = options.section
+    ? replaceGeneratedSection(
+        existingContent,
+        options.section.content,
+        options.section.markers ?? DEFAULT_SECTION_MARKERS,
+      ).content
+    : content;
 
   if (existingContent === updatedContent) {
     return { filePath, status: WriteStatus.Unchanged };
   }
-
   if (!dryRun) {
     io.writeFile(filePath, updatedContent);
   }
-
   return { filePath, status: WriteStatus.Updated };
 }

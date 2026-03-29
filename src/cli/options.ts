@@ -22,12 +22,13 @@
  * @module cli/options
  */
 
-import { Command } from 'commander';
+import type { IGlobalCliOptions } from "@/src/cli/types";
 
-import type { GlobalCliOptions } from './types';
+import { Command } from "commander";
 
 /** Commander Command instance type. */
 type CommandInstance = InstanceType<typeof Command>;
+type GlobalOptionValue = string | boolean | undefined;
 
 /**
  * Retrieves global options for a command, falling back to parent options.
@@ -38,7 +39,9 @@ type CommandInstance = InstanceType<typeof Command>;
  * @param command - The Command instance to retrieve options from.
  * @returns The resolved global CLI options.
  */
-export function getGlobalOptions(command?: CommandInstance): GlobalCliOptions {
+export function getGlobalOptions(
+  command?: Readonly<CommandInstance>,
+): IGlobalCliOptions {
   const localOptions = command?.opts?.() ?? {};
   const parentOptions = command?.parent?.opts?.() ?? {};
 
@@ -48,17 +51,44 @@ export function getGlobalOptions(command?: CommandInstance): GlobalCliOptions {
    * @param key - The option key to resolve.
    * @returns The resolved option value.
    */
-  const pickOption = (key: keyof GlobalCliOptions): string | boolean | undefined => {
+  const pickOption = (
+    key: keyof IGlobalCliOptions,
+  ): GlobalOptionValue => {
     if (localOptions[key] !== undefined) {
-      return localOptions[key] as string | boolean | undefined;
+      return getOptionValue(localOptions[key]);
     }
-    return parentOptions[key] as string | boolean | undefined;
+    return getOptionValue(parentOptions[key]);
   };
 
   return {
-    verbose: Boolean(pickOption('verbose')),
-    quiet: Boolean(pickOption('quiet')),
-    dryRun: Boolean(pickOption('dryRun')),
-    config: pickOption('config') as string | undefined,
+    verbose: Boolean(pickOption("verbose")),
+    quiet: Boolean(pickOption("quiet")),
+    dryRun: Boolean(pickOption("dryRun")),
+    config: getStringOption(pickOption("config")),
   };
+}
+
+/**
+ * Normalizes an unknown Commander option value into the supported scalar types.
+ *
+ * @param value - Raw option value returned by Commander.
+ * @returns String/boolean values, otherwise undefined.
+ */
+function getOptionValue(value: unknown): GlobalOptionValue {
+  if (typeof value === "boolean" || typeof value === "string") {
+    return value;
+  }
+  return undefined;
+}
+
+/**
+ * Returns a string option value when the provided value is a string.
+ *
+ * @param value - Candidate option value.
+ * @returns String value or undefined.
+ */
+function getStringOption(
+  value: Readonly<GlobalOptionValue>,
+): string | undefined {
+  return typeof value === "string" ? value : undefined;
 }

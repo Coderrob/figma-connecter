@@ -209,5 +209,5 @@ The plugin API supports:
 
 - Multi-parser pipelines (try multiple parsers per file)
 - Parser auto-detection based on file patterns
-- Parser versioning and compatibility checks
+- Parser capability metadata and registration-time validation
 - Conditional parser loading based on project detection

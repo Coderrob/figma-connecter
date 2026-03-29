@@ -29,8 +29,8 @@ import {
   hasParserPlugin,
   listParserTargets,
 } from '../../src/parsers/factory';
-import { ParserTarget, type Parser, type ParseContext } from '../../src/parsers/types';
-import type { WebComponentParseResult } from '../../src/core/types';
+import { ParserTarget, type IParser, type IParseContext } from '../../src/parsers/types';
+import type { IWebComponentParseResult } from '../../src/core/types';
 
 describe('createParser', () => {
   it('should return the webcomponent parser', () => {
@@ -70,9 +70,9 @@ describe('listParserTargets', () => {
  * @param target - Target identifier for the parser.
  * @returns Test parser instance.
  */
-const createTestParser = (target: ParserTarget): Parser => ({
+const createTestParser = (target: ParserTarget): IParser => ({
   target,
-  parse: (_context: ParseContext): WebComponentParseResult => ({
+  parse: (_context: IParseContext): IWebComponentParseResult => ({
     value: undefined,
     warnings: [],
     errors: [],
@@ -118,7 +118,7 @@ describe('parser registry helpers', () => {
               description: 'Duplicate parser for tests',
             },
           }),
-        ).toThrow('Parser plugin already registered for target: webcomponent');
+        ).toThrow('IParser plugin already registered for target: webcomponent');
       });
     });
   });

@@ -21,28 +21,28 @@
 
 import ts from 'typescript';
 
-import type { ConnectCommandOptions } from '../../src/commands/connect/types';
+import type { IConnectCommandOptions } from '../../src/commands/connect/types';
 import {
-  type AttributeDescriptor,
-  type ComponentModel,
-  type ConnectOptions,
-  type EmitterOptions,
+  type IAttributeDescriptor,
+  type IComponentModel,
+  type IConnectOptions,
+  type IEmitterOptions,
   type EmitterTarget,
-  type EventDescriptor,
+  type IEventDescriptor,
   FigmaPropertyType,
-  type GenerationReport,
+  type IGenerationReport,
   GenerationStatus,
-  type PropertyDescriptor,
+  type IPropertyDescriptor,
   PropertyVisibility,
 } from '../../src/core/types';
 import { createMemoryIoAdapter } from '../../src/io/adapter';
-import type { PipelineContext } from '../../src/pipeline/context';
+import type { IPipelineContext } from '../../src/pipeline/context';
 
 /**
- * Creates a mock PropertyDescriptor with default values.
+ * Creates a mock IPropertyDescriptor with default values.
  * @param overrides - Partial property values to override defaults.
  */
-export const createMockProperty = (overrides: Partial<PropertyDescriptor> = {}): PropertyDescriptor => ({
+export const createMockProperty = (overrides: Partial<IPropertyDescriptor> = {}): IPropertyDescriptor => ({
   name: 'testProperty',
   attribute: 'test-property',
   type: FigmaPropertyType.String,
@@ -55,10 +55,10 @@ export const createMockProperty = (overrides: Partial<PropertyDescriptor> = {}):
 });
 
 /**
- * Creates a mock AttributeDescriptor with default values.
+ * Creates a mock IAttributeDescriptor with default values.
  * @param overrides - Partial attribute values to override defaults.
  */
-export const createMockAttribute = (overrides: Partial<AttributeDescriptor> = {}): AttributeDescriptor => ({
+export const createMockAttribute = (overrides: Partial<IAttributeDescriptor> = {}): IAttributeDescriptor => ({
   name: 'test-attribute',
   propertyName: 'testAttribute',
   type: FigmaPropertyType.String,
@@ -69,10 +69,10 @@ export const createMockAttribute = (overrides: Partial<AttributeDescriptor> = {}
 });
 
 /**
- * Creates a mock EventDescriptor with default values.
+ * Creates a mock IEventDescriptor with default values.
  * @param overrides - Partial event values to override defaults.
  */
-export const createMockEvent = (overrides?: Partial<EventDescriptor>): EventDescriptor => ({
+export const createMockEvent = (overrides?: Partial<IEventDescriptor>): IEventDescriptor => ({
   name: 'test-event',
   reactHandler: 'onTestEvent',
   detailType: null,
@@ -80,10 +80,10 @@ export const createMockEvent = (overrides?: Partial<EventDescriptor>): EventDesc
 });
 
 /**
- * Creates a mock ComponentModel with default values.
+ * Creates a mock IComponentModel with default values.
  * @param overrides - Partial component values to override defaults.
  */
-export const createMockComponentModel = (overrides?: Partial<ComponentModel>): ComponentModel => ({
+export const createMockComponentModel = (overrides?: Partial<IComponentModel>): IComponentModel => ({
   className: 'TestComponent',
   tagName: 'my-test',
   filePath: '/test/components/test.component.ts',
@@ -96,10 +96,10 @@ export const createMockComponentModel = (overrides?: Partial<ComponentModel>): C
 });
 
 /**
- * Creates a mock ConnectOptions with default values.
+ * Creates a mock IConnectOptions with default values.
  * @param overrides - Partial options to override defaults.
  */
-export const createMockConnectOptions = (overrides?: Partial<ConnectOptions>): ConnectOptions => ({
+export const createMockConnectOptions = (overrides?: Partial<IConnectOptions>): IConnectOptions => ({
   inputPath: '/test/components',
   recursive: false,
   dryRun: false,
@@ -110,9 +110,9 @@ export const createMockConnectOptions = (overrides?: Partial<ConnectOptions>): C
 });
 
 /**
- * Creates an empty GenerationReport for testing.
+ * Creates an empty IGenerationReport for testing.
  */
-export const createMockReport = (): GenerationReport => ({
+export const createMockReport = (): IGenerationReport => ({
   status: GenerationStatus.Success,
   created: [],
   updated: [],
@@ -256,20 +256,20 @@ export class ComponentWithMixin extends DisabledMixin(LitElement) {
 `;
 
 /**
- * Creates a mock EmitterOptions with default values.
+ * Creates a mock IEmitterOptions with default values.
  * @param overrides - Partial options to override defaults.
  */
-export const createMockEmitterOptions = (overrides?: Partial<EmitterOptions>): EmitterOptions => ({
+export const createMockEmitterOptions = (overrides?: Partial<IEmitterOptions>): IEmitterOptions => ({
   dryRun: false,
   baseImportPath: undefined,
   ...overrides,
 });
 
 /**
- * Creates a mock ConnectCommandOptions with default values.
+ * Creates a mock IConnectCommandOptions with default values.
  * @param overrides - Partial options to override defaults.
  */
-export const createMockConnectCommandOptions = (overrides?: Partial<ConnectCommandOptions>): ConnectCommandOptions => ({
+export const createMockConnectCommandOptions = (overrides?: Partial<IConnectCommandOptions>): IConnectCommandOptions => ({
   path: './components',
   recursive: false,
   dryRun: false,
@@ -362,10 +362,10 @@ export const createMockProgram = (
 };
 
 /**
- * Creates a mock PipelineContext with default values.
+ * Creates a mock IPipelineContext with default values.
  * @param overrides - Partial context to override defaults.
  */
-export const createMockPipelineContext = (overrides?: Partial<PipelineContext>): PipelineContext => ({
+export const createMockPipelineContext = (overrides?: Partial<IPipelineContext>): IPipelineContext => ({
   checker: {} as ts.TypeChecker,
   emitters: [],
   parser: {} as any,

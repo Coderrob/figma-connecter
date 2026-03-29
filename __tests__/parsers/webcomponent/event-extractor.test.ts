@@ -20,7 +20,7 @@
 
 import ts from 'typescript';
 
-import { visitSourceFile } from '../../../src/parsers/webcomponent/ast-visitor';
+import { visitSourceFile } from '../../../src/parsers/webcomponent/shared/ast-visitor';
 import { extractEvents, extractEventsFromChain } from '../../../src/parsers/webcomponent/event-extractor';
 
 describe('extractEvents', () => {

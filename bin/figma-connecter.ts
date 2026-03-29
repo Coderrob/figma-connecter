@@ -23,9 +23,16 @@
  * It bootstraps the CLI application and handles top-level errors.
  */
 
-import { run } from '../src/cli';
+import { run } from "@/src/cli";
 
-run().catch((error: Error) => {
-  console.error('Fatal error:', error.message);
+/**
+ * Handles unrecoverable CLI startup failures.
+ * @param error - Error thrown during CLI execution.
+ * @returns Nothing.
+ */
+function handleFatalError(error: Readonly<Error>): void {
+  console.error("Fatal error:", error.message);
   process.exit(1);
-});
+}
+
+run().catch(handleFatalError);
