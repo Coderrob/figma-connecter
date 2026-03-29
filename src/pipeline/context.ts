@@ -15,32 +15,15 @@
  */
 
 /**
- * Utilities Index
+ * Pipeline Context Compatibility Module
  *
- * Re-exports all utility functions and compatibility types.
+ * Preserves legacy imports after pipeline context types moved to `src/types/pipeline`.
  *
- * @module utils
+ * @module pipeline/context
  */
 
-export type { IMergeByKeyOptions, MergeByKeyOptions } from "@/src/types/utils";
-export { mergeByKey } from "./merge-by-key";
-export {
-  buildCodeConnectFilePath,
-  normalizedBasename,
-  normalizePath,
-  resolveDistReactImportPath,
-  POSIX_PATH_SEPARATOR,
-} from "./paths";
-export {
-  kebabToTitleCase,
-  toCamelCase,
-  toKebabCase,
-  toPascalCase,
-  upperCaseFirstCharacter,
-} from "./strings";
-export {
-  getDecoratorOptions,
-  getJSDocSummary,
-  getJSDocTagText,
-  getLiteralValue,
-} from "./ts";
+export type {
+  IPipelineContext,
+  PipelineContext,
+  PipelineContextSeed,
+} from "@/src/types/pipeline";

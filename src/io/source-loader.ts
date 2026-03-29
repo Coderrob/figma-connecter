@@ -26,9 +26,15 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type { ISourceLoaderOptions, ISourceLoadResult } from "@/src/types/io";
-
 import type { IPipelineContext } from "@/src/types/pipeline";
 import ts from "typescript";
+
+export type {
+  ISourceLoadResult,
+  ISourceLoaderOptions,
+  SourceLoadResult,
+  SourceLoaderOptions,
+} from "@/src/types/io";
 
 // ============================================================================
 // Constants
@@ -40,12 +46,6 @@ import ts from "typescript";
 
 /** Unix read permission bits for owner, group, and others (r--r--r--). */
 const UNIX_READ_PERMISSION_MASK = 0o444;
-
-/** Unix write permission bits for owner, group, and others (-w--w--w-). */
-const UNIX_WRITE_PERMISSION_MASK = 0o222;
-
-/** Platform identifier for Windows. */
-const WINDOWS_PLATFORM = "win32";
 
 interface IParsedTsconfigFileSuccess {
   readonly config: Readonly<Record<string, unknown>>;
@@ -86,15 +86,6 @@ const getReadableFileError = (filePath: string): string | undefined => {
   try {
     const mode = fs.statSync(filePath).mode;
     if ((mode & UNIX_READ_PERMISSION_MASK) === 0) {
-      return `Source file is not readable: ${filePath}`;
-    }
-
-    // Windows can report R_OK even when chmod(000) is used in tests.
-    // Treat missing write bits as unreadable for parity with CI expectations.
-    if (
-      process.platform === WINDOWS_PLATFORM &&
-      (mode & UNIX_WRITE_PERMISSION_MASK) === 0
-    ) {
       return `Source file is not readable: ${filePath}`;
     }
 

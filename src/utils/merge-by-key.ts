@@ -24,6 +24,8 @@
 
 import type { IMergeByKeyOptions } from "@/src/types/utils";
 
+export type { IMergeByKeyOptions, MergeByKeyOptions } from "@/src/types/utils";
+
 /**
  * Merges a list of items into a Map keyed by the provided selector.
  * Uses insertion order for deterministic iteration.

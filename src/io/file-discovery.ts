@@ -31,6 +31,15 @@ import type {
 } from "@/src/types/io";
 import { POSIX_PATH_SEPARATOR } from "@/src/utils";
 
+export type {
+  DiscoveredFile,
+  FileDiscoveryFileSystem,
+  FileDiscoveryOptions,
+  IDiscoveredFile,
+  IFileDiscoveryFileSystem,
+  IFileDiscoveryOptions,
+} from "@/src/types/io";
+
 /** File suffix for component source files. */
 export const COMPONENT_SUFFIX = ".component.ts";
 
@@ -39,12 +48,6 @@ export const COMPONENT_GLOB = `**/*${COMPONENT_SUFFIX}`;
 
 /** Default directory names to exclude from traversal. */
 export const DEFAULT_EXCLUDE_DIRS: readonly string[] = ["node_modules", "dist"];
-
-/** Metadata for a discovered component file. */
-
-/** Options for component discovery. */
-
-/** File system provider interface for discovery. */
 
 /** Default file system provider using Node.js fs. */
 const defaultFileSystem: IFileDiscoveryFileSystem = {

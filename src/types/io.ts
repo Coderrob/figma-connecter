@@ -94,3 +94,14 @@ export interface ISourceLoadResult {
   readonly sourceFiles: readonly ts.SourceFile[];
   readonly sourceFileMap: ReadonlyMap<string, ts.SourceFile>;
 }
+
+export type DiscoveredFile = IDiscoveredFile;
+export type FileDiscoveryOptions = IFileDiscoveryOptions;
+export type FileDiscoveryFileSystem = IFileDiscoveryFileSystem;
+export type IoAdapter = IIoAdapter;
+export type FileWriteResult = IFileWriteResult;
+export type FileWriteOptions = IFileWriteOptions;
+export type SectionMarkers = ISectionMarkers;
+export type SectionUpdateResult = ISectionUpdateResult;
+export type SourceLoaderOptions = ISourceLoaderOptions;
+export type SourceLoadResult = ISourceLoadResult;

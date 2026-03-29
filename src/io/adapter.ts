@@ -27,6 +27,8 @@ import fs from "node:fs";
 import path from "node:path";
 import type { IIoAdapter } from "@/src/types/io";
 
+export type { IIoAdapter, IoAdapter } from "@/src/types/io";
+
 /**
  * Default IO adapter backed by the Node.js filesystem.
  */

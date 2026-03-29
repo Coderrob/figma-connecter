@@ -170,7 +170,7 @@ export class Logger {
    */
   constructor(
     private readonly levelOrOptions: LogLevel | ILoggerOptions = LogLevel.INFO,
-    private readonly useColorsOption = false,
+    private readonly useColorsOption?: boolean,
   ) {
     this.useColors =
       typeof levelOrOptions === "object"
@@ -186,7 +186,9 @@ export class Logger {
   private get options(): ILoggerOptions {
     return typeof this.levelOrOptions === "object"
       ? this.levelOrOptions
-      : { level: this.levelOrOptions, useColors: this.useColorsOption };
+      : this.useColorsOption === undefined
+        ? { level: this.levelOrOptions }
+        : { level: this.levelOrOptions, useColors: this.useColorsOption };
   }
 
   /**
@@ -204,7 +206,8 @@ export class Logger {
    * @returns True when ANSI colors are enabled.
    */
   private get isColorOutputEnabled(): boolean {
-    return Boolean(this.useColors ?? this.options.useColors);
+    const explicit = this.useColors ?? this.options.useColors;
+    return explicit ?? Boolean(process.stdout.isTTY);
   }
 
   /**

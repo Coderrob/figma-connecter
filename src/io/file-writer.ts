@@ -34,6 +34,14 @@ import {
   replaceGeneratedSection,
 } from "./section-updater";
 
+export type {
+  FileWriteOptions,
+  FileWriteResult,
+  IFileWriteOptions,
+  IFileWriteResult,
+} from "@/src/types/io";
+export { WriteStatus } from "@/src/types/io";
+
 /**
  * Writes a file to disk, updating generated sections if configured.
  *

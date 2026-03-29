@@ -139,7 +139,15 @@ describe('source-loader', () => {
 
     const result = loadSourceProgram([filePath], { context: createContextSeed() });
 
-    expect(result.errors.some((error) => error.includes('Source file is not readable'))).toBe(true);
+    const hasUnreadableError = result.errors.some((error) =>
+      error.includes('Source file is not readable'),
+    );
+
+    if (process.platform === 'win32') {
+      expect(hasUnreadableError).toBe(false);
+    } else {
+      expect(hasUnreadableError).toBe(true);
+    }
 
     fs.chmodSync(filePath, 0o644);
   });

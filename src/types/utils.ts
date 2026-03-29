@@ -8,3 +8,5 @@ export interface IMergeByKeyOptions<TItem, TKey> {
   /** Merge strategy when the key already exists (defaults to last-in-wins). */
   readonly merge?: (existing: TItem, incoming: TItem) => TItem;
 }
+
+export type MergeByKeyOptions<TItem, TKey> = IMergeByKeyOptions<TItem, TKey>;

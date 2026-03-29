@@ -41,3 +41,5 @@ export type PipelineContextSeed = Omit<
   keyof DerivedPipelineProps
 > &
   Partial<DerivedPipelineProps>;
+
+export type PipelineContext = IPipelineContext;

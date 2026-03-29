@@ -15,32 +15,16 @@
  */
 
 /**
- * Utilities Index
+ * Shared Types Index
  *
- * Re-exports all utility functions and compatibility types.
+ * Re-exports shared type modules for package-level compatibility.
  *
- * @module utils
+ * @module types
  */
 
-export type { IMergeByKeyOptions, MergeByKeyOptions } from "@/src/types/utils";
-export { mergeByKey } from "./merge-by-key";
-export {
-  buildCodeConnectFilePath,
-  normalizedBasename,
-  normalizePath,
-  resolveDistReactImportPath,
-  POSIX_PATH_SEPARATOR,
-} from "./paths";
-export {
-  kebabToTitleCase,
-  toCamelCase,
-  toKebabCase,
-  toPascalCase,
-  upperCaseFirstCharacter,
-} from "./strings";
-export {
-  getDecoratorOptions,
-  getJSDocSummary,
-  getJSDocTagText,
-  getLiteralValue,
-} from "./ts";
+export * from "./cli";
+export * from "./io";
+export * from "./parsers-webcomponent";
+export * from "./pipeline";
+export * from "./plugins";
+export * from "./utils";

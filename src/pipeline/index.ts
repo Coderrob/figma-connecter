@@ -23,3 +23,8 @@
  */
 export { processComponentBatch } from "./batch";
 export { runConnectPipeline } from "./runner";
+export type {
+  IPipelineContext,
+  PipelineContext,
+  PipelineContextSeed,
+} from "@/src/types/pipeline";

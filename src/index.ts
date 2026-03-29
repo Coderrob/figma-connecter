@@ -32,4 +32,5 @@ export * from "./io";
 export * from "./mappers";
 export * from "./parsers";
 export * from "./pipeline";
+export * from "./types/cli";
 export * from "./utils";
