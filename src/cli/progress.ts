@@ -25,8 +25,8 @@
 import type {
   IProgressIndicator,
   IProgressIndicatorOptions,
-} from "@/src/types/cli";
-import { ProgressStatus } from "@/src/types/cli";
+} from "@/src/cli/types";
+import { ProgressStatus } from "@/src/cli/types";
 
 /** Animation frames for the spinner. */
 const SPINNER_FRAMES = ["-", String.raw`\\`, "|", "/"];

@@ -19,39 +19,29 @@
  *
  * Applies per-class extractors across an inheritance chain and merges results deterministically.
  *
- * @module parsers/webcomponent/chain-extractor
+ * @module parsers/webcomponent/shared/chain-extractor
  */
 
 import { mergeByKey } from "@/src/utils/merge-by-key";
 
 import ts from "typescript";
 
-/**
- * Aggregated extraction results for a class chain.
- */
 export interface IChainExtractionResult<TItem> {
-  /** Extracted items merged by key. */
   readonly items: readonly TItem[];
-  /** Warnings produced during extraction. */
   readonly warnings: readonly string[];
 }
 
-/**
- * Options for extracting and merging items across a class chain.
- */
 export interface IChainExtractorOptions<TItem> {
-  /** Extractor applied to each class in the chain. */
   readonly extract: (
     classNode: ts.ClassLikeDeclaration,
   ) => IChainExtractionResult<TItem>;
-  /** Key selector for deterministic merging. */
   readonly getKey: (item: TItem) => string;
-  /** Optional merge strategy when keys collide. */
   readonly merge?: (existing: TItem, incoming: TItem) => TItem;
 }
 
 /**
  * Applies the configured extractor to a class node.
+ *
  * @param options - Chain extraction options.
  * @param classNode - Class node to process.
  * @returns Extraction result for the class node.
@@ -66,7 +56,7 @@ function extractForClassNode<TItem>(
 /**
  * Applies an extractor across the class chain and merges items by key.
  *
- * @param classChain - Ordered class chain (base to derived).
+ * @param classChain - Ordered class chain.
  * @param options - Extraction and merge options.
  * @returns Aggregated items and warnings.
  */
@@ -96,6 +86,7 @@ export function extractFromChain<TItem>(
 
 /**
  * Selects extracted items from a chain extraction result.
+ *
  * @param result - Extraction result.
  * @returns Extracted items.
  */
@@ -107,6 +98,7 @@ function selectExtractedItems<TItem>(
 
 /**
  * Selects warnings from a chain extraction result.
+ *
  * @param result - Extraction result.
  * @returns Extraction warnings.
  */

@@ -22,9 +22,9 @@
  * @module utils/merge-by-key
  */
 
-import type { IMergeByKeyOptions } from "@/src/types/utils";
+import type { IMergeByKeyOptions } from "@/src/utils/types";
 
-export type { IMergeByKeyOptions, MergeByKeyOptions } from "@/src/types/utils";
+export type { IMergeByKeyOptions, MergeByKeyOptions } from "@/src/utils/types";
 
 /**
  * Merges a list of items into a Map keyed by the provided selector.

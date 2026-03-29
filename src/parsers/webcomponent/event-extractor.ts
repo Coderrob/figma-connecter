@@ -19,16 +19,20 @@ import type { IEventDescriptor } from "@/src/core/types";
 import type {
   EventExtractionResult,
   IEventExtractionContext,
-} from "@/src/types/parsers-webcomponent";
+} from "@/src/parsers/webcomponent/types";
 import { mergeByKey } from "@/src/utils/merge-by-key";
 import { toPascalCase } from "@/src/utils/strings";
 import { getJSDocTagText } from "@/src/utils/ts";
 import ts from "typescript";
 
-import type { IASTVisitorResult, IDispatchEventCall } from "./ast-visitor";
-import { extractFromChain } from "./chain-extractor";
+import type {
+  IASTVisitorResult,
+  IDispatchEventCall,
+} from "./shared/ast-visitor";
+import { extractFromChain } from "./shared/chain-extractor";
 
 const JSDOC_EVENT_TAG = "event";
+const JSDOC_EVENT_NAME_PATTERN = /^([A-Za-z0-9-:_]+)/;
 
 /**
  * Derives a React handler name from an event name and optional comment.
@@ -48,28 +52,22 @@ const deriveReactHandler = (eventName: string, comment?: string): string => {
 };
 
 /**
- * extractEvents TODO: describe.
- * @param classDeclaration TODO: describe parameter
- * @param context TODO: describe parameter
- * @returns TODO: describe return value
+ * Extracts event descriptors from a single class declaration.
+ *
+ * Events are collected from both class-level JSDoc `@event` tags and
+ * `dispatchEvent(...)` calls discovered during AST visitation.
+ *
+ * @param classDeclaration - Class declaration to inspect.
+ * @param context - Event extraction context with pre-collected AST data.
+ * @returns Extracted events and any warnings.
  */
 export const extractEvents = (
   classDeclaration: Readonly<ts.ClassLikeDeclaration>,
   context: Readonly<IEventExtractionContext>,
 ): EventExtractionResult => {
-  const warnings: string[] = [];
-  const events = [
-    ...extractEventsFromJSDoc(classDeclaration),
-    ...extractEventsFromDispatch(classDeclaration, context.astData),
-  ];
-  const unique = mergeByKey(events, {
-    getKey: getEventKey,
-  });
-
-  return {
-    items: Array.from(unique.values()),
-    warnings,
-  };
+  return createEventExtractionResult(
+    extractEventsForClass(context, classDeclaration).items,
+  );
 };
 
 /**
@@ -82,19 +80,17 @@ function extractEventsForClass(
   context: Readonly<IEventExtractionContext>,
   classDecl: Readonly<ts.ClassLikeDeclaration>,
 ): EventExtractionResult {
-  const jsdocEvents = extractEventsFromJSDoc(classDecl);
-  const dispatchEvents = extractEventsFromDispatch(classDecl, context.astData);
-  return {
-    items: [...jsdocEvents, ...dispatchEvents],
-    warnings: [],
-  };
+  return createEventExtractionResult(
+    collectEventsForClass(classDecl, context.astData),
+  );
 }
 
 /**
- * extractEventsFromChain TODO: describe.
- * @param classChain TODO: describe parameter
- * @param context TODO: describe parameter
- * @returns TODO: describe return value
+ * Extracts and merges event descriptors across an inheritance chain.
+ *
+ * @param classChain - Ordered class chain to inspect.
+ * @param context - Event extraction context with pre-collected AST data.
+ * @returns Deduplicated events and merged warnings for the class chain.
  */
 export const extractEventsFromChain = (
   classChain: readonly ts.ClassLikeDeclaration[],
@@ -112,20 +108,76 @@ export const extractEventsFromChain = (
 };
 
 /**
- * extractEventsFromDispatch TODO: describe.
- * @param classDeclaration TODO: describe parameter
- * @param astData TODO: describe parameter
- * @returns TODO: describe return value
+ * Collects raw event descriptors for a single class declaration.
+ *
+ * @param classDeclaration - Class declaration to inspect.
+ * @param astData - Pre-collected AST data containing dispatch event calls.
+ * @returns Event descriptors collected from JSDoc and dispatch calls.
+ */
+function collectEventsForClass(
+  classDeclaration: Readonly<ts.ClassLikeDeclaration>,
+  astData: Readonly<IASTVisitorResult>,
+): readonly IEventDescriptor[] {
+  return [
+    ...extractEventsFromJSDoc(classDeclaration),
+    ...extractEventsFromDispatch(classDeclaration, astData),
+  ];
+}
+
+/**
+ * Creates a normalized event extraction result with deduplicated items.
+ *
+ * @param events - Event descriptors to normalize.
+ * @returns Extraction result with de-duplicated events and no warnings.
+ */
+function createEventExtractionResult(
+  events: readonly IEventDescriptor[],
+): EventExtractionResult {
+  return {
+    items: dedupeEvents(events),
+    warnings: [],
+  };
+}
+
+/**
+ * Extracts events from `dispatchEvent(...)` calls belonging to a class.
+ *
+ * @param classDeclaration - Class declaration whose dispatch calls should be considered.
+ * @param astData - Pre-collected AST data containing dispatch call records.
+ * @returns Deduplicated dispatch-derived event descriptors.
  */
 function extractEventsFromDispatch(
   classDeclaration: Readonly<ts.ClassLikeDeclaration>,
   astData: Readonly<IASTVisitorResult>,
 ): IEventDescriptor[] {
-  // Use pre-collected dispatchEvent calls
   const events = astData.dispatchEventCalls
     .filter(isDispatchCallForClass.bind(undefined, classDeclaration))
     .map(mapDispatchCallToEvent);
+  return dedupeEvents(events);
+}
 
+/**
+ * Extracts event descriptors from class-level JSDoc `@event` tags.
+ *
+ * @param classDeclaration - Class declaration to inspect.
+ * @returns Event descriptors derived from matching JSDoc tags.
+ */
+function extractEventsFromJSDoc(
+  classDeclaration: Readonly<ts.ClassLikeDeclaration>,
+): IEventDescriptor[] {
+  const tags = ts.getJSDocTags(classDeclaration).filter(isEventTag);
+  return tags.flatMap(mapJSDocTagToEvents);
+}
+
+/**
+ * De-duplicates event descriptors by event name.
+ *
+ * @param events - Event descriptors to normalize.
+ * @returns De-duplicated event descriptors in insertion order.
+ */
+function dedupeEvents(
+  events: readonly IEventDescriptor[],
+): IEventDescriptor[] {
   if (events.length === 0) {
     return [];
   }
@@ -133,20 +185,7 @@ function extractEventsFromDispatch(
   const unique = mergeByKey(events, {
     getKey: getEventKey,
   });
-
   return Array.from(unique.values());
-}
-
-/**
- * extractEventsFromJSDoc TODO: describe.
- * @param classDeclaration TODO: describe parameter
- * @returns TODO: describe return value
- */
-function extractEventsFromJSDoc(
-  classDeclaration: Readonly<ts.ClassLikeDeclaration>,
-): IEventDescriptor[] {
-  const tags = ts.getJSDocTags(classDeclaration).filter(isEventTag);
-  return tags.flatMap(mapJSDocTagToEvents);
 }
 
 /**
@@ -201,22 +240,52 @@ function mapDispatchCallToEvent(
  * @returns Event descriptor list derived from the tag.
  */
 function mapJSDocTagToEvents(tag: Readonly<ts.JSDocTag>): IEventDescriptor[] {
+  const parsedEvent = parseJSDocEventTag(tag);
+  if (!parsedEvent) {
+    return [];
+  }
+
+  const { eventName, text } = parsedEvent;
+  return [createEventDescriptor(eventName, text)];
+}
+
+/**
+ * Parses an event name and raw text payload from a JSDoc `@event` tag.
+ *
+ * @param tag - JSDoc event tag to inspect.
+ * @returns Parsed tag payload or `null` when the tag does not declare an event name.
+ */
+function parseJSDocEventTag(
+  tag: Readonly<ts.JSDocTag>,
+): { readonly eventName: string; readonly text: string } | null {
   const text = getJSDocTagText(tag);
   if (!text) {
-    return [];
+    return null;
   }
 
-  const nameMatch = text.match(/^([A-Za-z0-9-:_]+)/);
+  const nameMatch = text.match(JSDOC_EVENT_NAME_PATTERN);
   const eventName = nameMatch?.[1];
   if (!eventName) {
-    return [];
+    return null;
   }
 
-  return [
-    {
-      name: eventName,
-      reactHandler: deriveReactHandler(eventName, text),
-      detailType: null,
-    },
-  ];
+  return { eventName, text };
+}
+
+/**
+ * Creates a normalized event descriptor.
+ *
+ * @param eventName - Event name to represent.
+ * @param comment - Optional raw source text used for handler overrides.
+ * @returns Normalized event descriptor.
+ */
+function createEventDescriptor(
+  eventName: string,
+  comment?: string,
+): IEventDescriptor {
+  return {
+    name: eventName,
+    reactHandler: deriveReactHandler(eventName, comment),
+    detailType: null,
+  };
 }

@@ -15,16 +15,14 @@
  */
 
 /**
- * Shared Types Index
+ * Internal Plugin Registry Module
  *
- * Re-exports shared type modules for package-level compatibility.
+ * Provides centralized access to plugin registration functions
+ * to avoid circular dependencies in the public plugins API.
  *
- * @module types
+ * @internal
+ * @module plugins/internal-registry
  */
 
-export * from "./cli";
-export * from "./io";
-export * from "./parsers-webcomponent";
-export * from "./pipeline";
-export * from "./plugins";
-export * from "./utils";
+export { getAllEmitterMetadata, registerEmitterPlugin } from "@/src/emitters/factory";
+export { getAllParserMetadata, registerParserPlugin } from "@/src/parsers/factory";

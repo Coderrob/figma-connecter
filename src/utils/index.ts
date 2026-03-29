@@ -17,12 +17,12 @@
 /**
  * Utilities Index
  *
- * Re-exports all utility functions and compatibility types.
+ * Re-exports utility functions and utility-local types.
  *
  * @module utils
  */
 
-export type { IMergeByKeyOptions, MergeByKeyOptions } from "@/src/types/utils";
+export type { IMergeByKeyOptions, MergeByKeyOptions } from "./types";
 export { mergeByKey } from "./merge-by-key";
 export {
   buildCodeConnectFilePath,

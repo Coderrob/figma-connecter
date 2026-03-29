@@ -22,7 +22,7 @@ import path from 'node:path';
 
 import ts from 'typescript';
 
-import { resolveTagName } from '../../src/parsers/webcomponent/tagname-resolver';
+import { resolveTagName } from '../../src/parsers/webcomponent/tagname';
 
 const createSourceFile = (source: string, fileName = 'component.ts'): ts.SourceFile =>
   ts.createSourceFile(fileName, source, ts.ScriptTarget.ESNext, true, ts.ScriptKind.TS);

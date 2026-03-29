@@ -15,13 +15,16 @@
  */
 
 /**
- * CLI Context Module
+ * Plugin Parser API
  *
- * Standardizes immutable command contexts and execution stages.
+ * Local plugin-facing parser registration exports.
  *
- * @module cli/context
+ * @module plugins/parsers
  */
 
-// Re-exports from ../core are disabled due to ESLint rule preventing
-// parent directory re-exports to avoid circular dependencies.
-// Types should be imported directly from ../types/cli instead.
+export {
+  hasParserPlugin,
+  listParserTargets,
+  type IParserPluginOptions,
+  registerParserPlugin,
+} from "@/src/parsers/factory";

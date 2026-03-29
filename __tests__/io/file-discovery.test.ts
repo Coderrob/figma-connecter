@@ -28,7 +28,7 @@ import {
   discoverComponentFiles,
   isComponentFile,
 } from '../../src/io/file-discovery';
-import type { IFileDiscoveryFileSystem } from '../../src/types/io';
+import type { IFileDiscoveryFileSystem } from '../../src/io/types';
 
 /**
  * Creates a mock Stats object.

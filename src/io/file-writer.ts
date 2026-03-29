@@ -27,7 +27,7 @@ import {
   WriteStatus,
   type IFileWriteOptions,
   type IFileWriteResult,
-} from "@/src/types/io";
+} from "@/src/io/types";
 import { nodeIoAdapter } from "./adapter";
 import {
   DEFAULT_SECTION_MARKERS,
@@ -39,8 +39,8 @@ export type {
   FileWriteResult,
   IFileWriteOptions,
   IFileWriteResult,
-} from "@/src/types/io";
-export { WriteStatus } from "@/src/types/io";
+} from "@/src/io/types";
+export { WriteStatus } from "@/src/io/types";
 
 /**
  * Writes a file to disk, updating generated sections if configured.

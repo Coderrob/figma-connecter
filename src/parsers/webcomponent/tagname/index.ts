@@ -15,16 +15,12 @@
  */
 
 /**
- * Connect Pipeline Orchestrator
+ * Web Component Tag Name Utilities
  *
- * Coordinates discovery, loading, parsing, emitting, and writing.
+ * Groups tag-name resolution helpers and supporting modules for the
+ * Web Component parser.
  *
- * @module pipeline
+ * @module parsers/webcomponent/tagname
  */
-export { processComponentBatch } from "./batch";
-export { runConnectPipeline } from "./runner";
-export type {
-  IPipelineContext,
-  PipelineContext,
-  PipelineContextSeed,
-} from "./types";
+
+export { resolveTagName } from "./resolver";

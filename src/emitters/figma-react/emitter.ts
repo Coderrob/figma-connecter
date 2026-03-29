@@ -37,7 +37,7 @@ import {
   withProps,
   withSections,
   withWarnings,
-} from "@/src/emitters/utils";
+} from "@/src/emitters/shared/utils";
 import {
   buildCodeConnectFilePath,
   resolveDistReactImportPath,

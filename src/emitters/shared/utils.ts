@@ -15,30 +15,13 @@
  */
 
 /**
- * IEmitter Utilities Module
+ * Shared Emitter Utility API
  *
- * Barrel export module that consolidates emitter utilities.
- * Functionality extracted into focused modules for better maintainability.
+ * Consolidates the shared emitter utility surface used by built-in emitters.
  *
- * @module emitters/utils
+ * @module emitters/shared/utils
  */
 
-// Re-export from formatting module
-export { formatPropAccessor, formatPropKey, indent, indentBlock, isValidIdentifier, toTitleCase } from './formatting';
-
-// Re-export from figma-mapper module
-export { getComponentBaseName, mapPropToFigma, sortByName, type IFigmaPropMapping } from './figma-mapper';
-
-// Re-export from section-builder module
-export {
-  buildEventsSection,
-  buildExampleTemplate,
-  buildPropsSection,
-  buildReactExampleSection,
-  type IExampleTemplate,
-} from './section-builder';
-
-// Re-export from file-builder module
 export {
   buildFilePayload,
   createFilePayload,
@@ -50,4 +33,26 @@ export {
   wrapGeneratedSection,
   type FilePayloadBuilder,
   type IFilePayloadDraft,
-} from './file-builder';
+} from "./file-builder";
+export {
+  getComponentBaseName,
+  mapPropToFigma,
+  sortByName,
+  type IFigmaPropMapping,
+} from "./figma-mapper";
+export {
+  formatPropAccessor,
+  formatPropKey,
+  indent,
+  indentBlock,
+  isValidIdentifier,
+  toTitleCase,
+} from "./formatting";
+export {
+  buildEventsSection,
+  buildExampleTemplate,
+  buildPropsSection,
+  buildReactExampleSection,
+  type IExampleTemplate,
+  type IPropsSection,
+} from "./section-builder";

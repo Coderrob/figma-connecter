@@ -23,9 +23,18 @@
  */
 
 export { parseWebComponent, WebComponentParser } from "./parser";
+export type {
+  EventExtractionResult,
+  IEventExtractionContext,
+  IInheritanceContext,
+  IInheritanceResolution,
+  ITagNameResolution,
+  ITagNameResolverOptions,
+  IWebComponentParseResult,
+} from "./types";
 
 export { discoverComponentClass } from "./component-discovery";
 export { extractPropertyDecorators } from "./decorator-extractor";
 export { extractEvents, extractEventsFromChain } from "./event-extractor";
 export { resolveInheritanceChain } from "./inheritance-resolver";
-export { resolveTagName } from "./tagname-resolver";
+export { resolveTagName } from "./tagname";

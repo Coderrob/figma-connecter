@@ -7,7 +7,7 @@
  * @module commands/command-builder
  */
 import assert from "node:assert/strict";
-import type { ICommandStages } from "@/src/types/cli";
+import type { ICommandStages } from "@/src/cli/types";
 
 interface ICommandBuilderConfig<Context, IResult> {
   readonly validate?: () => Context;

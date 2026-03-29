@@ -25,7 +25,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import { nodeIoAdapter } from "@/src/io/adapter";
-import type { IGlobalCliOptions } from "@/src/types/cli";
+import type { IGlobalCliOptions } from "@/src/cli/types";
 
 /**
  * Validates and resolves a config file path if provided.

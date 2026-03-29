@@ -24,7 +24,7 @@ import path from "node:path";
 
 import ts from "typescript";
 
-import { resolveTagName } from "../../../src/parsers/webcomponent/tagname-resolver";
+import { resolveTagName } from "../../../src/parsers/webcomponent/tagname";
 
 describe("resolveTagName", () => {
   afterEach(() => {

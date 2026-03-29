@@ -19,7 +19,7 @@ import { ClassDiscoveryMethod } from "@/src/core/types";
 import type { IClassSource } from "@/src/core/types";
 import ts from "typescript";
 
-import type { IASTVisitorResult } from "./ast-visitor";
+import type { IASTVisitorResult } from "./shared/ast-visitor";
 
 const CUSTOM_ELEMENT_DECORATOR = "customElement";
 const TAGNAME_JSDOC_TAG = "tagname";

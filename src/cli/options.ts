@@ -22,7 +22,7 @@
  * @module cli/options
  */
 
-import type { IGlobalCliOptions } from "@/src/types/cli";
+import type { IGlobalCliOptions } from "@/src/cli/types";
 
 import { Command } from "commander";
 

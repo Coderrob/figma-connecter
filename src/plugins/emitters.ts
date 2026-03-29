@@ -15,16 +15,16 @@
  */
 
 /**
- * Connect Pipeline Orchestrator
+ * Plugin Emitter API
  *
- * Coordinates discovery, loading, parsing, emitting, and writing.
+ * Local plugin-facing emitter registration exports.
  *
- * @module pipeline
+ * @module plugins/emitters
  */
-export { processComponentBatch } from "./batch";
-export { runConnectPipeline } from "./runner";
-export type {
-  IPipelineContext,
-  PipelineContext,
-  PipelineContextSeed,
-} from "./types";
+
+export {
+  type IEmitterPluginOptions,
+  hasEmitterPlugin,
+  listEmitterTargets,
+  registerEmitterPlugin,
+} from "@/src/emitters/factory";

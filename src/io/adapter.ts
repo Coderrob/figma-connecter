@@ -25,9 +25,9 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import type { IIoAdapter } from "@/src/types/io";
+import type { IIoAdapter } from "@/src/io/types";
 
-export type { IIoAdapter, IoAdapter } from "@/src/types/io";
+export type { IIoAdapter, IoAdapter } from "@/src/io/types";
 
 /**
  * Default IO adapter backed by the Node.js filesystem.

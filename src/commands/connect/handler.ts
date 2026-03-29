@@ -41,6 +41,8 @@ import type {
   IConnectOptions,
   EmitterTarget,
   IGenerationReport,
+  IComponentResult,
+  IFileChangeDetail,
 } from "@/src/core/types";
 import { GenerationStatus } from "@/src/core/types";
 import { runConnectPipeline } from "@/src/pipeline";
@@ -48,16 +50,21 @@ import type {
   CommandContext,
   CommandStages,
   GlobalCliOptions,
-} from "@/src/types/cli";
-
-import { ProgressStatus } from "@/src/types/cli";
+} from "@/src/cli/types";
+import { ProgressStatus } from "@/src/cli/types";
 import { Command } from "commander";
 import { EMIT_TARGETS } from "./constants";
 import { resolveLogLevel, runCommandStages } from "./helpers";
 import type { IConnectCommandOptions } from "./types";
 
 type PipelineReport = IGenerationReport;
+type PipelineComponentResult = IComponentResult;
+type PipelineFileChange = IFileChangeDetail;
+
 const FAILED_EXIT_CODE = 1;
+const DRY_RUN_DETAILS_HEADER = "=== Dry Run Details ===";
+const GENERATION_SUMMARY_HEADER = "=== Generation Summary ===";
+const UNKNOWN_COMPONENT_NAME = "UnknownComponent";
 
 interface IResolvedConnectInputs {
   readonly inputPath: string;
@@ -238,31 +245,15 @@ function logDryRunDetails(
   logger: Readonly<Logger>,
   report: Readonly<PipelineReport>,
 ): void {
-  if (!report.componentResults?.length) {
+  const componentResults = report.componentResults ?? [];
+  if (componentResults.length === 0) {
     return;
   }
-  logger.info("");
-  logger.info("=== Dry Run Details ===");
-  for (const component of report.componentResults) {
-    const name =
-      component.componentName ??
-      component.model?.className ??
-      "UnknownComponent";
-    const created = component.created.length;
-    const updated = component.updated.length;
-    const unchanged = component.unchanged.length;
 
-    logger.info(
-      `${name}: created ${created}, updated ${updated}, unchanged ${unchanged}`,
-    );
-    const fileChanges = component.fileChanges ?? [];
-    if (fileChanges.length > 0) {
-      for (const change of fileChanges) {
-        const relative =
-          path.relative(process.cwd(), change.filePath) || change.filePath;
-        logger.info(`  - ${relative}: ${change.status} (${change.reason})`);
-      }
-    }
+  logger.info("");
+  logger.info(DRY_RUN_DETAILS_HEADER);
+  for (const component of componentResults) {
+    logComponentDryRunDetails(logger, component);
   }
 }
 
@@ -305,6 +296,75 @@ function logReportDiagnostics(
 }
 
 /**
+ * Logs dry-run summary and file changes for a single component result.
+ * @param logger - Logger used for command output.
+ * @param component - Component result to log.
+ * @returns Nothing.
+ */
+function logComponentDryRunDetails(
+  logger: Readonly<Logger>,
+  component: Readonly<PipelineComponentResult>,
+): void {
+  logger.info(formatComponentDryRunSummary(component));
+  for (const line of getDryRunChangeLines(component)) {
+    logger.info(line);
+  }
+}
+
+/**
+ * Formats the dry-run summary line for a component result.
+ * @param component - Component result to summarize.
+ * @returns Summary line including name and created/updated/unchanged counts.
+ */
+function formatComponentDryRunSummary(
+  component: Readonly<PipelineComponentResult>,
+): string {
+  const name = getComponentDisplayName(component);
+  const created = component.created.length;
+  const updated = component.updated.length;
+  const unchanged = component.unchanged.length;
+  return `${name}: created ${created}, updated ${updated}, unchanged ${unchanged}`;
+}
+
+/**
+ * Returns the display name used for component-level logging.
+ * @param component - Component result to inspect.
+ * @returns Explicit component name, model class name, or a fallback label.
+ */
+function getComponentDisplayName(
+  component: Readonly<PipelineComponentResult>,
+): string {
+  return (
+    component.componentName ??
+    component.model?.className ??
+    UNKNOWN_COMPONENT_NAME
+  );
+}
+
+/**
+ * Builds the dry-run file-change lines for a component result.
+ * @param component - Component result whose file changes should be logged.
+ * @returns Formatted file-change lines.
+ */
+function getDryRunChangeLines(
+  component: Readonly<PipelineComponentResult>,
+): readonly string[] {
+  return (component.fileChanges ?? []).map(formatDryRunChangeLine);
+}
+
+/**
+ * Formats a single dry-run file-change line.
+ * @param change - File change metadata to log.
+ * @returns Formatted file-change line with a relative or absolute path.
+ */
+function formatDryRunChangeLine(
+  change: Readonly<PipelineFileChange>,
+): string {
+  const relative = path.relative(process.cwd(), change.filePath) || change.filePath;
+  return `  - ${relative}: ${change.status} (${change.reason})`;
+}
+
+/**
  * Logs the human-readable generation summary for a pipeline report.
  * @param logger - Logger used for command output.
  * @param report - Pipeline report to summarize.
@@ -315,7 +375,7 @@ function logReportSummary(
   report: Readonly<PipelineReport>,
 ): void {
   logger.info("");
-  logger.info("=== Generation Summary ===");
+  logger.info(GENERATION_SUMMARY_HEADER);
   formatReportSummary(report)
     .split("\n")
     .forEach(
@@ -378,15 +438,7 @@ function reportConnectPipelineStage(
   context: Readonly<ConnectCommandContext>,
   report: Readonly<PipelineReport>,
 ): void {
-  logReportSummary(context.logger, report);
-  if (context.dryRun) {
-    logDryRunDetails(context.logger, report);
-  }
-  logReportDiagnostics(context.logger, report);
-
-  if (isErrorReport(report)) {
-    Reflect.set(process, "exitCode", FAILED_EXIT_CODE);
-  }
+  reportPipelineOutcome(context, report);
 }
 
 /**
@@ -412,4 +464,33 @@ function stopConnectProgressOnError(
   context: Readonly<ConnectCommandContext>,
 ): void {
   context.progress.stop("Connect failed", ProgressStatus.Error);
+}
+
+/**
+ * Logs a pipeline report and applies any process-level side effects.
+ * @param context - Validated connect command context.
+ * @param report - Pipeline generation report.
+ * @returns Nothing.
+ */
+function reportPipelineOutcome(
+  context: Readonly<ConnectCommandContext>,
+  report: Readonly<PipelineReport>,
+): void {
+  logReportSummary(context.logger, report);
+  if (context.dryRun) {
+    logDryRunDetails(context.logger, report);
+  }
+  logReportDiagnostics(context.logger, report);
+  applyReportExitCode(report);
+}
+
+/**
+ * Applies the process exit code for a pipeline report.
+ * @param report - Pipeline generation report to evaluate.
+ * @returns Nothing.
+ */
+function applyReportExitCode(report: Readonly<PipelineReport>): void {
+  if (isErrorReport(report)) {
+    Reflect.set(process, "exitCode", FAILED_EXIT_CODE);
+  }
 }

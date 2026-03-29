@@ -50,9 +50,9 @@ import type {
   IIoAdapter,
   IDiscoveredFile,
   IFileWriteResult,
-} from "@/src/types/io";
-import { WriteStatus } from "@/src/types/io";
-import type { IPipelineContext } from "@/src/types/pipeline";
+} from "@/src/io/types";
+import { WriteStatus } from "@/src/io/types";
+import type { IPipelineContext } from "@/src/pipeline/types";
 
 import type ts from "typescript";
 
@@ -100,6 +100,11 @@ interface IWriteRequest {
 
 interface IFileExistenceRecord {
   readonly exists: boolean;
+}
+
+interface IEmissionWritePlan {
+  readonly useDirectWrite: boolean;
+  readonly fileRecord: IFileExistenceRecord;
 }
 
 /**
@@ -475,12 +480,6 @@ export function processComponentBatch(
   discovered: readonly IDiscoveredFile[],
   context: Readonly<IPipelineContext>,
 ): IAggregateResult<IComponentResult> {
-  const steps: FileStep[] = [
-    resolveSourceFileStep,
-    parseComponentStep,
-    emitComponentStep,
-  ];
-
   let results: IResult<IComponentResult>[] = [];
   let shouldContinue = true;
 
@@ -489,15 +488,27 @@ export function processComponentBatch(
       break;
     }
 
-    const initialState = createFileContext(file, context);
-    const finalState = runSteps(initialState, steps);
-    const outcome = finalizeFileOutcome(finalState);
-
+    const outcome = processDiscoveredFile(file, context);
     results = [...results, outcome.result];
     shouldContinue = outcome.shouldContinue;
   }
 
   return aggregateResults(results);
+}
+
+/**
+ * Processes a single discovered component file through the batch pipeline.
+ * @param file - Discovered component file metadata.
+ * @param context - Shared pipeline context for the batch.
+ * @returns Result payload and continuation flag for batch iteration.
+ */
+function processDiscoveredFile(
+  file: Readonly<IDiscoveredFile>,
+  context: Readonly<IPipelineContext>,
+): IFileProcessOutcome {
+  const initialState = createFileContext(file, context);
+  const finalState = runFilePipeline(initialState);
+  return finalizeFileOutcome(finalState);
 }
 
 /**
@@ -546,6 +557,21 @@ function runSteps(
   steps: readonly FileStep[],
 ): IResult<IFileContext> {
   return steps.reduce(runFileStep, state);
+}
+
+/**
+ * Runs the standard file-processing pipeline for a discovered file.
+ * @param state - Initial file-processing state.
+ * @returns Final file-processing state after source resolution, parsing, and emission.
+ */
+function runFilePipeline(
+  state: Readonly<IResult<IFileContext>>,
+): IResult<IFileContext> {
+  return runSteps(state, [
+    resolveSourceFileStep,
+    parseComponentStep,
+    emitComponentStep,
+  ]);
 }
 
 /**
@@ -686,24 +712,66 @@ function writeEmission(
   emission: Readonly<IEmitResult>,
   writeContext: Readonly<IWriteContext>,
 ): IWriteOutcome {
-  const { io } = writeContext;
-  const sections = emission.sections;
-  const exists = io.exists(emission.filePath);
-  const fileRecord: IFileExistenceRecord = { exists };
-
-  if (shouldWriteFullContent(emission, writeContext, fileRecord)) {
-    return writeDirectEmission(emission, writeContext, fileRecord);
+  const plan = createEmissionWritePlan(emission, writeContext);
+  if (plan.useDirectWrite) {
+    return writeDirectEmission(emission, writeContext, plan.fileRecord);
   }
 
-  if (!exists) {
-    return writeDirectEmission(emission, writeContext, fileRecord);
-  }
+  return applySectionUpdate(
+    emission.filePath,
+    emission.sections as GeneratedSections,
+    writeContext,
+  );
+}
 
-  if (!sections) {
-    return writeDirectEmission(emission, writeContext, fileRecord);
-  }
+/**
+ * Chooses the write strategy for an emitter output.
+ * @param emission - Emitter output describing the target file and content.
+ * @param writeContext - Write-time configuration and IO dependencies.
+ * @returns Write plan including file existence metadata and whether to bypass section updates.
+ */
+function createEmissionWritePlan(
+  emission: Readonly<IEmitResult>,
+  writeContext: Readonly<IWriteContext>,
+): IEmissionWritePlan {
+  const fileRecord = getFileExistenceRecord(emission.filePath, writeContext.io);
+  return {
+    fileRecord,
+    useDirectWrite: shouldWriteDirectEmission(emission, writeContext, fileRecord),
+  };
+}
 
-  return applySectionUpdate(emission.filePath, sections, writeContext);
+/**
+ * Returns file existence metadata for a write target.
+ * @param filePath - File path to inspect.
+ * @param io - IO adapter used for filesystem access.
+ * @returns Existing-file metadata for the path.
+ */
+function getFileExistenceRecord(
+  filePath: string,
+  io: Readonly<IIoAdapter>,
+): IFileExistenceRecord {
+  return {
+    exists: io.exists(filePath),
+  };
+}
+
+/**
+ * Returns true when an emission should use direct file writes instead of section updates.
+ * @param emission - Emitter output describing the target file and content.
+ * @param writeContext - Write-time configuration and IO dependencies.
+ * @param fileRecord - Existing-file metadata for the destination path.
+ * @returns True when direct writing should be used.
+ */
+function shouldWriteDirectEmission(
+  emission: Readonly<IEmitResult>,
+  writeContext: Readonly<IWriteContext>,
+  fileRecord: Readonly<IFileExistenceRecord>,
+): boolean {
+  return (
+    shouldWriteFullContent(emission, writeContext, fileRecord) ||
+    !fileRecord.exists
+  );
 }
 
 /**

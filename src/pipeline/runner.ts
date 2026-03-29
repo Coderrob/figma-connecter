@@ -49,9 +49,8 @@ import { discoverComponentFiles } from "@/src/io/file-discovery";
 import { loadSourceProgram } from "@/src/io/source-loader";
 import { createDefaultParser } from "@/src/parsers/factory";
 import type { IParser } from "@/src/parsers/types";
-import type { IDiscoveredFile, ISourceLoadResult } from "@/src/types/io";
-
-import type { PipelineContextSeed } from "@/src/types/pipeline";
+import type { IDiscoveredFile, ISourceLoadResult } from "@/src/io/types";
+import type { PipelineContextSeed } from "@/src/pipeline/types";
 import { processComponentBatch } from "./batch";
 
 interface IRunnerContext {
@@ -108,6 +107,19 @@ function appendRunnerResults(
 }
 
 /**
+ * Creates report-build options for the current runner state.
+ * @param state - Runner state containing discovery and component results.
+ * @returns Report-build options derived from the state.
+ */
+function createReportBuildOptions(
+  state: Readonly<IRunnerContext>,
+): IReportBuildOptions {
+  return {
+    includeComponents: state.discovered.length > 0,
+  };
+}
+
+/**
  * Builds the final generation report from collected component results.
  * @param results - Component results accumulated during the pipeline run.
  * @param timer - Timer used to calculate total pipeline duration.
@@ -129,6 +141,33 @@ const buildReport = (
 
   return options.includeComponents ? { ...report, componentResults } : report;
 };
+
+/**
+ * Builds the shared pipeline seed used for source loading and batch processing.
+ * @param options - Connect command options controlling pipeline behavior.
+ * @param logger - Logger used by the pipeline.
+ * @param emitters - Emitter instances selected for the run.
+ * @param parser - Parser used for component parsing.
+ * @returns Shared pipeline seed for downstream steps.
+ */
+function createPipelineSeed(
+  options: Readonly<IConnectOptions>,
+  logger: Readonly<Logger>,
+  emitters: readonly IEmitter[],
+  parser: Readonly<IParser>,
+): PipelineContextSeed {
+  return {
+    emitters,
+    parser,
+    dryRun: options.dryRun,
+    strict: options.strict,
+    logger,
+    continueOnError: options.continueOnError,
+    baseImportPath: options.baseImportPath,
+    force: options.force ?? false,
+    io: nodeIoAdapter,
+  };
+}
 
 /**
  * Creates the initial runner context for a pipeline invocation.
@@ -191,11 +230,11 @@ const discoverComponentsStep: RunnerStep = (state) => {
  * @returns Updated runner state with the final report attached.
  */
 const finalizeReportStep: RunnerStep = (state) => {
-  const { componentResults, discovered, results, timer } = state.value;
+  const { componentResults, results, timer } = state.value;
   const reportWithComponents = buildReport(
     results,
     timer,
-    { includeComponents: discovered.length > 0 },
+    createReportBuildOptions(state.value),
     componentResults,
   );
 
@@ -224,17 +263,7 @@ const initializePipelineStep: RunnerStep = (state) => {
   const { options, logger } = state.value;
   const emitters = createEmitters({ targets: options.emitTargets });
   const parser = createDefaultParser();
-  const pipelineSeed: PipelineContextSeed = {
-    emitters,
-    parser,
-    dryRun: options.dryRun,
-    strict: options.strict,
-    logger,
-    continueOnError: options.continueOnError,
-    baseImportPath: options.baseImportPath,
-    force: options.force ?? false,
-    io: nodeIoAdapter,
-  };
+  const pipelineSeed = createPipelineSeed(options, logger, emitters, parser);
 
   return setInitializedPipeline(state, emitters, parser, pipelineSeed);
 };
@@ -304,7 +333,7 @@ function resolveFinalReport(
   return buildReport(
     state.value.results,
     state.value.timer,
-    { includeComponents: state.value.discovered.length > 0 },
+    createReportBuildOptions(state.value),
     state.value.componentResults,
   );
 }
@@ -340,16 +369,8 @@ export function runConnectPipeline(
   options: Readonly<IConnectOptions>,
   logger: Readonly<Logger>,
 ): Promise<IGenerationReport> {
-  const finalState = runSteps(
+  const finalState = runPipelineSteps(
     createResult(createInitialRunnerContext(options, logger)),
-    [
-      discoverComponentsStep,
-      initializePipelineStep,
-      loadSourcesStep,
-      warnOnMissingEmittersStep,
-      runBatchStep,
-      finalizeReportStep,
-    ],
   );
 
   return Promise.resolve(resolveFinalReport(finalState));
@@ -380,6 +401,24 @@ function runSteps(
   steps: readonly RunnerStep[],
 ): IResult<IRunnerContext> {
   return steps.reduce(runRunnerStep, state);
+}
+
+/**
+ * Runs the standard pipeline runner steps in order.
+ * @param state - Initial runner state.
+ * @returns Final runner state after all standard steps run.
+ */
+function runPipelineSteps(
+  state: Readonly<IResult<IRunnerContext>>,
+): IResult<IRunnerContext> {
+  return runSteps(state, [
+    discoverComponentsStep,
+    initializePipelineStep,
+    loadSourcesStep,
+    warnOnMissingEmittersStep,
+    runBatchStep,
+    finalizeReportStep,
+  ]);
 }
 
 /**

@@ -24,19 +24,7 @@ export {
   MemoryIoAdapter,
   nodeIoAdapter,
 } from "./adapter";
-export type {
-  DiscoveredFile,
-  FileDiscoveryFileSystem,
-  FileDiscoveryOptions,
-  FileWriteOptions,
-  FileWriteResult,
-  IoAdapter,
-  SectionMarkers,
-  SectionUpdateResult,
-  SourceLoadResult,
-  SourceLoaderOptions,
-} from "@/src/types/io";
-export { SectionUpdateStatus, WriteStatus } from "@/src/types/io";
+export * from "./types";
 export {
   COMPONENT_GLOB,
   COMPONENT_SUFFIX,

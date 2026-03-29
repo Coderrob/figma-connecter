@@ -18,28 +18,25 @@
  * String Formatting Utilities Module
  *
  * Provides utilities for string manipulation, indentation, and identifier handling.
- * Extracted from emitters/utils.ts for better modularity.
  *
- * @module emitters/formatting
+ * @module emitters/shared/formatting
  */
 
-// ============================================================================
-// String Formatting
-// ============================================================================
-
 /**
- * Prefixes a line with an indentation string.
+ * Prefixes a line with indentation content.
+ *
  * @param prefix - Indentation prefix to prepend.
  * @param line - Line content to indent.
- * @returns Indented line content.
+ * @returns Indented line.
  */
 function applyIndent(prefix: string, line: string): string {
   return `${prefix}${line}`;
 }
 
 /**
- * Formats a property accessor for generated `props` lookups.
- * @param value - Property name to access on the `props` object.
+ * Formats a property accessor for generated props lookups.
+ *
+ * @param value - Property name to access.
  * @returns Dot notation for identifiers, otherwise bracket notation.
  */
 export const formatPropAccessor = (value: string): string =>
@@ -47,20 +44,18 @@ export const formatPropAccessor = (value: string): string =>
 
 /**
  * Formats a property key for generated object literals.
+ *
  * @param value - Property name to emit.
- * @returns Unquoted identifiers or quoted string keys for non-identifiers.
+ * @returns Unquoted identifier keys or quoted string keys.
  */
 export const formatPropKey = (value: string): string =>
   isValidIdentifier(value) ? value : `'${value}'`;
 
-// ============================================================================
-// Identifier Handling
-// ============================================================================
-
 /**
- * Formats a single token for title-cased output.
+ * Formats one token for title-cased output.
+ *
  * @param token - Token to capitalize.
- * @returns Capitalized token with the remaining characters lowercased.
+ * @returns Capitalized token.
  */
 function formatTitleToken(token: string): string {
   return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
@@ -68,18 +63,20 @@ function formatTitleToken(token: string): string {
 
 /**
  * Creates a repeated two-space indentation prefix.
+ *
  * @param depth - Indentation depth in two-space units.
- * @returns Indentation string for the requested depth.
+ * @returns Indentation string.
  */
 export function indent(depth: number): string {
   return "  ".repeat(depth);
 }
 
 /**
- * Indents each line in a multi-line string block.
- * @param content - Multi-line content to indent.
- * @param depth - Indentation depth in two-space units.
- * @returns Array of indented lines.
+ * Indents each line in a multi-line content block.
+ *
+ * @param content - Content block to indent.
+ * @param depth - Indentation depth to apply.
+ * @returns Indented content lines.
  */
 export const indentBlock = (content: string, depth: number): string[] => {
   const prefix = indent(depth);
@@ -88,18 +85,17 @@ export const indentBlock = (content: string, depth: number): string[] => {
 };
 
 /**
- * Formats a property key for object literal syntax.
- * Returns the key as-is if it's a valid identifier, otherwise quotes it.
+ * Returns true when a value can be emitted as a JavaScript identifier.
  *
- * @param value - The property key.
- * @returns The formatted key (e.g., 'disabled' or "'data-value'").
+ * @param value - Candidate identifier.
+ * @returns True when the value is a valid identifier.
  */
 export function isValidIdentifier(value: string): boolean {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
 }
 
 /**
- * Converts an identifier or phrase into title case text.
+ * Converts identifier-like text into title case.
  *
  * @param value - Source text to transform.
  * @returns Title-cased text with separators normalized to spaces.

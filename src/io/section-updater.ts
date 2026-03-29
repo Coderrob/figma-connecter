@@ -30,8 +30,8 @@ import type {
   GeneratedSectionName,
   IGeneratedSectionPayload,
 } from "@/src/core/types";
-import type { ISectionMarkers, ISectionUpdateResult } from "@/src/types/io";
-import { SectionUpdateStatus } from "@/src/types/io";
+import type { ISectionMarkers, ISectionUpdateResult } from "@/src/io/types";
+import { SectionUpdateStatus } from "@/src/io/types";
 
 interface ISectionRange {
   readonly endLineEnd: number;

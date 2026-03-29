@@ -38,7 +38,7 @@ import {
   withProps,
   withSections,
   withWarnings,
-} from "@/src/emitters/utils";
+} from "@/src/emitters/shared/utils";
 import { buildCodeConnectFilePath } from "@/src/utils/paths";
 
 import { buildImportsLine } from "./helpers";

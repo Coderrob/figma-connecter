@@ -33,12 +33,11 @@ The system is intentionally layered.
 | Mappers | Data normalization and mapping helpers for emitters | `src/mappers/` |
 | Emitters | Target-specific Code Connect generation | `src/emitters/` |
 | Pipeline | End-to-end orchestration over discovery, parse, emit, and reporting | `src/pipeline/` |
-| Types | Cross-layer contracts used by the runtime and plugin API | `src/types/` |
 | Utils | Pure path, string, merge, and TypeScript utility functions | `src/utils/` |
 
 The layers are designed to be mostly one-way:
 
-`CLI -> Pipeline -> IO / Parsers / Emitters -> Core / Utils / Types`
+`CLI -> Pipeline -> IO / Parsers / Emitters -> Core / Utils`
 
 ## 3. Design Principles
 
@@ -267,8 +266,7 @@ Registry primitives:
 - `src/core/registry-factory.ts`
 - `src/emitters/factory.ts`
 - `src/parsers/factory.ts`
-- `src/plugins.ts`
-- `src/internal-plugin-registry.ts`
+- `src/plugins/`
 
 Extension rules:
 
@@ -405,7 +403,7 @@ src/
     webcomponent/
       tagname/
   pipeline/
-  types/
+  plugins/
   utils/
 __tests__/
 ```

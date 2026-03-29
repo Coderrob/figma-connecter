@@ -15,16 +15,13 @@
  */
 
 /**
- * Connect Pipeline Orchestrator
+ * Shared Web Component Parser Utilities
  *
- * Coordinates discovery, loading, parsing, emitting, and writing.
+ * Groups reusable web component parser infrastructure that is shared across
+ * multiple extractor and resolver modules.
  *
- * @module pipeline
+ * @module parsers/webcomponent/shared
  */
-export { processComponentBatch } from "./batch";
-export { runConnectPipeline } from "./runner";
-export type {
-  IPipelineContext,
-  PipelineContext,
-  PipelineContextSeed,
-} from "./types";
+
+export * from "./ast-visitor";
+export * from "./chain-extractor";

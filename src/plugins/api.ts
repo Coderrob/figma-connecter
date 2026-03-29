@@ -17,10 +17,10 @@
 /**
  * Plugin API Module
  *
- * Centralized plugin registration interface for extending the tool
- * with custom emitters and parsers without modifying core code.
+ * Centralized plugin registration and inspection helpers for extending the tool
+ * with custom emitters and parsers.
  *
- * @module plugins
+ * @module plugins/api
  */
 
 import {
@@ -28,22 +28,8 @@ import {
   getAllParserMetadata,
   registerEmitterPlugin as registerEmitterPluginImpl,
   registerParserPlugin as registerParserPluginImpl,
-} from "./internal-plugin-registry";
-import type { IPluginInfo, IPluginOptions } from "./types/plugins";
-
-// Re-export plugin interfaces and functions
-export {
-  type IEmitterPluginOptions,
-  hasEmitterPlugin,
-  listEmitterTargets,
-  registerEmitterPlugin,
-} from "./emitters/factory";
-export {
-  hasParserPlugin,
-  listParserTargets,
-  type IParserPluginOptions,
-  registerParserPlugin,
-} from "./parsers/factory";
+} from "./internal-registry";
+import type { IPluginInfo, IPluginOptions } from "./types";
 
 /**
  * Gets information about all registered plugins.
@@ -69,7 +55,30 @@ export function getPluginInfo(): IPluginInfo {
 }
 
 /**
+ * Registers one or more plugins in a single call.
+ * Provides a convenient interface for plugin packages that bundle
+ * both emitters and parsers.
+ *
+ * @param options - Plugin configuration.
+ * @throws Error if any target is already registered.
+ */
+export function registerPlugin(options: Readonly<IPluginOptions>): void {
+  if (options.emitters) {
+    for (const emitter of options.emitters) {
+      registerEmitterPluginImpl(emitter);
+    }
+  }
+
+  if (options.parsers) {
+    for (const parser of options.parsers) {
+      registerParserPluginImpl(parser);
+    }
+  }
+}
+
+/**
  * Builds a normalized plugin info tuple from emitter metadata.
+ *
  * @param entry - Emitter metadata map entry.
  * @returns Key/value tuple for plugin info map construction.
  */
@@ -91,6 +100,7 @@ function mapEmitterMetadataEntry(
 
 /**
  * Builds a normalized plugin info tuple from parser metadata.
+ *
  * @param entry - Parser metadata map entry.
  * @returns Key/value tuple for plugin info map construction.
  */
@@ -108,29 +118,4 @@ function mapParserMetadataEntry(
       description: meta.description,
     },
   ];
-}
-
-/**
- * Unified plugin registration options.
- * Allows registering multiple emitters and parsers in a single call.
- *
- * Registers one or more plugins in a single call.
- * Provides a convenient interface for plugin packages that bundle
- * both emitters and parsers.
- *
- * @param options - Plugin configuration.
- * @throws Error if any target is already registered.
- */
-export function registerPlugin(options: Readonly<IPluginOptions>): void {
-  if (options.emitters) {
-    for (const emitter of options.emitters) {
-      registerEmitterPluginImpl(emitter);
-    }
-  }
-
-  if (options.parsers) {
-    for (const parser of options.parsers) {
-      registerParserPluginImpl(parser);
-    }
-  }
 }

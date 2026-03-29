@@ -20,9 +20,7 @@
  * @module commands/connect/helpers
  */
 import { LogLevel } from "@/src/core/logger";
-import type { ICommandStages, IGlobalCliOptions } from "@/src/types/cli";
-
-// Types live in `src/types/cli`.
+import type { ICommandStages, IGlobalCliOptions } from "@/src/cli/types";
 
 /**
  * Resolves the log level based on global CLI options.

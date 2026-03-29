@@ -1,4 +1,3 @@
-import fs from "node:fs";
 /**
  * Copyright (c) 2026 Robert Lindley
  *
@@ -23,12 +22,13 @@ import fs from "node:fs";
  * @module io/file-discovery
  */
 
+import fs from "node:fs";
 import path from "node:path";
 import type {
   IDiscoveredFile,
   IFileDiscoveryOptions,
   IFileDiscoveryFileSystem,
-} from "@/src/types/io";
+} from "@/src/io/types";
 import { POSIX_PATH_SEPARATOR } from "@/src/utils";
 
 export type {
@@ -38,7 +38,7 @@ export type {
   IDiscoveredFile,
   IFileDiscoveryFileSystem,
   IFileDiscoveryOptions,
-} from "@/src/types/io";
+} from "@/src/io/types";
 
 /** File suffix for component source files. */
 export const COMPONENT_SUFFIX = ".component.ts";
@@ -77,10 +77,15 @@ function compareDiscoveredFiles(
 }
 
 /**
- * discoverComponentFiles TODO: describe.
- * @param inputPath TODO: describe parameter
- * @param options TODO: describe parameter
- * @returns TODO: describe return value
+ * Discovers component source files from a file path or directory path.
+ *
+ * When the input is a file, the file is returned only when it matches
+ * the component naming convention. When the input is a directory, the
+ * directory is scanned and optionally traversed recursively.
+ *
+ * @param inputPath - File or directory path to inspect.
+ * @param options - Discovery options controlling recursion, exclusions, and filesystem access.
+ * @returns Sorted list of discovered component files.
  */
 export function discoverComponentFiles(
   inputPath: string,

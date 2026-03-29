@@ -18,9 +18,8 @@
  * Section Builder Module
  *
  * Builds props, events, and example sections for Figma Code Connect files.
- * Extracted from emitters/utils.ts for better modularity.
  *
- * @module emitters/section-builder
+ * @module emitters/shared/section-builder
  */
 
 import type {
@@ -39,8 +38,14 @@ interface IPropsAccumulator {
   readonly warnings: readonly string[];
 }
 
+export interface IPropsSection {
+  readonly lines: readonly string[];
+  readonly warnings: readonly string[];
+}
+
 /**
- * Appends a warning to warning collection when present.
+ * Appends a warning when one is present.
+ *
  * @param warnings - Existing warnings.
  * @param warning - Optional warning message.
  * @returns Updated warning collection.
@@ -53,7 +58,8 @@ function appendWarning(
 }
 
 /**
- * Builds an attribute binding snippet for html example templates.
+ * Builds an attribute binding snippet for HTML example templates.
+ *
  * @param attribute - Attribute descriptor.
  * @returns Formatted binding expression.
  */
@@ -70,6 +76,7 @@ function buildAttributeBinding(
 
 /**
  * Builds a single event mapping line.
+ *
  * @param depth - Base indentation depth.
  * @param event - Event descriptor.
  * @returns Formatted event mapping line.
@@ -83,10 +90,11 @@ function buildEventLine(
 }
 
 /**
- * buildEventsSection TODO: describe.
- * @param events TODO: describe parameter
- * @param depth TODO: describe parameter
- * @returns TODO: describe return value
+ * Builds the `events` section for a Figma Code Connect payload.
+ *
+ * @param events - Event descriptors to serialize.
+ * @param depth - Base indentation depth.
+ * @returns Event section lines ready to insert into the payload.
  */
 export const buildEventsSection = (
   events: readonly IEventDescriptor[],
@@ -102,21 +110,17 @@ export const buildEventsSection = (
   return [`${indent(depth)}events: {`, ...eventLines, `${indent(depth)}},`];
 };
 
-/**
- * IResult of building a web component example template.
- */
 export interface IExampleTemplate {
-  /** Example function string for figma.connect. */
   readonly example: string;
-  /** Whether the example references props. */
   readonly usesProps: boolean;
 }
 
 /**
- * buildExampleTemplate TODO: describe.
- * @param tagName TODO: describe parameter
- * @param attributes TODO: describe parameter
- * @returns TODO: describe return value
+ * Builds the Web Component example function used by `figma.connect(...)`.
+ *
+ * @param tagName - Custom element tag name to render.
+ * @param attributes - Attributes to bind from `props`.
+ * @returns Example template string plus whether it references props.
  */
 export const buildExampleTemplate = (
   tagName: string,
@@ -140,23 +144,20 @@ export const buildExampleTemplate = (
 };
 
 /**
- * buildPropsSection TODO: describe.
- * @param props TODO: describe parameter
- * @param depth TODO: describe parameter
- * @returns TODO: describe return value
+ * Builds the `props` section for emitted Code Connect content.
+ *
+ * @param props - Property descriptors to serialize.
+ * @param depth - Base indentation depth.
+ * @returns Section lines plus any mapping warnings.
  */
 export const buildPropsSection = (
   props: readonly IPropertyDescriptor[],
   depth = 1,
-): { readonly lines: readonly string[]; readonly warnings: readonly string[] } => {
+): IPropsSection => {
   if (props.length === 0) {
-    return {
-      lines: [`${indent(depth)}props: {},`],
-      warnings: [],
-    };
+    return createEmptyPropsSection(depth);
   }
 
-  // Sort deterministically by name
   const sorted = sortByName(props);
   const initial: IPropsAccumulator = {
     lines: [`${indent(depth)}props: {`],
@@ -175,9 +176,10 @@ export const buildPropsSection = (
 };
 
 /**
- * buildReactExampleSection TODO: describe.
- * @param className TODO: describe parameter
- * @returns TODO: describe return value
+ * Builds the React example block used by `figma.connect(...)`.
+ *
+ * @param className - React component class or function name to render.
+ * @returns Multi-line example section string.
  */
 export const buildReactExampleSection = (className: string): string =>
   [
@@ -188,6 +190,7 @@ export const buildReactExampleSection = (className: string): string =>
 
 /**
  * Formats a binding line with one level of indentation.
+ *
  * @param binding - Raw binding expression.
  * @returns Indented binding line.
  */
@@ -197,6 +200,7 @@ function formatBindingLine(binding: string): string {
 
 /**
  * Formats a single inner enum mapping line.
+ *
  * @param depth - Base indentation depth.
  * @param innerLine - Raw inner mapping line.
  * @returns Indented mapping line.
@@ -206,7 +210,8 @@ function formatInnerEnumLine(depth: number, innerLine: string): string {
 }
 
 /**
- * Builds one props accumulator step for a property descriptor.
+ * Builds one props-accumulator step for a property descriptor.
+ *
  * @param depth - Base indentation depth.
  * @param accumulator - Current accumulator.
  * @param prop - Property descriptor to map.
@@ -225,23 +230,68 @@ function reducePropsAccumulator(
     return {
       warnings,
       lines: accumulator.lines.concat(
-        `${indent(depth + 1)}${propKey}: ${figmaMapping.lines[0]},`,
+        createSingleLinePropMapping(depth, propKey, figmaMapping.lines[0]),
       ),
     };
   }
 
-  const innerLines = figmaMapping.lines
+  return {
+    warnings,
+    lines: accumulator.lines.concat(
+      createMultiLinePropMapping(depth, propKey, figmaMapping.lines),
+    ),
+  };
+}
+
+/**
+ * Creates the default empty props section.
+ *
+ * @param depth - Base indentation depth for the section.
+ * @returns Empty props section result.
+ */
+function createEmptyPropsSection(depth: number): IPropsSection {
+  return {
+    lines: [`${indent(depth)}props: {},`],
+    warnings: [],
+  };
+}
+
+/**
+ * Builds a single-line property mapping entry.
+ *
+ * @param depth - Base indentation depth.
+ * @param propKey - Formatted property key.
+ * @param expression - Figma mapping expression.
+ * @returns Single-line mapping entry.
+ */
+function createSingleLinePropMapping(
+  depth: number,
+  propKey: string,
+  expression: string,
+): string {
+  return `${indent(depth + 1)}${propKey}: ${expression},`;
+}
+
+/**
+ * Builds a multi-line property mapping entry.
+ *
+ * @param depth - Base indentation depth.
+ * @param propKey - Formatted property key.
+ * @param lines - Multi-line Figma mapping lines.
+ * @returns Multi-line mapping entry.
+ */
+function createMultiLinePropMapping(
+  depth: number,
+  propKey: string,
+  lines: readonly string[],
+): readonly string[] {
+  const innerLines = lines
     .slice(1, -1)
     .map(formatInnerEnumLine.bind(undefined, depth));
-  const lastLine = figmaMapping.lines.at(-1);
-  const multiLine = [
-    `${indent(depth + 1)}${propKey}: ${figmaMapping.lines[0]}`,
+  const lastLine = lines.at(-1);
+  return [
+    `${indent(depth + 1)}${propKey}: ${lines[0]}`,
     ...innerLines,
     `${indent(depth + 1)}${lastLine},`,
   ];
-
-  return {
-    warnings,
-    lines: accumulator.lines.concat(multiLine),
-  };
 }

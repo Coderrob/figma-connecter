@@ -15,15 +15,14 @@
  */
 
 /**
- * Pipeline Context Compatibility Module
+ * Plugins Index
  *
- * Preserves legacy imports after pipeline context types moved to `src/types/pipeline`.
+ * Re-exports the public plugin API from standalone modules.
  *
- * @module pipeline/context
+ * @module plugins
  */
 
-export type {
-  IPipelineContext,
-  PipelineContext,
-  PipelineContextSeed,
-} from "@/src/types/pipeline";
+export * from "./emitters";
+export * from "./parsers";
+export { getPluginInfo, registerPlugin } from "./api";
+export type { IPluginInfo, IPluginOptions, PluginInfo } from "./types";

@@ -21,7 +21,7 @@
 import ts from 'typescript';
 
 import { ClassDiscoveryMethod } from '../../../src/core/types';
-import { visitSourceFile } from '../../../src/parsers/webcomponent/ast-visitor';
+import { visitSourceFile } from '../../../src/parsers/webcomponent/shared/ast-visitor';
 import { discoverComponentClass } from '../../../src/parsers/webcomponent/component-discovery';
 
 describe('discoverComponentClass', () => {

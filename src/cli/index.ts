@@ -42,3 +42,15 @@ export {
 
 // Progress indicators
 export { createProgressIndicator } from "./progress";
+export type {
+  CommandContext,
+  CommandStages,
+  GlobalCliOptions,
+  ICommandStages,
+  IGlobalCliOptions,
+  IProgressIndicator,
+  IProgressIndicatorOptions,
+  ProgressIndicator,
+  ProgressIndicatorOptions,
+} from "./types";
+export { ProgressStatus } from "./types";

@@ -15,15 +15,18 @@
  */
 
 /**
- * Internal Plugin Registry Module
+ * Utility Types
  *
- * Provides centralized access to plugin registration functions
- * to avoid circular dependencies in the public plugins API.
+ * Shared generic utility contracts.
  *
- * @internal
- * @module internal-plugin-registry
+ * @module utils/types
  */
 
-// Re-export from factories
-export { getAllEmitterMetadata, registerEmitterPlugin } from './emitters/factory';
-export { getAllParserMetadata, registerParserPlugin } from './parsers/factory';
+export interface IMergeByKeyOptions<TItem, TKey> {
+  /** Returns the key used to merge items. */
+  readonly getKey: (item: TItem) => TKey;
+  /** Merge strategy when the key already exists (defaults to last-in-wins). */
+  readonly merge?: (existing: TItem, incoming: TItem) => TItem;
+}
+
+export type MergeByKeyOptions<TItem, TKey> = IMergeByKeyOptions<TItem, TKey>;

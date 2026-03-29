@@ -27,16 +27,14 @@ import type { IComponentModel } from "@/src/core/types";
 import { mapComponentModel } from "@/src/mappers/component-model";
 import type { IParseContext, IParser } from "@/src/parsers/types";
 import { ParserTarget } from "@/src/parsers/types";
-import type { IWebComponentParseResult } from "@/src/types/parsers-webcomponent";
+import type { IWebComponentParseResult } from "@/src/parsers/webcomponent/types";
 
-import { visitSourceFile } from "./ast-visitor";
+import { visitSourceFile } from "./shared/ast-visitor";
 import { discoverComponentClass } from "./component-discovery";
 import { extractPropertyDecorators } from "./decorator-extractor";
 import { extractEventsFromChain } from "./event-extractor";
 import { resolveInheritanceChain } from "./inheritance-resolver";
-import { resolveTagName } from "./tagname-resolver";
-
-// WebComponent parse result type is defined in `src/types/parsers-webcomponent`.
+import { resolveTagName } from "./tagname";
 
 /**
  * Parses a Web Component source file into a IComponentModel.

@@ -15,16 +15,16 @@
  */
 
 /**
- * Connect Pipeline Orchestrator
+ * Shared Emitter Utilities
  *
- * Coordinates discovery, loading, parsing, emitting, and writing.
+ * Groups reusable emitter support modules that are not tied to a single
+ * emitter implementation.
  *
- * @module pipeline
+ * @module emitters/shared
  */
-export { processComponentBatch } from "./batch";
-export { runConnectPipeline } from "./runner";
-export type {
-  IPipelineContext,
-  PipelineContext,
-  PipelineContextSeed,
-} from "./types";
+
+export * from "./figma-mapper";
+export * from "./file-builder";
+export * from "./formatting";
+export * from "./section-builder";
+export * from "./utils";

@@ -18,9 +18,8 @@
  * File Payload Builder Module
  *
  * Provides builder pattern utilities for constructing emit result payloads.
- * Extracted from emitters/utils.ts for better modularity.
  *
- * @module emitters/file-builder
+ * @module emitters/shared/file-builder
  */
 
 import { GENERATED_SECTION_MARKERS } from "@/src/core/constants";
@@ -34,31 +33,21 @@ import {
 
 import { indent, indentBlock } from "./formatting";
 
-/**
- * Draft state for building an emitter file payload.
- */
 export interface IFilePayloadDraft {
-  /** File path for the emitted payload. */
   readonly filePath: string;
-  /** Action for the emitted payload. */
   readonly action: FileChangeStatus;
-  /** Accumulated file content lines. */
   readonly contentLines: readonly string[];
-  /** Accumulated generated section metadata. */
   readonly sections: readonly IGeneratedSectionPayload[];
-  /** Accumulated warnings. */
   readonly warnings: readonly string[];
 }
 
-/**
- * Functional builder for updating a file payload draft.
- */
 export type FilePayloadBuilder = (
   draft: IFilePayloadDraft,
 ) => IFilePayloadDraft;
 
 /**
  * Appends import lines to a payload draft.
+ *
  * @param lines - Import lines to append.
  * @param draft - Current payload draft.
  * @returns Updated payload draft.
@@ -75,6 +64,7 @@ function applyImports(
 
 /**
  * Appends section lines and metadata to a payload draft.
+ *
  * @param block - Section block to append.
  * @param draft - Current payload draft.
  * @returns Updated payload draft.
@@ -94,7 +84,8 @@ function applySectionBlock(
 
 /**
  * Appends warnings to a payload draft.
- * @param warnings - Warning lines to append.
+ *
+ * @param warnings - Warning strings to append.
  * @param draft - Current payload draft.
  * @returns Updated payload draft.
  */
@@ -109,10 +100,11 @@ function applyWarnings(
 }
 
 /**
- * buildFilePayload TODO: describe.
- * @param draft TODO: describe parameter
- * @param builders TODO: describe parameter
- * @returns TODO: describe return value
+ * Applies a sequence of builders to a payload draft and finalizes the emit result.
+ *
+ * @param draft - Initial payload draft state.
+ * @param builders - Builders to apply in order.
+ * @returns Finalized emit result.
  */
 export const buildFilePayload = (
   draft: Readonly<IFilePayloadDraft>,
@@ -132,10 +124,11 @@ export const buildFilePayload = (
 };
 
 /**
- * createFilePayload TODO: describe.
- * @param filePath TODO: describe parameter
- * @param action TODO: describe parameter
- * @returns TODO: describe return value
+ * Creates an empty payload draft for an emitted file.
+ *
+ * @param filePath - Destination file path.
+ * @param action - Initial file-change action.
+ * @returns Empty payload draft.
  */
 export const createFilePayload = (
   filePath: string,
@@ -149,9 +142,10 @@ export const createFilePayload = (
 });
 
 /**
- * withExample TODO: describe.
- * @param input TODO: describe parameter
- * @returns TODO: describe return value
+ * Adds an example section and matching metadata to a payload draft.
+ *
+ * @param input - Example section content and metadata.
+ * @returns Builder that appends the example block.
  */
 export const withExample = (
   input: Readonly<ISectionBuilderInput>,
@@ -169,35 +163,31 @@ export const withExample = (
 };
 
 interface ISectionBuilderInput {
-  /** The generated section content (without markers). */
   readonly content: string;
-  /** Marker strings used to delimit the section. */
   readonly markers: IGeneratedSectionMarkers;
-  /** Optional name to attach to the generated section metadata. */
   readonly name?: GeneratedSectionName;
-  /** Optional indentation depth for the wrapped section. */
   readonly depth?: number;
 }
 
 interface ISectionBlock {
-  /** Lines to append to content. */
   readonly lines: readonly string[];
-  /** Optional sections metadata to append. */
   readonly sections?: readonly IGeneratedSectionPayload[];
 }
 
 /**
- * withImports TODO: describe.
- * @param lines TODO: describe parameter
- * @returns TODO: describe return value
+ * Adds import lines to a payload draft.
+ *
+ * @param lines - Import lines to append.
+ * @returns Builder that appends the import block.
  */
 export const withImports = (lines: readonly string[]): FilePayloadBuilder =>
   applyImports.bind(undefined, lines);
 
 /**
- * withProps TODO: describe.
- * @param input TODO: describe parameter
- * @returns TODO: describe return value
+ * Adds a props section and matching metadata to a payload draft.
+ *
+ * @param input - Props section content and metadata.
+ * @returns Builder that appends the props block.
  */
 export const withProps = (
   input: Readonly<ISectionBuilderInput>,
@@ -215,9 +205,10 @@ export const withProps = (
 };
 
 /**
- * withSections TODO: describe.
- * @param block TODO: describe parameter
- * @returns TODO: describe return value
+ * Adds arbitrary content lines and optional section metadata to a payload draft.
+ *
+ * @param block - Content block and optional section metadata.
+ * @returns Builder that appends the provided block.
  */
 export function withSections(
   block: Readonly<ISectionBlock>,
@@ -226,20 +217,22 @@ export function withSections(
 }
 
 /**
- * withWarnings TODO: describe.
- * @param warnings TODO: describe parameter
- * @returns TODO: describe return value
+ * Adds warnings to a payload draft.
+ *
+ * @param warnings - Warning strings to append.
+ * @returns Builder that appends the warnings.
  */
 export const withWarnings = (
   warnings: readonly string[] = [],
 ): FilePayloadBuilder => applyWarnings.bind(undefined, warnings);
 
 /**
- * wrapGeneratedSection TODO: describe.
- * @param content TODO: describe parameter
- * @param markers TODO: describe parameter
- * @param depth TODO: describe parameter
- * @returns TODO: describe return value
+ * Wraps content in generated-section markers with optional indentation.
+ *
+ * @param content - Raw generated content.
+ * @param markers - Start and end markers for the section.
+ * @param depth - Base indentation depth.
+ * @returns Wrapped section lines including markers.
  */
 export function wrapGeneratedSection(
   content: string,
