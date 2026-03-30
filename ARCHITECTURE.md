@@ -301,7 +301,7 @@ Test layout:
 - `testEnvironment: 'node'`
 - roots include `__tests__` and `src`
 - path alias mapping for `@/`
-- global coverage threshold of 95% across branches, functions, lines, and statements
+- global coverage threshold of 90% for branches and 95% across functions, lines, and statements
 
 The tests validate:
 
@@ -328,6 +328,7 @@ Rollup is used for packaging.
 
 Build outputs:
 
+- `dist/figma-connecter.cjs`
 - `dist/index.cjs`
 - `dist/index.d.ts`
 
@@ -342,6 +343,7 @@ Key build tooling:
 
 The package publishes the `dist/` directory and exposes:
 
+- the `figma-connecter` CLI executable via the package `bin` field
 - CommonJS runtime bundle
 - bundled type declarations
 

@@ -161,8 +161,8 @@ The formal plugin interface allows external packages to register parsers without
 Use the `registerParserPlugin` function:
 
 ```typescript
-import { registerParserPlugin, type ParserPluginOptions } from '@momentum-design/figma-connecter/parsers/factory';
-import { ParserTarget } from '@momentum-design/figma-connecter/parsers/types';
+import { registerParserPlugin, type ParserPluginOptions } from '@coderrob/figma-connecter/parsers/factory';
+import { ParserTarget } from '@coderrob/figma-connecter/parsers/types';
 import { MyExternalParser } from './my-parser';
 
 // Register before pipeline execution
@@ -189,7 +189,7 @@ registerParserPlugin({
 Verify if a target is registered:
 
 ```typescript
-import { hasParserPlugin } from '@momentum-design/figma-connecter/parsers/factory';
+import { hasParserPlugin } from '@coderrob/figma-connecter/parsers/factory';
 
 if (!hasParserPlugin(ParserTarget.MyExternal)) {
   registerParserPlugin({...});

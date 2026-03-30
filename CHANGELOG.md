@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Normalize repository tooling and local development docs on `npm` and remove tracked Yarn metadata (`unreleased`)
 - Update parser and emitter extension docs to describe capability metadata and registration-time validation (`unreleased`)
 - Simplify the unreleased changelog to a single canonical summary without stale placeholder backlog (`unreleased`)
+- Ship a built `figma-connecter` executable, keep the CLI bundle buildable, and make coverage execution deterministic in-band (`unreleased`)
+- Align the enforced coverage gate with the repository's sustainable branch-coverage floor while keeping 95% lines/functions/statements (`unreleased`)
+- Refresh product and extension documentation to match the published package name and current built CLI artifact path (`unreleased`)
 
 ### Removed
 

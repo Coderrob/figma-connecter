@@ -7,6 +7,9 @@
     "@automapper/pojos": "^8.8.1",
     "commander": "^14.0.3"
   },
+  "bin": {
+    "figma-connecter": "./dist/figma-connecter.cjs"
+  },
   "description": "Figma Connecter management tool",
   "devDependencies": {
     "@coderrob/eslint-plugin-zero-tolerance": "^1.1.7",
@@ -43,7 +46,7 @@
     "npm": ">=8.0.0"
   },
   "files": [
-    "./dist"
+    "dist"
   ],
   "license": "Apache-2.0",
   "main": "./dist/index.cjs",
@@ -58,8 +61,8 @@
     "quality:gate": "npm run lint && npm run tsc && npm test && npm run duplication && npm run repo:hygiene && npm run build",
     "repo:hygiene": "node ./scripts/validate-repo-hygiene.mjs",
     "test": "npm run test:unit",
-    "test:coverage": "jest --config jest.config.js --coverage",
-    "test:unit": "jest --config jest.config.js",
+    "test:coverage": "jest --config jest.config.js --coverage --runInBand",
+    "test:unit": "jest --config jest.config.js --runInBand",
     "tsc": "tsc --noEmit"
   },
   "type": "commonjs",

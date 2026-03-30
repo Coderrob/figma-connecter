@@ -1,4 +1,4 @@
-# @momentum-design/figma-connecter - Contributing Guide
+# @coderrob/figma-connecter - Contributing Guide
 
 ## Code Organization
 

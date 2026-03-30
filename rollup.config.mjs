@@ -117,6 +117,32 @@ export default [
       terser(terserOptions),
     ],
   },
+  // CLI executable bundle
+  {
+    input: 'bin/figma-connecter.ts',
+    output: {
+      file: 'dist/figma-connecter.cjs',
+      format: 'cjs',
+      sourcemap: false,
+    },
+    external,
+    plugins: [
+      projectAliasPlugin(),
+      resolve({
+        preferBuiltins: true,
+        extensions: ['.ts', '.tsx', '.js', '.jsx'],
+      }),
+      typescript({
+        tsconfig: './tsconfig.json',
+        declaration: false,
+        declarationMap: false,
+        module: 'ESNext',
+      }),
+      commonjs({
+        extensions: ['.js', '.ts'],
+      }),
+    ],
+  },
   // Type definitions bundle
   {
     input: 'src/index.ts',

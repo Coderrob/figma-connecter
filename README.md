@@ -28,7 +28,7 @@ and emits Code Connect files for Web Components and React.
 # From the repo root
 
 npm run build
-node dist/bin/figma-connecter.js --help
+node dist/figma-connecter.cjs --help
 ```
 
 If this package is installed from a registry, the `figma-connecter` binary is available on your `PATH` after install.
