@@ -23,4 +23,4 @@
  */
 
 export { mapPropertiesToAttributes, mapPropertyToAttribute } from './attribute-mapper';
-export { type ComponentModelInput, deriveImportPath, mapComponentModel } from './component-model';
+export { type IComponentModelInput, deriveImportPath, mapComponentModel } from './component-model';

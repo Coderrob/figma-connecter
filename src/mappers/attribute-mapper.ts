@@ -22,29 +22,22 @@
  * @module mappers/attribute-mapper
  */
 
-import type { AttributeDescriptor, PropertyDescriptor } from '../core/types';
-import { mergeByKey } from '../utils/merge-by-key';
+import type {
+  IAttributeDescriptor,
+  IPropertyDescriptor,
+} from "@/src/core/types";
+import { mergeByKey } from "@/src/utils/merge-by-key";
 
 /**
- * Maps a property descriptor into an attribute descriptor when possible.
- *
- * @param property - Property descriptor to map.
- * @returns Attribute descriptor or null if no attribute is configured.
+ * Narrows nullable attribute descriptors to concrete descriptor values.
+ * @param attribute - Candidate attribute descriptor.
+ * @returns True when the descriptor is non-null.
  */
-export const mapPropertyToAttribute = (property: PropertyDescriptor): AttributeDescriptor | null => {
-  if (!property.attribute) {
-    return null;
-  }
-
-  return {
-    name: property.attribute,
-    propertyName: property.name,
-    type: property.type,
-    reflect: property.reflect,
-    defaultValue: property.defaultValue,
-    doc: property.doc,
-  };
-};
+function isAttributeDescriptor(
+  attribute: IAttributeDescriptor | null,
+): attribute is IAttributeDescriptor {
+  return attribute !== null;
+}
 
 /**
  * Maps property descriptors into unique attribute descriptors.
@@ -52,10 +45,12 @@ export const mapPropertyToAttribute = (property: PropertyDescriptor): AttributeD
  * @param properties - Property descriptors to map.
  * @returns Attribute descriptors keyed by attribute name.
  */
-export const mapPropertiesToAttributes = (properties: readonly PropertyDescriptor[]): AttributeDescriptor[] => {
+export function mapPropertiesToAttributes(
+  properties: readonly IPropertyDescriptor[],
+): IAttributeDescriptor[] {
   const mapped = properties
     .map(mapPropertyToAttribute)
-    .filter((attribute): attribute is AttributeDescriptor => Boolean(attribute));
+    .filter(isAttributeDescriptor);
 
   const merged = mergeByKey(mapped, {
     /**
@@ -68,4 +63,27 @@ export const mapPropertiesToAttributes = (properties: readonly PropertyDescripto
   });
 
   return Array.from(merged.values());
-};
+}
+
+/**
+ * Maps a property descriptor into an attribute descriptor when possible.
+ *
+ * @param property - Property descriptor to map.
+ * @returns Attribute descriptor or null if no attribute is configured.
+ */
+export function mapPropertyToAttribute(
+  property: Readonly<IPropertyDescriptor>,
+): IAttributeDescriptor | null {
+  if (!property.attribute) {
+    return null;
+  }
+
+  return {
+    name: property.attribute,
+    propertyName: property.name,
+    type: property.type,
+    reflect: property.reflect,
+    defaultValue: property.defaultValue,
+    doc: property.doc,
+  };
+}

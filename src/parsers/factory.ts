@@ -15,28 +15,36 @@
  */
 
 /**
- * Parser Factory Module
+ * IParser Factory Module
  *
  * Registry-based factory for parser strategies.
  * Uses a metadata-enriched registry to eliminate branching logic.
  *
  * To add a new parser target:
- * 1. Implement the Parser interface
+ * 1. Implement the IParser interface
  * 2. Add an entry to PARSER_REGISTRY with metadata
  * 3. No changes needed in pipeline/orchestration code
  *
  * @module parsers/factory
  */
 
-import { RegistryFactory } from '../core/registry-factory';
+import { RegistryFactory } from "@/src/core/registry-factory";
 
-import { type Parser, ParserTarget } from './types';
-import { WebComponentParser } from './webcomponent';
+import { type IParser, ParserTarget } from "./types";
+import { WebComponentParser } from "./webcomponent";
+
+/**
+ * Creates the default parser instance for the configured default target.
+ * @returns Parser instance for the factory default target.
+ */
+export function createDefaultParser(): IParser {
+  return getParserFactory().createDefaultInstance();
+}
 
 /**
  * Metadata describing a parser's capabilities and configuration.
  */
-export interface ParserMetadata {
+export interface IParserMetadata {
   /** Display name for CLI/logging */
   readonly displayName: string;
   /** Description of what this parser handles */
@@ -48,24 +56,31 @@ export interface ParserMetadata {
 /**
  * Plugin registration options for parsers.
  */
-export interface ParserPluginOptions {
+export interface IParserPluginOptions {
   readonly target: ParserTarget;
-  readonly factory: () => Parser;
-  readonly metadata: ParserMetadata;
+  readonly factory: () => IParser;
+  readonly metadata: IParserMetadata;
 }
 
 /**
- * Creates a Web Component parser instance.
+ * Creates a parser instance for the requested target.
  *
- * @returns Web Component parser.
+ * @param target - IParser target to instantiate.
+ * @returns IParser instance for the target.
  */
-const createWebComponentParser = (): Parser => new WebComponentParser();
+export function createParser(target: Readonly<ParserTarget>): IParser {
+  return getParserFactory().createInstance(target);
+}
 
 /**
- * Parser factory implementation extending generic registry factory.
+ * IParser factory implementation extending generic registry factory.
  */
-class ParserFactoryImpl extends RegistryFactory<ParserTarget, Parser, ParserMetadata> {
-  protected readonly factoryTypeName = 'Parser';
+class ParserFactoryImpl extends RegistryFactory<
+  ParserTarget,
+  IParser,
+  IParserMetadata
+> {
+  protected readonly factoryTypeName = "IParser";
 }
 
 /**
@@ -77,89 +92,75 @@ const parserFactory = new ParserFactoryImpl([
     {
       factory: createWebComponentParser,
       metadata: {
-        displayName: 'Web Component',
-        description: 'Parses LitElement-based Web Components with @property decorators',
-        filePatterns: ['*.component.ts', '*.element.ts'],
+        displayName: "Web Component",
+        description:
+          "Parses LitElement-based Web Components with @property decorators",
+        filePatterns: ["*.component.ts", "*.element.ts"],
       },
     },
   ],
 ]);
 
 /**
- * Registers a new parser plugin at runtime.
- * Allows external packages to extend parser support without modifying this file.
- *
- * @param options - Plugin configuration.
- * @throws Error if target is already registered.
- *
- * @example
- * ```typescript
- * import { registerParserPlugin } from '@momentum-design/figma-connecter/parsers/factory';
- *
- * registerParserPlugin({
- *   target: ParserTarget.MyCustomTarget,
- *   factory: () => new MyCustomParser(),
- *   metadata: {
- *     displayName: 'My Custom Parser',
- *     description: 'Parses custom component format',
- *     filePatterns: ['*.custom.ts'],
- *   },
- * });
- * ```
+ * Creates the built-in Web Component parser instance.
+ * @returns Web Component parser implementation.
  */
-export const registerParserPlugin = (options: ParserPluginOptions): void => {
+function createWebComponentParser(): IParser {
+  return new WebComponentParser();
+}
+
+/**
+ * Returns metadata for all registered parser targets.
+ * @returns Read-only map of parser targets to metadata.
+ */
+export const getAllParserMetadata = (): ReadonlyMap<
+  ParserTarget,
+  IParserMetadata
+> => parserFactory.getAllMetadata();
+
+/**
+ * Returns the default parser target configured by the factory.
+ * @returns Default parser target.
+ */
+export const getDefaultParserTarget = (): ParserTarget =>
+  parserFactory.getDefaultTarget();
+
+/**
+ * Returns the singleton parser factory instance.
+ * @returns Shared parser factory used by the module.
+ */
+function getParserFactory(): ParserFactoryImpl {
+  return parserFactory;
+}
+
+/**
+ * Returns metadata for a specific parser target.
+ * @param target - Parser target to inspect.
+ * @returns Metadata registered for the target.
+ */
+export const getParserMetadata = (target: Readonly<ParserTarget>): IParserMetadata =>
+  parserFactory.getMetadata(target);
+
+/**
+ * Returns true when a parser plugin is registered for a target.
+ * @param target - Parser target to inspect.
+ * @returns True when the target has a registered parser plugin.
+ */
+export const hasParserPlugin = (target: Readonly<ParserTarget>): boolean =>
+  parserFactory.hasPlugin(target);
+
+/**
+ * Lists all registered parser targets.
+ * @returns Registered parser targets in factory order.
+ */
+export const listParserTargets = (): ParserTarget[] =>
+  parserFactory.listTargets();
+
+/**
+ * Registers a parser plugin with the shared factory.
+ * @param options - Plugin factory and metadata registration payload.
+ * @returns Nothing.
+ */
+export const registerParserPlugin = (options: Readonly<IParserPluginOptions>): void => {
   parserFactory.registerPlugin(options);
 };
-
-/**
- * Checks if a parser target is registered.
- *
- * @param target - Target to check.
- * @returns True if registered.
- */
-export const hasParserPlugin = (target: ParserTarget): boolean => parserFactory.hasPlugin(target);
-
-/**
- * Returns the list of registered parser targets.
- *
- * @returns Array of registered parser targets.
- */
-export const listParserTargets = (): ParserTarget[] => parserFactory.listTargets();
-
-/**
- * Gets metadata for a specific parser target.
- *
- * @param target - Parser target to query.
- * @returns Metadata for the target.
- */
-export const getParserMetadata = (target: ParserTarget): ParserMetadata => parserFactory.getMetadata(target);
-
-/**
- * Gets metadata for all registered parsers.
- *
- * @returns Map of targets to their metadata.
- */
-export const getAllParserMetadata = (): ReadonlyMap<ParserTarget, ParserMetadata> =>
-  parserFactory.getAllMetadata();
-
-/**
- * Returns the default parser target.
- *
- * @returns The first registered parser target.
- */
-export const getDefaultParserTarget = (): ParserTarget => parserFactory.getDefaultTarget();
-
-/**
- * Creates a parser instance for the requested target.
- *
- * @param target - Parser target to instantiate.
- * @returns Parser instance for the target.
- */
-export const createParser = (target: ParserTarget): Parser => parserFactory.createInstance(target);
-
-/**
- * Creates the default parser instance.
- *
- * @returns Parser instance for the default target.
- */
-export const createDefaultParser = (): Parser => parserFactory.createDefaultInstance();

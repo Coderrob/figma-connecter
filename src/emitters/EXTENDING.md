@@ -128,8 +128,8 @@ The formal plugin interface allows external packages to register emitters withou
 Use the `registerEmitterPlugin` function:
 
 ```typescript
-import { registerEmitterPlugin, type EmitterPluginOptions } from '@momentum-design/figma-connecter/emitters/factory';
-import { EmitterTarget } from '@momentum-design/figma-connecter/core/types';
+import { registerEmitterPlugin, type EmitterPluginOptions } from '@coderrob/figma-connecter/emitters/factory';
+import { EmitterTarget } from '@coderrob/figma-connecter/core/types';
 import { MyExternalEmitter } from './my-emitter';
 
 // Register before pipeline execution
@@ -156,7 +156,7 @@ registerEmitterPlugin({
 Verify if a target is registered:
 
 ```typescript
-import { hasEmitterPlugin } from '@momentum-design/figma-connecter/emitters/factory';
+import { hasEmitterPlugin } from '@coderrob/figma-connecter/emitters/factory';
 
 if (!hasEmitterPlugin(EmitterTarget.MyExternal)) {
   registerEmitterPlugin({...});
@@ -176,5 +176,5 @@ The plugin API supports:
 
 - Dynamic target discovery at runtime
 - Conditional emitter loading based on project config
-- Emitter versioning and compatibility checks
+- Emitter capability metadata and registration-time validation
 - Hot-reloading of emitter implementations

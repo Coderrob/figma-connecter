@@ -15,37 +15,62 @@
  */
 
 /**
- * Emitter Factory Module
+ * IEmitter Factory Module
  *
  * Registry-based factory for emitter strategies.
  * Uses a metadata-enriched registry to eliminate branching logic.
  *
  * To add a new emitter target:
- * 1. Implement the Emitter interface
+ * 1. Implement the IEmitter interface
  * 2. Add an entry to EMITTER_REGISTRY with metadata
  * 3. No changes needed in pipeline/orchestration code
  *
  * @module emitters/factory
  */
 
-import { EmitterTarget } from '../core/types';
-import { RegistryFactory } from '../core/registry-factory';
+import { RegistryFactory } from "@/src/core/registry-factory";
+import { EmitterTarget } from "@/src/core/types";
 
-import { FigmaReactEmitter } from './figma-react';
-import { FigmaWebComponentEmitter } from './figma-webcomponent';
-import type { Emitter } from './types';
+import { FigmaReactEmitter } from "./figma-react";
+import { FigmaWebComponentEmitter } from "./figma-webcomponent";
+import type { IEmitter } from "./types";
+
+/**
+ * Creates an emitter instance for a specific target.
+ * @param target - Emitter target to instantiate.
+ * @returns Emitter instance registered for the target.
+ */
+export function createEmitter(target: Readonly<EmitterTarget>): IEmitter {
+  return getEmitterFactory().createInstance(target);
+}
+
+/**
+ * Creates emitter instances for the requested target set.
+ * @param options - Emitter selection options.
+ * @returns Emitters ordered by registry registration order.
+ */
+export function createEmitters(
+  options: Readonly<IEmitterFactoryOptions>,
+): IEmitter[] {
+  const targets = new Set(options.targets);
+  const allTargets = getEmitterFactory().listTargets();
+  const hasTarget = targets.has.bind(targets);
+
+  // Iterate in registry order to ensure consistent output
+  return allTargets.filter(hasTarget).map(createEmitter);
+}
 
 /**
  * Options for selecting emitter targets from the registry.
  */
-export interface EmitterFactoryOptions {
+export interface IEmitterFactoryOptions {
   readonly targets: readonly EmitterTarget[];
 }
 
 /**
  * Metadata describing an emitter's capabilities and configuration.
  */
-export interface EmitterMetadata {
+export interface IEmitterMetadata {
   /** File extension for emitted files (e.g., '.figma.ts' or '.figma.tsx') */
   readonly fileExtension: string;
   /** Display name for CLI/logging */
@@ -57,31 +82,37 @@ export interface EmitterMetadata {
 /**
  * Plugin registration options for emitters.
  */
-export interface EmitterPluginOptions {
+export interface IEmitterPluginOptions {
   readonly target: EmitterTarget;
-  readonly factory: () => Emitter;
-  readonly metadata: EmitterMetadata;
+  readonly factory: () => IEmitter;
+  readonly metadata: IEmitterMetadata;
 }
 
 /**
- * Creates a Web Component emitter instance.
- *
- * @returns Web Component emitter.
+ * Creates the built-in React emitter instance.
+ * @returns React emitter implementation.
  */
-const createWebComponentEmitter = (): Emitter => new FigmaWebComponentEmitter();
+function createReactEmitter(): IEmitter {
+  return new FigmaReactEmitter();
+}
 
 /**
- * Creates a React emitter instance.
- *
- * @returns React emitter.
+ * Creates the built-in Web Component emitter instance.
+ * @returns Web Component emitter implementation.
  */
-const createReactEmitter = (): Emitter => new FigmaReactEmitter();
+function createWebComponentEmitter(): IEmitter {
+  return new FigmaWebComponentEmitter();
+}
 
 /**
- * Emitter factory implementation extending generic registry factory.
+ * IEmitter factory implementation extending generic registry factory.
  */
-class EmitterFactoryImpl extends RegistryFactory<EmitterTarget, Emitter, EmitterMetadata> {
-  protected readonly factoryTypeName = 'Emitter';
+class EmitterFactoryImpl extends RegistryFactory<
+  EmitterTarget,
+  IEmitter,
+  IEmitterMetadata
+> {
+  protected readonly factoryTypeName = "IEmitter";
 }
 
 /**
@@ -93,9 +124,9 @@ const emitterFactory = new EmitterFactoryImpl([
     {
       factory: createWebComponentEmitter,
       metadata: {
-        fileExtension: '.webcomponent.figma.ts',
-        displayName: 'Web Component',
-        description: 'Figma Code Connect for HTML/Web Components',
+        fileExtension: ".webcomponent.figma.ts",
+        displayName: "Web Component",
+        description: "Figma Code Connect for HTML/Web Components",
       },
     },
   ],
@@ -104,90 +135,62 @@ const emitterFactory = new EmitterFactoryImpl([
     {
       factory: createReactEmitter,
       metadata: {
-        fileExtension: '.react.figma.tsx',
-        displayName: 'React',
-        description: 'Figma Code Connect for React components',
+        fileExtension: ".react.figma.tsx",
+        displayName: "React",
+        description: "Figma Code Connect for React components",
       },
     },
   ],
 ]);
 
 /**
- * Registers a new emitter plugin at runtime.
- * Allows external packages to extend emitter support without modifying this file.
- *
- * @param options - Plugin configuration.
- * @throws Error if target is already registered.
- *
- * @example
- * ```typescript
- * import { registerEmitterPlugin } from '@momentum-design/figma-connecter/emitters/factory';
- *
- * registerEmitterPlugin({
- *   target: EmitterTarget.MyCustomTarget,
- *   factory: () => new MyCustomEmitter(),
- *   metadata: {
- *     fileExtension: '.custom.figma.ts',
- *     displayName: 'My Custom Target',
- *     description: 'Custom emitter for specialized components',
- *   },
- * });
- * ```
+ * Returns metadata for all registered emitter targets.
+ * @returns Read-only map of emitter targets to metadata.
  */
-export const registerEmitterPlugin = (options: EmitterPluginOptions): void => {
+export const getAllEmitterMetadata = (): ReadonlyMap<
+  EmitterTarget,
+  IEmitterMetadata
+> => emitterFactory.getAllMetadata();
+
+/**
+ * Returns the singleton emitter factory instance.
+ * @returns Shared emitter factory used by the module.
+ */
+function getEmitterFactory(): EmitterFactoryImpl {
+  return emitterFactory;
+}
+
+/**
+ * Returns metadata for a specific emitter target.
+ * @param target - Emitter target to inspect.
+ * @returns Metadata registered for the target.
+ */
+export const getEmitterMetadata = (
+  target: Readonly<EmitterTarget>,
+): IEmitterMetadata => emitterFactory.getMetadata(target);
+
+/**
+ * Returns true when an emitter plugin is registered for a target.
+ * @param target - Emitter target to inspect.
+ * @returns True when the target has a registered emitter plugin.
+ */
+export const hasEmitterPlugin = (target: Readonly<EmitterTarget>): boolean =>
+  emitterFactory.hasPlugin(target);
+
+/**
+ * Lists all registered emitter targets.
+ * @returns Registered emitter targets in factory order.
+ */
+export const listEmitterTargets = (): EmitterTarget[] =>
+  emitterFactory.listTargets();
+
+/**
+ * Registers an emitter plugin with the shared factory.
+ * @param options - Plugin factory and metadata registration payload.
+ * @returns Nothing.
+ */
+export const registerEmitterPlugin = (
+  options: Readonly<IEmitterPluginOptions>,
+): void => {
   emitterFactory.registerPlugin(options);
-};
-
-/**
- * Checks if an emitter target is registered.
- *
- * @param target - Target to check.
- * @returns True if registered.
- */
-export const hasEmitterPlugin = (target: EmitterTarget): boolean => emitterFactory.hasPlugin(target);
-
-/**
- * Returns the list of registered emitter targets.
- *
- * @returns Array of registered emitter targets.
- */
-export const listEmitterTargets = (): EmitterTarget[] => emitterFactory.listTargets();
-
-/**
- * Gets metadata for a specific emitter target.
- *
- * @param target - Emitter target to query.
- * @returns Metadata for the target.
- */
-export const getEmitterMetadata = (target: EmitterTarget): EmitterMetadata => emitterFactory.getMetadata(target);
-
-/**
- * Gets metadata for all registered emitters.
- *
- * @returns Map of targets to their metadata.
- */
-export const getAllEmitterMetadata = (): ReadonlyMap<EmitterTarget, EmitterMetadata> =>
-  emitterFactory.getAllMetadata();
-
-/**
- * Creates a single emitter instance for the requested target.
- *
- * @param target - Emitter target to instantiate.
- * @returns Emitter instance for the target.
- */
-export const createEmitter = (target: EmitterTarget): Emitter => emitterFactory.createInstance(target);
-
-/**
- * Creates emitter instances for the requested targets.
- * Uses only targets that exist in the registry (silently skips unknown targets).
- *
- * @param options - Factory options including target list.
- * @returns Array of emitter instances in registry order.
- */
-export const createEmitters = (options: EmitterFactoryOptions): Emitter[] => {
-  const targets = new Set(options.targets);
-  const allTargets = emitterFactory.listTargets();
-
-  // Iterate in registry order to ensure consistent output
-  return allTargets.filter((target) => targets.has(target)).map((target) => emitterFactory.createInstance(target));
 };

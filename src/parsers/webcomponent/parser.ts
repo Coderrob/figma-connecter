@@ -15,46 +15,47 @@
  */
 
 /**
- * Web Component Parser Module
+ * Web Component IParser Module
  *
- * Parses Web Component source files into ComponentModel representations.
+ * Parses Web Component source files into IComponentModel representations.
  *
  * @module parsers/webcomponent/parser
  */
 
-import { createResult, mergeDiagnostics, type Result } from '../../core/result';
-import type { ClassSource, ComponentModel, TagNameResult } from '../../core/types';
-import { mapComponentModel } from '../../mappers/component-model';
-import type { ParseContext, Parser } from '../types';
-import { ParserTarget } from '../types';
+import { createResult, mergeDiagnostics } from "@/src/core/result";
+import type { IComponentModel } from "@/src/core/types";
+import { mapComponentModel } from "@/src/mappers/component-model";
+import type { IParseContext, IParser } from "@/src/parsers/types";
+import { ParserTarget } from "@/src/parsers/types";
+import type { IWebComponentParseResult } from "@/src/parsers/webcomponent/types";
 
-import { visitSourceFile } from './ast-visitor';
-import { discoverComponentClass } from './component-discovery';
-import { extractPropertyDecorators } from './decorator-extractor';
-import { extractEventsFromChain } from './event-extractor';
-import { resolveInheritanceChain } from './inheritance-resolver';
-import { resolveTagName } from './tagname-resolver';
-
-export interface WebComponentParseResult extends Result<ComponentModel | undefined> {
-  readonly classSource?: ClassSource;
-  readonly tagNameResult?: TagNameResult;
-}
+import { visitSourceFile } from "./shared/ast-visitor";
+import { discoverComponentClass } from "./component-discovery";
+import { extractPropertyDecorators } from "./decorator-extractor";
+import { extractEventsFromChain } from "./event-extractor";
+import { resolveInheritanceChain } from "./inheritance-resolver";
+import { resolveTagName } from "./tagname";
 
 /**
- * Parses a Web Component source file into a ComponentModel.
+ * Parses a Web Component source file into a IComponentModel.
  *
  * @param parseContext - Parse context for the current source file.
  * @returns Parse result with component model, warnings, and errors.
  */
-export const parseWebComponent = (parseContext: ParseContext): WebComponentParseResult => {
+export function parseWebComponent(
+  parseContext: Readonly<IParseContext>,
+): IWebComponentParseResult {
   // Single AST traversal for all extractors
   const astData = visitSourceFile(parseContext.sourceFile);
 
   const discovery = discoverComponentClass(astData);
   if (!discovery) {
-    return mergeDiagnostics(createResult<ComponentModel | undefined>(undefined), {
-      errors: ['No class declaration found in component source file.'],
-    });
+    return mergeDiagnostics(
+      createResult<IComponentModel | undefined>(undefined),
+      {
+        errors: ["No class declaration found in component source file."],
+      },
+    );
   }
 
   const { classDeclaration, source } = discovery;
@@ -72,11 +73,15 @@ export const parseWebComponent = (parseContext: ParseContext): WebComponentParse
     strict: parseContext.strict,
   });
 
-  const properties = extractPropertyDecorators(inheritance.chain, { checker: parseContext.checker });
+  const properties = extractPropertyDecorators(inheritance.chain, {
+    checker: parseContext.checker,
+  });
 
-  const eventsExtraction = extractEventsFromChain(inheritance.chain, { astData });
+  const eventsExtraction = extractEventsFromChain(inheritance.chain, {
+    astData,
+  });
 
-  const model: ComponentModel = mapComponentModel({
+  const model: IComponentModel = mapComponentModel({
     className,
     tagName: tagNameResolution.tagName,
     filePath: parseContext.filePath,
@@ -87,11 +92,13 @@ export const parseWebComponent = (parseContext: ParseContext): WebComponentParse
 
   const strictErrors =
     parseContext.strict && inheritance.unresolved.length > 0
-      ? [`Unable to resolve base classes for: ${inheritance.unresolved.join(', ')}`]
+      ? [
+          `Unable to resolve base classes for: ${inheritance.unresolved.join(", ")}`,
+        ]
       : [];
 
   const result = mergeDiagnostics(
-    createResult<ComponentModel | undefined>(model),
+    createResult<IComponentModel | undefined>(model),
     tagNameResolution,
     inheritance,
     properties,
@@ -107,12 +114,12 @@ export const parseWebComponent = (parseContext: ParseContext): WebComponentParse
       source: tagNameResolution.source,
     },
   };
-};
+}
 
 /**
- * Parser strategy for Web Components.
+ * IParser strategy for Web Components.
  */
-export class WebComponentParser implements Parser {
+export class WebComponentParser implements IParser {
   readonly target = ParserTarget.WebComponent;
 
   /**
@@ -121,7 +128,7 @@ export class WebComponentParser implements Parser {
    * @param parseContext - Parse context for the source file.
    * @returns Parse result for the component.
    */
-  parse(parseContext: ParseContext): WebComponentParseResult {
+  parse(parseContext: Readonly<IParseContext>): IWebComponentParseResult {
     return parseWebComponent(parseContext);
   }
 }

@@ -18,7 +18,7 @@
  * @fileoverview Tests for generic registry factory base class.
  */
 
-import { RegistryFactory, type PluginOptions, type RegistryEntry } from '../../src/core/registry-factory';
+import { RegistryFactory, type IPluginOptions, type IRegistryEntry } from '../../src/core/registry-factory';
 
 // Test types
 enum TestTarget {
@@ -61,7 +61,7 @@ describe('RegistryFactory', () => {
     });
 
     it('should initialize with provided entries', () => {
-      const entries: Array<[TestTarget, RegistryEntry<TestInstance, TestMetadata>]> = [
+      const entries: Array<[TestTarget, IRegistryEntry<TestInstance, TestMetadata>]> = [
         [
           TestTarget.TypeA,
           {
@@ -84,7 +84,7 @@ describe('RegistryFactory', () => {
   describe('registerPlugin', () => {
     it('should register a new plugin', () => {
       const factory = new TestFactory();
-      const options: PluginOptions<TestTarget, TestInstance, TestMetadata> = {
+      const options: IPluginOptions<TestTarget, TestInstance, TestMetadata> = {
         target: TestTarget.TypeA,
         factory: createTypeAInstance,
         metadata: {
@@ -101,7 +101,7 @@ describe('RegistryFactory', () => {
 
     it('should throw when registering duplicate target', () => {
       const factory = new TestFactory();
-      const options: PluginOptions<TestTarget, TestInstance, TestMetadata> = {
+      const options: IPluginOptions<TestTarget, TestInstance, TestMetadata> = {
         target: TestTarget.TypeA,
         factory: createTypeAInstance,
         metadata: {

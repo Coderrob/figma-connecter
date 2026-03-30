@@ -29,12 +29,26 @@ export {
   FIGMA_PACKAGE_HTML,
   FIGMA_PACKAGE_REACT,
   GENERATED_SECTION_MARKERS,
-} from './constants';
-export { formatEmitTargetOptions, listEmitTargets, parseEmitTargets } from './emit-targets';
-export type { LogContext, LoggerOptions } from './logger';
-export { RegistryFactory, type PluginOptions, type RegistryEntry } from './registry-factory';
-export { createScopedLogger, Logger, LogLevel, resolveLogLevel } from './logger';
-export type { ReportTimer } from './report';
+} from "./constants";
+export {
+  formatEmitTargetOptions,
+  listEmitTargets,
+  parseEmitTargets,
+} from "./emit-targets";
+export type { ILogContext, ILoggerOptions } from "./logger";
+export {
+  RegistryFactory,
+  type IPluginOptions,
+  type IRegistryEntry,
+} from "./registry-factory";
+export {
+  createScopedLogger,
+  Logger,
+  LogContextKey,
+  LogLevel,
+  resolveLogLevel,
+} from "./logger";
+export type { IReportTimer } from "./report";
 export {
   addCreatedFile,
   addError,
@@ -47,8 +61,8 @@ export {
   formatReportSummary,
   mergeResults,
   reportReducer,
-} from './report';
-export type { AggregateResult, Diagnostics, Result } from './result';
+} from "./report";
+export type { IAggregateResult, IDiagnostics, IResult } from "./result";
 export {
   addErrors,
   addWarnings,
@@ -60,30 +74,30 @@ export {
   hasDiagnostics,
   hasErrors,
   hasWarnings,
-  map as mapResult,
+  map,
   mergeDiagnostics,
   mergeErrors,
   mergeWarnings,
-} from './result';
+} from "./result";
 export type {
-  AttributeDescriptor,
-  ClassSource,
-  ComponentModel,
-  ComponentResult,
-  ConnectOptions,
-  EmitResult,
+  IAttributeDescriptor,
+  IClassSource,
+  IComponentModel,
+  IComponentResult,
+  IConnectOptions,
+  IEmitResult,
   EmitTarget,
-  EmitterOptions,
-  EventDescriptor,
-  ExtractionResult,
+  IEmitterOptions,
+  IEventDescriptor,
+  IExtractionResult,
   FigmaPropertyType,
-  GeneratedSectionMarkers,
+  IGeneratedSectionMarkers,
   GeneratedSectionName,
-  GeneratedSectionPayload,
-  GenerationReport,
+  IGeneratedSectionPayload,
+  IGenerationReport,
   GenerationStatus,
-  PropertyDescriptor,
+  IPropertyDescriptor,
   PropertyVisibility,
-  TagNameResult,
-} from './types';
-export { EmitterTarget, FileChangeStatus } from './types';
+  ITagNameResult,
+} from "./types";
+export { ClassDiscoveryMethod, EmitterTarget, FileChangeStatus } from "./types";

@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-import type { ComponentModel, EmitResult, EmitterOptions, EmitterTarget } from '../core/types';
+import type { IComponentModel, IEmitResult, IEmitterOptions, EmitterTarget } from '@/src/core/types';
 
 /**
  * Context for emitter operations, containing model and emitter options.
  */
-export interface EmitterContext {
-  readonly model: ComponentModel;
-  readonly options: EmitterOptions;
+export interface IEmitterContext {
+  readonly model: IComponentModel;
+  readonly options: IEmitterOptions;
 }
 
 /**
  * Emitters transform a component model into a file payload.
  */
-export interface Emitter {
+export interface IEmitter {
   readonly target: EmitterTarget;
-  emit(emitterContext: EmitterContext): EmitResult;
+  emit(emitterContext: IEmitterContext): IEmitResult;
 }
 
 /**
- * Result type for emitter operations.
+ * IResult type for emitter operations.
  */
-export type EmitterResult = EmitResult;
+export type EmitterResult = IEmitResult;

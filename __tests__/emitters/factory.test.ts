@@ -21,11 +21,11 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 
 import { EmitterTarget } from '../../src/core/types';
-import type { EmitResult } from '../../src/core/types';
+import type { IEmitResult } from '../../src/core/types';
 import { createEmitter, createEmitters, listEmitterTargets } from '../../src/emitters/factory';
 import { FigmaReactEmitter } from '../../src/emitters/figma-react';
 import { FigmaWebComponentEmitter } from '../../src/emitters/figma-webcomponent';
-import type { Emitter, EmitterContext } from '../../src/emitters/types';
+import type { IEmitter, IEmitterContext } from '../../src/emitters/types';
 
 /**
  * Creates a minimal test emitter for plugin registration.
@@ -33,9 +33,9 @@ import type { Emitter, EmitterContext } from '../../src/emitters/types';
  * @param target - Target identifier for the emitter.
  * @returns Test emitter instance.
  */
-const createTestEmitter = (target: EmitterTarget): Emitter => ({
+const createTestEmitter = (target: EmitterTarget): IEmitter => ({
   target,
-  emit: (_context: EmitterContext): EmitResult => ({
+  emit: (_context: IEmitterContext): IEmitResult => ({
     filePath: `/${target}.figma.ts`,
     content: '',
     action: 'created',
@@ -154,7 +154,7 @@ describe('emitter registry helpers', () => {
             description: 'Duplicate emitter for tests',
           },
         }),
-      ).toThrow('Emitter plugin already registered for target: webcomponent');
+      ).toThrow('IEmitter plugin already registered for target: webcomponent');
     });
   });
 

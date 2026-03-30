@@ -14,173 +14,382 @@
  * limitations under the License.
  */
 
-import path from 'node:path';
+import path from "node:path";
 
-import type ts from 'typescript';
+import { DEFAULT_CONNECT_OPTIONS } from "@/src/core/constants";
 
-import { DEFAULT_CONNECT_OPTIONS } from '../core/constants';
-import { addCreatedFile, addUnchangedFile, addUpdatedFile, createEmptyComponentResult } from '../core/report';
+import {
+  addCreatedFile,
+  addUnchangedFile,
+  addUpdatedFile,
+  createEmptyComponentResult,
+} from "@/src/core/report";
 import {
   addDiagnostics,
   addError,
   addWarnings,
-  type AggregateResult,
+  type IAggregateResult,
   aggregateResults,
   createResult,
-  map as mapResult,
-  type Result,
-} from '../core/result';
-import type { ComponentModel, ComponentResult, EmitResult, FileChangeDetail } from '../core/types';
-import { FileChangeReason, FileChangeStatus } from '../core/types';
-import { type IoAdapter, nodeIoAdapter } from '../io/adapter';
-import type { DiscoveredFile } from '../io/file-discovery';
-import { type FileWriteResult, writeFile, WriteStatus } from '../io/file-writer';
-import { applyGeneratedSectionUpdates } from '../io/section-updater';
-import type { ParseContext } from '../parsers/types';
+  map,
+  type IResult,
+} from "@/src/core/result";
+import type {
+  IComponentModel,
+  IComponentResult,
+  IEmitResult,
+  IFileChangeDetail,
+  IGeneratedSectionPayload,
+} from "@/src/core/types";
+import { FileChangeReason, FileChangeStatus } from "@/src/core/types";
+import { nodeIoAdapter } from "@/src/io/adapter";
+import { writeFile } from "@/src/io/file-writer";
+import { applyGeneratedSectionUpdates } from "@/src/io/section-updater";
+import type { IParseContext } from "@/src/parsers/types";
+import type {
+  IIoAdapter,
+  IDiscoveredFile,
+  IFileWriteResult,
+} from "@/src/io/types";
+import { WriteStatus } from "@/src/io/types";
+import type { IPipelineContext } from "@/src/pipeline/types";
 
-import type { PipelineContext } from './context';
+import type ts from "typescript";
 
-type WriteFileResult = FileWriteResult;
+type WriteFileResult = IFileWriteResult;
+type GeneratedSections = readonly IGeneratedSectionPayload[];
 
-type FileStep = (state: Result<FileContext>) => Result<FileContext>;
+type FileStep = (state: IResult<IFileContext>) => IResult<IFileContext>;
+type ComponentUpdater = (
+  component: Readonly<IComponentResult>,
+) => IComponentResult;
 
-interface FileContext {
-  readonly file: DiscoveredFile;
-  readonly pipeline: PipelineContext;
+interface IFileContext {
+  readonly file: IDiscoveredFile;
+  readonly pipeline: IPipelineContext;
   readonly continueOnError: boolean;
   readonly sourceFile?: ts.SourceFile;
-  readonly model?: ComponentModel;
-  readonly component: ComponentResult;
+  readonly model?: IComponentModel;
+  readonly component: IComponentResult;
   readonly shouldContinue: boolean;
 }
 
-interface FileProcessOutcome {
-  readonly result: Result<ComponentResult>;
+interface IFileProcessOutcome {
+  readonly result: IResult<IComponentResult>;
   readonly shouldContinue: boolean;
 }
 
-interface WriteOutcome {
+interface IWriteOutcome {
   readonly result: WriteFileResult;
   readonly warning?: string;
-  readonly change?: FileChangeDetail;
+  readonly change?: IFileChangeDetail;
 }
 
-interface WriteContext {
+interface IWriteContext {
   readonly dryRun: boolean;
   readonly force: boolean;
-  readonly io: IoAdapter;
+  readonly io: IIoAdapter;
+}
+
+interface IWriteRequest {
+  readonly filePath: string;
+  readonly content: string;
+  readonly exists: boolean;
+  readonly reason: FileChangeReason;
+}
+
+interface IFileExistenceRecord {
+  readonly exists: boolean;
+}
+
+interface IEmissionWritePlan {
+  readonly useDirectWrite: boolean;
+  readonly fileRecord: IFileExistenceRecord;
 }
 
 /**
- * Runs each file step against the current state.
- *
- * @param state - Current file processing state.
- * @param steps - Steps to execute in order.
- * @returns Updated file context state.
+ * Appends a file-change record to a component result.
+ * @param result - Component result to update.
+ * @param change - File change metadata to append.
+ * @returns Updated component result including the file-change record.
  */
-const runSteps = (state: Result<FileContext>, steps: readonly FileStep[]): Result<FileContext> =>
-  steps.reduce((current, step) => step(current), state);
+function addFileChange(
+  result: Readonly<IComponentResult>,
+  change: Readonly<IFileChangeDetail>,
+): IComponentResult {
+  return {
+    ...result,
+    fileChanges: [...(result.fileChanges ?? []), change],
+  };
+}
 
 /**
- * Updates the component result inside the file context.
- *
- * @param state - Current file processing state.
- * @param updater - Component updater function.
- * @returns Updated file context state.
+ * Applies a component updater to the current file-processing state.
+ * @param state - Current file-processing state.
+ * @param updater - Component updater to apply.
+ * @returns Updated file-processing state.
  */
-const updateComponent = (
-  state: Result<FileContext>,
-  updater: (component: ComponentResult) => ComponentResult,
-): Result<FileContext> =>
-  mapResult(state, (context) => ({
-    ...context,
-    component: updater(context.component),
-  }));
+function applyComponentUpdate(
+  state: Readonly<IResult<IFileContext>>,
+  updater: ComponentUpdater,
+): IResult<IFileContext> {
+  return setFileValue(state, {
+    ...state.value,
+    component: updater(state.value.component),
+  });
+}
 
 /**
- * Updates the shouldContinue flag for processing.
- *
- * @param state - Current file processing state.
- * @param shouldContinue - Whether processing should continue.
- * @returns Updated file context state.
+ * Applies emitter output, write results, and warnings to file-processing state.
+ * @param state - Current file-processing state.
+ * @param emission - Emitter output for the current component.
+ * @param writeContext - Write-time configuration and IO dependencies.
+ * @returns Updated file-processing state after emission handling.
  */
-const setShouldContinue = (state: Result<FileContext>, shouldContinue: boolean): Result<FileContext> =>
-  mapResult(state, (context) => ({
-    ...context,
-    shouldContinue,
-  }));
+function applyEmissionOutcome(
+  state: Readonly<IResult<IFileContext>>,
+  emission: Readonly<IEmitResult>,
+  writeContext: Readonly<IWriteContext>,
+): IResult<IFileContext> {
+  const writeOutcome = writeEmission(emission, writeContext);
+  const emissionWarnings = emission.warnings ?? [];
+  const writeWarnings = writeOutcome.warning ? [writeOutcome.warning] : [];
+  let next = addWarnings(state, [...emissionWarnings, ...writeWarnings]);
 
-/**
- * Resolves the source file for a discovered component.
- *
- * @param state - Current file processing state.
- * @returns Updated file context state.
- */
-const resolveSourceFileStep: FileStep = (state) => {
-  const { file, pipeline, continueOnError } = state.value;
-  const sourceFile = pipeline.sourceFileMap.get(path.resolve(file.filePath));
-
-  if (!sourceFile) {
-    const next = addError(state, `Source file not found in program: ${file.filePath}`);
-    return setShouldContinue(next, continueOnError);
+  const { change } = writeOutcome;
+  if (change) {
+    const appendChange = applyFileChange.bind(undefined, change);
+    next = updateComponent(next, appendChange);
   }
 
-  return mapResult(state, (context) => ({
-    ...context,
-    sourceFile,
-  }));
+  const applyResult = applyWriteResultToComponent.bind(
+    undefined,
+    writeOutcome.result,
+  );
+  return updateComponent(next, applyResult);
+}
+
+/**
+ * Applies a file change to a component result.
+ * @param change - File change metadata to append.
+ * @param component - Component result to update.
+ * @returns Updated component result.
+ */
+function applyFileChange(
+  change: Readonly<IFileChangeDetail>,
+  component: Readonly<IComponentResult>,
+): IComponentResult {
+  return addFileChange(component, change);
+}
+
+/**
+ * Applies generated section updates to an existing file and writes it when needed.
+ * @param filePath Target file path to update.
+ * @param sections Generated sections keyed by marker name.
+ * @param writeContext Write-time dependencies and dry-run mode.
+ * @returns The write outcome and any warning or file-change metadata.
+ */
+function applySectionUpdate(
+  filePath: string,
+  sections: Readonly<GeneratedSections>,
+  writeContext: Readonly<IWriteContext>,
+): IWriteOutcome {
+  const { io } = writeContext;
+  const exists = io.exists(filePath);
+  const existingContent = io.readFile(filePath);
+  const updatedContent = applyGeneratedSectionUpdates(
+    existingContent,
+    sections,
+  );
+
+  if (!updatedContent) {
+    return createMissingSectionOutcome(filePath, { exists });
+  }
+
+  return writeFileWithChange(
+    {
+      filePath,
+      content: updatedContent,
+      exists,
+      reason: FileChangeReason.SectionUpdated,
+    },
+    writeContext,
+  );
+}
+
+/**
+ * Applies a file write result to a component result summary.
+ * @param component - Component result to update.
+ * @param writeResult - File write result to record.
+ * @returns Updated component result with created/updated/unchanged tracking.
+ */
+function applyWriteResult(
+  component: Readonly<IComponentResult>,
+  writeResult: Readonly<WriteFileResult>,
+): IComponentResult {
+  if (writeResult.status === WriteStatus.Created) {
+    return addCreatedFile(component, writeResult.filePath);
+  }
+  if (writeResult.status === WriteStatus.Updated) {
+    return addUpdatedFile(component, writeResult.filePath);
+  }
+  return addUnchangedFile(component, writeResult.filePath);
+}
+
+/**
+ * Applies a write result summary to a component result.
+ * @param writeResult - File write result to record.
+ * @param component - Component result to update.
+ * @returns Updated component result.
+ */
+function applyWriteResultToComponent(
+  writeResult: Readonly<WriteFileResult>,
+  component: Readonly<IComponentResult>,
+): IComponentResult {
+  return applyWriteResult(component, writeResult);
+}
+
+/**
+ * Builds normalized file-change metadata from a write status.
+ * @param status - Final write status for the file.
+ * @param fileRecord - Existing-file metadata used to interpret updates.
+ * @param fileRecord.existed - Whether the file existed before writing.
+ * @param updateReason - Reason the file was updated.
+ * @param filePath - Path to the affected file.
+ * @returns File change detail for reporting.
+ */
+function buildFileChange(
+  status: Readonly<WriteStatus>,
+  fileRecord: { readonly existed: boolean },
+  updateReason: Readonly<FileChangeReason>,
+  filePath: string,
+): IFileChangeDetail {
+  const { existed } = fileRecord;
+  if (status === WriteStatus.Created) {
+    return {
+      filePath,
+      status: FileChangeStatus.Created,
+      reason: FileChangeReason.NewFile,
+    };
+  }
+
+  if (status === WriteStatus.Unchanged) {
+    return {
+      filePath,
+      status: FileChangeStatus.Unchanged,
+      reason: FileChangeReason.Unchanged,
+    };
+  }
+
+  return createUpdatedFileChange(filePath, { existed }, updateReason);
+}
+
+/**
+ * Creates the initial processing context for a discovered component file.
+ * @param file - Discovered component file metadata.
+ * @param pipeline - Shared pipeline context for parsing and emission.
+ * @returns Initial file-processing result state.
+ */
+const createFileContext = (
+  file: Readonly<IDiscoveredFile>,
+  pipeline: Readonly<IPipelineContext>,
+): IResult<IFileContext> => {
+  const continueOnError =
+    pipeline.continueOnError ?? DEFAULT_CONNECT_OPTIONS.continueOnError;
+  return createResult({
+    file,
+    pipeline,
+    continueOnError,
+    sourceFile: undefined,
+    model: undefined,
+    component: {
+      ...createEmptyComponentResult(),
+      componentName: file.componentName,
+    },
+    shouldContinue: true,
+  });
 };
 
 /**
- * Parses a component source file into a component model.
- *
- * @param state - Current file processing state.
- * @returns Updated file context state.
+ * Creates the write outcome used when section markers are missing.
+ * @param filePath - Target file path for the attempted update.
+ * @param fileRecord - Existing-file metadata for the attempted update.
+ * @param fileRecord.exists - Whether the file existed before the attempted update.
+ * @returns Warning outcome preserving the existing file.
  */
-const parseComponentStep: FileStep = (state) => {
-  const { continueOnError, file, pipeline, sourceFile } = state.value;
-  if (!sourceFile) {
-    return state;
-  }
+function createMissingSectionOutcome(
+  filePath: string,
+  fileRecord: Readonly<IFileExistenceRecord>,
+): IWriteOutcome {
+  const result: WriteFileResult = {
+    filePath,
+    status: WriteStatus.Unchanged,
+  };
+  return {
+    result,
+    warning: `Generated section markers not found in ${filePath}. Skipping update to preserve manual edits.`,
+    change: buildFileChange(
+      result.status,
+      { existed: fileRecord.exists },
+      FileChangeReason.SectionUpdated,
+      filePath,
+    ),
+  };
+}
 
-  pipeline.logger?.debug('Parsing component source.', {
-    component: file.componentName,
-    filePath: file.filePath,
-  });
-
-  const parseContext: ParseContext = {
+/**
+ * Builds parse context for a discovered component source file.
+ * @param file - Discovered file metadata.
+ * @param pipeline - Shared pipeline context.
+ * @param sourceFile - Resolved TypeScript source file.
+ * @returns Parse context for the parser.
+ */
+function createParseContext(
+  file: Readonly<IDiscoveredFile>,
+  pipeline: Readonly<IPipelineContext>,
+  sourceFile: Readonly<ts.SourceFile>,
+): IParseContext {
+  return {
     sourceFile,
     filePath: file.filePath,
     componentDir: file.dirPath,
     checker: pipeline.checker,
     strict: pipeline.strict,
   };
-
-  const parseResult = pipeline.parser.parse(parseContext);
-  let next = addDiagnostics(state, parseResult);
-
-  if (!parseResult.value) {
-    return setShouldContinue(next, continueOnError);
-  }
-
-  const model = parseResult.value;
-  next = mapResult(next, (context) => ({
-    ...context,
-    model,
-    component: {
-      ...context.component,
-      model,
-    },
-  }));
-
-  return next;
-};
+}
 
 /**
- * Runs configured emitters for a parsed component model.
- *
- * @param state - Current file processing state.
- * @returns Updated file context state.
+ * Creates file-change details for an updated file.
+ * @param filePath - Path to the affected file.
+ * @param fileRecord - Existing-file metadata for the write operation.
+ * @param fileRecord.existed - Whether the file existed before writing.
+ * @param updateReason - Reason the file was updated.
+ * @returns Updated file-change detail.
+ */
+function createUpdatedFileChange(
+  filePath: string,
+  fileRecord: { readonly existed: boolean },
+  updateReason: Readonly<FileChangeReason>,
+): IFileChangeDetail {
+  if (!fileRecord.existed) {
+    return {
+      filePath,
+      status: FileChangeStatus.Updated,
+      reason: FileChangeReason.NewFile,
+    };
+  }
+
+  return {
+    filePath,
+    status: FileChangeStatus.Updated,
+    reason: updateReason,
+  };
+}
+
+/**
+ * Emits connect files for a parsed component model.
+ * @param state - Current file-processing state.
+ * @returns Updated file-processing state after emission and writing.
  */
 const emitComponentStep: FileStep = (state) => {
   const { model, pipeline } = state.value;
@@ -188,7 +397,7 @@ const emitComponentStep: FileStep = (state) => {
     return state;
   }
 
-  const writeContext: WriteContext = {
+  const writeContext: IWriteContext = {
     dryRun: pipeline.dryRun,
     force: pipeline.force,
     io: pipeline.io ?? nodeIoAdapter,
@@ -208,231 +417,409 @@ const emitComponentStep: FileStep = (state) => {
 };
 
 /**
- * Creates the final processing outcome for a file.
- *
- * @param state - Final file processing state.
- * @returns File processing outcome.
+ * Maps file-processing state to its component result.
+ * @param context - File-processing context.
+ * @returns Component result carried by the state.
  */
-const finalizeFileOutcome = (state: Result<FileContext>): FileProcessOutcome => ({
-  result: mapResult(state, (context) => context.component),
+function extractComponentResult(
+  context: Readonly<IFileContext>,
+): IComponentResult {
+  return context.component;
+}
+
+/**
+ * Finalizes file-processing state into a batch outcome.
+ * @param state - Final file-processing state.
+ * @returns Result payload and continuation flag for batch iteration.
+ */
+const finalizeFileOutcome = (
+  state: Readonly<IResult<IFileContext>>,
+): IFileProcessOutcome => ({
+  result: map(state, extractComponentResult),
   shouldContinue: state.value.shouldContinue,
 });
 
 /**
- * Creates the initial file context for processing.
- *
- * @param file - Discovered file metadata.
- * @param pipeline - Pipeline context.
- * @param continueOnError - Whether processing should continue on errors.
- * @returns Initial file processing state.
+ * Parses a source file into a component model and merges diagnostics.
+ * @param state - Current file-processing state.
+ * @returns Updated file-processing state after parsing.
  */
-const createFileContext = (
-  file: DiscoveredFile,
-  pipeline: PipelineContext,
-  continueOnError: boolean,
-): Result<FileContext> =>
-  createResult({
-    file,
-    pipeline,
-    continueOnError,
-    sourceFile: undefined,
-    model: undefined,
-    component: {
-      ...createEmptyComponentResult(),
-      componentName: file.componentName,
-    },
-    shouldContinue: true,
+const parseComponentStep: FileStep = (state) => {
+  const { continueOnError, file, pipeline, sourceFile } = state.value;
+  if (!sourceFile) {
+    return state;
+  }
+
+  pipeline.logger?.debug("Parsing component source.", {
+    component: file.componentName,
+    filePath: file.filePath,
   });
 
+  const parseResult = pipeline.parser.parse(
+    createParseContext(file, pipeline, sourceFile),
+  );
+  let next = addDiagnostics(state, parseResult);
+
+  if (!parseResult.value) {
+    return continueOnError ? setCanContinue(next) : setCannotContinue(next);
+  }
+
+  const model = parseResult.value;
+  next = setParsedModel(next, model);
+
+  return next;
+};
+
 /**
- * Processes a batch of discovered component files.
- *
+ * Processes a batch of discovered component files through parse and emit steps.
  * @param discovered - Discovered component files to process.
- * @param context - Pipeline context for parsing and emitting.
- * @returns Component results for each processed file.
+ * @param context - Shared pipeline context for the batch.
+ * @returns Aggregate result for all processed component files.
  */
 export function processComponentBatch(
-  discovered: readonly DiscoveredFile[],
-  context: PipelineContext,
-): AggregateResult<ComponentResult> {
-  const continueOnError = context.continueOnError ?? DEFAULT_CONNECT_OPTIONS.continueOnError;
-  const steps: FileStep[] = [resolveSourceFileStep, parseComponentStep, emitComponentStep];
+  discovered: readonly IDiscoveredFile[],
+  context: Readonly<IPipelineContext>,
+): IAggregateResult<IComponentResult> {
+  let results: IResult<IComponentResult>[] = [];
+  let shouldContinue = true;
 
-  const batchState = discovered.reduce(
-    (acc, file) => {
-      if (!acc.shouldContinue) {
-        return acc;
-      }
+  for (const file of discovered) {
+    if (!shouldContinue) {
+      break;
+    }
 
-      const initialState = createFileContext(file, context, continueOnError);
-      const finalState = runSteps(initialState, steps);
-      const outcome = finalizeFileOutcome(finalState);
+    const outcome = processDiscoveredFile(file, context);
+    results = [...results, outcome.result];
+    shouldContinue = outcome.shouldContinue;
+  }
 
-      return {
-        results: [...acc.results, outcome.result],
-        shouldContinue: outcome.shouldContinue,
-      };
+  return aggregateResults(results);
+}
+
+/**
+ * Processes a single discovered component file through the batch pipeline.
+ * @param file - Discovered component file metadata.
+ * @param context - Shared pipeline context for the batch.
+ * @returns Result payload and continuation flag for batch iteration.
+ */
+function processDiscoveredFile(
+  file: Readonly<IDiscoveredFile>,
+  context: Readonly<IPipelineContext>,
+): IFileProcessOutcome {
+  const initialState = createFileContext(file, context);
+  const finalState = runFilePipeline(initialState);
+  return finalizeFileOutcome(finalState);
+}
+
+/**
+ * Resolves the current discovered file to a TypeScript source file.
+ * @param state - Current file-processing state.
+ * @returns Updated file-processing state with the resolved source file.
+ */
+function resolveSourceFileStep(
+  state: Readonly<IResult<IFileContext>>,
+): IResult<IFileContext> {
+  const { file, pipeline, continueOnError } = state.value;
+  const sourceFile = pipeline.sourceFileMap.get(path.resolve(file.filePath));
+
+  if (!sourceFile) {
+    const next = addError(
+      state,
+      `Source file not found in program: ${file.filePath}`,
+    );
+    return continueOnError ? setCanContinue(next) : setCannotContinue(next);
+  }
+
+  return setResolvedSourceFile(state, sourceFile);
+}
+
+/**
+ * Executes a single file-processing step within `Array.prototype.reduce`.
+ * @param state - Accumulated file-processing state.
+ * @param step - Step to execute.
+ * @returns Updated file-processing state.
+ */
+function runFileStep(
+  state: Readonly<IResult<IFileContext>>,
+  step: FileStep,
+): IResult<IFileContext> {
+  return step(state);
+}
+
+/**
+ * Runs the configured file-processing steps in sequence.
+ * @param state - Initial file-processing state.
+ * @param steps - Steps to execute.
+ * @returns Final file-processing state after all steps run.
+ */
+function runSteps(
+  state: Readonly<IResult<IFileContext>>,
+  steps: readonly FileStep[],
+): IResult<IFileContext> {
+  return steps.reduce(runFileStep, state);
+}
+
+/**
+ * Runs the standard file-processing pipeline for a discovered file.
+ * @param state - Initial file-processing state.
+ * @returns Final file-processing state after source resolution, parsing, and emission.
+ */
+function runFilePipeline(
+  state: Readonly<IResult<IFileContext>>,
+): IResult<IFileContext> {
+  return runSteps(state, [
+    resolveSourceFileStep,
+    parseComponentStep,
+    emitComponentStep,
+  ]);
+}
+
+/**
+ * Marks the current file-processing state as eligible to continue.
+ * @param state - Current file-processing state.
+ * @returns Updated state with `shouldContinue` set to true.
+ */
+function setCanContinue(
+  state: Readonly<IResult<IFileContext>>,
+): IResult<IFileContext> {
+  return setFileValue(state, {
+    ...state.value,
+    shouldContinue: true,
+  });
+}
+
+/**
+ * Marks the current file-processing state as terminal for the batch.
+ * @param state - Current file-processing state.
+ * @returns Updated state with `shouldContinue` set to false.
+ */
+function setCannotContinue(
+  state: Readonly<IResult<IFileContext>>,
+): IResult<IFileContext> {
+  return setFileValue(state, {
+    ...state.value,
+    shouldContinue: false,
+  });
+}
+
+/**
+ * Replaces the file-processing context value while preserving diagnostics.
+ * @param state - Current file-processing state.
+ * @param value - Next file-processing context value.
+ * @returns Updated file-processing state.
+ */
+function setFileValue(
+  state: Readonly<IResult<IFileContext>>,
+  value: Readonly<IFileContext>,
+): IResult<IFileContext> {
+  return {
+    ...state,
+    value,
+  };
+}
+
+/**
+ * Stores the parsed component model on file-processing state.
+ * @param state - Current file-processing state.
+ * @param model - Parsed component model.
+ * @returns Updated state with the parsed model attached.
+ */
+function setParsedModel(
+  state: Readonly<IResult<IFileContext>>,
+  model: Readonly<IComponentModel>,
+): IResult<IFileContext> {
+  return setFileValue(state, {
+    ...state.value,
+    model,
+    component: {
+      ...state.value.component,
+      model,
     },
-    { results: [] as Result<ComponentResult>[], shouldContinue: true },
+  });
+}
+
+/**
+ * Stores a resolved TypeScript source file on file-processing state.
+ * @param state - Current file-processing state.
+ * @param sourceFile - Source file resolved from the program.
+ * @returns Updated state with the source file attached.
+ */
+function setResolvedSourceFile(
+  state: Readonly<IResult<IFileContext>>,
+  sourceFile: Readonly<ts.SourceFile>,
+): IResult<IFileContext> {
+  return setFileValue(state, {
+    ...state.value,
+    sourceFile,
+  });
+}
+
+/**
+ * Returns true when an emission should overwrite the full file content.
+ * @param emission - Emitter output describing target content.
+ * @param writeContext - Write-time configuration and IO dependencies.
+ * @param fileRecord - Existing-file metadata for the destination path.
+ * @param fileRecord.exists - Whether the destination file already exists.
+ * @returns True when the emission should bypass section updates.
+ */
+function shouldWriteFullContent(
+  emission: Readonly<IEmitResult>,
+  writeContext: Readonly<IWriteContext>,
+  fileRecord: Readonly<IFileExistenceRecord>,
+): boolean {
+  return (writeContext.force && fileRecord.exists) || !emission.sections;
+}
+
+/**
+ * Updates the component result stored inside file-processing state.
+ * @param state - Current file-processing state.
+ * @param updater - Function that maps the current component result to a new one.
+ * @returns Updated file-processing state with the new component result.
+ */
+function updateComponent(
+  state: Readonly<IResult<IFileContext>>,
+  updater: ComponentUpdater,
+): IResult<IFileContext> {
+  return applyComponentUpdate(state, updater);
+}
+
+/**
+ * Writes an emitted file directly, choosing the appropriate change reason from file existence.
+ * @param emission - Emitter output describing the target file and content.
+ * @param writeContext - Write-time configuration and IO dependencies.
+ * @param fileRecord - Existing-file metadata for the destination path.
+ * @returns Write outcome for the emitted file.
+ */
+function writeDirectEmission(
+  emission: Readonly<IEmitResult>,
+  writeContext: Readonly<IWriteContext>,
+  fileRecord: Readonly<IFileExistenceRecord>,
+): IWriteOutcome {
+  const reason = fileRecord.exists
+    ? FileChangeReason.ContentUpdated
+    : FileChangeReason.NewFile;
+
+  return writeFullEmission(emission, writeContext, fileRecord, reason);
+}
+
+/**
+ * Chooses the appropriate write strategy for an emitter output.
+ * @param emission - Emitter output describing the target file and content.
+ * @param writeContext - Write-time configuration and IO dependencies.
+ * @returns Normalized write outcome for the emitted file.
+ */
+function writeEmission(
+  emission: Readonly<IEmitResult>,
+  writeContext: Readonly<IWriteContext>,
+): IWriteOutcome {
+  const plan = createEmissionWritePlan(emission, writeContext);
+  if (plan.useDirectWrite) {
+    return writeDirectEmission(emission, writeContext, plan.fileRecord);
+  }
+
+  return applySectionUpdate(
+    emission.filePath,
+    emission.sections as GeneratedSections,
+    writeContext,
   );
-
-  return aggregateResults(batchState.results);
 }
 
 /**
- * Applies emission output, warnings, and file changes to the component result.
- *
- * @param state - Result wrapper for the component context.
- * @param emission - Emitter output to write.
- * @param writeContext - Write configuration values.
- * @returns Updated result with merged diagnostics and file changes.
+ * Chooses the write strategy for an emitter output.
+ * @param emission - Emitter output describing the target file and content.
+ * @param writeContext - Write-time configuration and IO dependencies.
+ * @returns Write plan including file existence metadata and whether to bypass section updates.
  */
-function applyEmissionOutcome(
-  state: Result<FileContext>,
-  emission: EmitResult,
-  writeContext: WriteContext,
-): Result<FileContext> {
-  const writeOutcome = writeEmission(emission, writeContext);
-  const emissionWarnings = emission.warnings ?? [];
-  const writeWarnings = writeOutcome.warning ? [writeOutcome.warning] : [];
-  let next = addWarnings(state, [...emissionWarnings, ...writeWarnings]);
-
-  const { change } = writeOutcome;
-  if (change) {
-    next = updateComponent(next, (component) => addFileChange(component, change));
-  }
-
-  return updateComponent(next, (component) => applyWriteResult(component, writeOutcome.result));
+function createEmissionWritePlan(
+  emission: Readonly<IEmitResult>,
+  writeContext: Readonly<IWriteContext>,
+): IEmissionWritePlan {
+  const fileRecord = getFileExistenceRecord(emission.filePath, writeContext.io);
+  return {
+    fileRecord,
+    useDirectWrite: shouldWriteDirectEmission(emission, writeContext, fileRecord),
+  };
 }
 
 /**
- * Applies write status updates to a component result.
- *
- * @param component - Component result to update.
- * @param writeResult - Write result payload.
- * @returns Updated component result.
+ * Returns file existence metadata for a write target.
+ * @param filePath - File path to inspect.
+ * @param io - IO adapter used for filesystem access.
+ * @returns Existing-file metadata for the path.
  */
-function applyWriteResult(component: ComponentResult, writeResult: WriteFileResult): ComponentResult {
-  if (writeResult.status === WriteStatus.Created) {
-    return addCreatedFile(component, writeResult.filePath);
-  }
-  if (writeResult.status === WriteStatus.Updated) {
-    return addUpdatedFile(component, writeResult.filePath);
-  }
-  return addUnchangedFile(component, writeResult.filePath);
+function getFileExistenceRecord(
+  filePath: string,
+  io: Readonly<IIoAdapter>,
+): IFileExistenceRecord {
+  return {
+    exists: io.exists(filePath),
+  };
 }
 
 /**
- * Writes an emission to disk, respecting generated section markers.
- *
- * @param emission - Emitter result to write.
- * @param writeContext - Write configuration values.
- * @returns Write outcome including warnings and change details.
+ * Returns true when an emission should use direct file writes instead of section updates.
+ * @param emission - Emitter output describing the target file and content.
+ * @param writeContext - Write-time configuration and IO dependencies.
+ * @param fileRecord - Existing-file metadata for the destination path.
+ * @returns True when direct writing should be used.
  */
-function writeEmission(emission: EmitResult, writeContext: WriteContext): WriteOutcome {
-  const { dryRun, force, io } = writeContext;
-  const sections = emission.sections ?? null;
-  const exists = io.exists(emission.filePath);
+function shouldWriteDirectEmission(
+  emission: Readonly<IEmitResult>,
+  writeContext: Readonly<IWriteContext>,
+  fileRecord: Readonly<IFileExistenceRecord>,
+): boolean {
+  return (
+    shouldWriteFullContent(emission, writeContext, fileRecord) ||
+    !fileRecord.exists
+  );
+}
 
-  if (force && exists) {
-    const result = writeFile(emission.filePath, emission.content, { dryRun, io });
-    return {
-      result,
-      change: buildFileChange(result.status, exists, FileChangeReason.ContentUpdated, emission.filePath),
-    };
-  }
-
-  if (!sections) {
-    const result = writeFile(emission.filePath, emission.content, { dryRun, io });
-    return {
-      result,
-      change: buildFileChange(result.status, exists, FileChangeReason.ContentUpdated, emission.filePath),
-    };
-  }
-
-  if (!exists) {
-    const result = writeFile(emission.filePath, emission.content, { dryRun, io });
-    return {
-      result,
-      change: buildFileChange(result.status, exists, FileChangeReason.NewFile, emission.filePath),
-    };
-  }
-
-  const existingContent = io.readFile(emission.filePath);
-  const updatedContent = applyGeneratedSectionUpdates(existingContent, sections);
-
-  if (!updatedContent) {
-    const result = { filePath: emission.filePath, status: WriteStatus.Unchanged } as const;
-    return {
-      result,
-      warning: `Generated section markers not found in ${emission.filePath}. Skipping update to preserve manual edits.`,
-      change: buildFileChange(result.status, exists, FileChangeReason.SectionUpdated, emission.filePath),
-    };
-  }
-
-  const result = writeFile(emission.filePath, updatedContent, { dryRun, io });
+/**
+ * Writes output content and builds a normalized file-change record.
+ * @param request File write payload and change reason metadata.
+ * @param writeContext Write-time dependencies and dry-run mode.
+ * @returns The write outcome and associated file-change entry.
+ */
+function writeFileWithChange(
+  request: Readonly<IWriteRequest>,
+  writeContext: Readonly<IWriteContext>,
+): IWriteOutcome {
+  const { dryRun, io } = writeContext;
+  const { filePath, content, exists, reason } = request;
+  const result = writeFile(filePath, content, { dryRun, io });
   return {
     result,
-    change: buildFileChange(result.status, exists, FileChangeReason.SectionUpdated, emission.filePath),
+    change: buildFileChange(
+      result.status,
+      { existed: exists },
+      reason,
+      filePath,
+    ),
   };
 }
 
 /**
- * Adds a file change detail to a component result.
- *
- * @param result - Component result to update.
- * @param change - File change detail to append.
- * @returns Updated component result.
+ * Writes full emitter output directly to the destination path.
+ * @param emission - Emitter output describing the target file and content.
+ * @param writeContext - Write-time configuration and IO dependencies.
+ * @param fileRecord - Existing-file metadata for the destination path.
+ * @param fileRecord.exists - Whether the target file already exists.
+ * @param reason - File change reason to record.
+ * @returns Write outcome for the emitted file.
  */
-function addFileChange(result: ComponentResult, change: FileChangeDetail): ComponentResult {
-  return {
-    ...result,
-    fileChanges: [...(result.fileChanges ?? []), change],
-  };
-}
-
-/**
- * Builds a file change detail for a write outcome.
- *
- * @param status - Write status returned by the file writer.
- * @param existed - Whether the file existed before the write.
- * @param updateReason - Reason string for the change.
- * @param filePath - File path being written.
- * @returns File change detail entry.
- */
-function buildFileChange(
-  status: WriteStatus,
-  existed: boolean,
-  updateReason: FileChangeReason,
-  filePath: string,
-): FileChangeDetail {
-  if (status === WriteStatus.Created) {
-    return {
-      filePath,
-      status: FileChangeStatus.Created,
-      reason: FileChangeReason.NewFile,
-    };
-  }
-
-  if (status === WriteStatus.Unchanged) {
-    return {
-      filePath,
-      status: FileChangeStatus.Unchanged,
-      reason: FileChangeReason.Unchanged,
-    };
-  }
-
-  if (!existed) {
-    return {
-      filePath,
-      status: FileChangeStatus.Updated,
-      reason: FileChangeReason.NewFile,
-    };
-  }
-
-  return {
-    filePath,
-    status: FileChangeStatus.Updated,
-    reason: updateReason,
-  };
+function writeFullEmission(
+  emission: Readonly<IEmitResult>,
+  writeContext: Readonly<IWriteContext>,
+  fileRecord: Readonly<IFileExistenceRecord>,
+  reason: Readonly<FileChangeReason>,
+): IWriteOutcome {
+  return writeFileWithChange(
+    {
+      filePath: emission.filePath,
+      content: emission.content,
+      exists: fileRecord.exists,
+      reason,
+    },
+    writeContext,
+  );
 }

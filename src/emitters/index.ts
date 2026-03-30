@@ -23,7 +23,7 @@
  */
 export * from './types';
 
-export type { EmitterFactoryOptions } from './factory';
+export type { IEmitterFactoryOptions } from './factory';
 export {
   createEmitter,
   createEmitters,
@@ -33,4 +33,4 @@ export {
 } from './factory';
 export * from './figma-react';
 export * from './figma-webcomponent';
-export type { Emitter, EmitterContext, EmitterResult } from './types';
+export type { IEmitter, IEmitterContext, EmitterResult } from './types';

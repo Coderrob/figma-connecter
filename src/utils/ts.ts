@@ -22,50 +22,7 @@
  * @module utils/ts
  */
 
-import ts from 'typescript';
-
-/**
- * Extracts the first JSDoc summary for a node.
- *
- * @param node - AST node to inspect.
- * @returns Summary text or null when missing.
- */
-export const getJSDocSummary = (node: ts.Node): string | null => {
-  const docs = ts.getJSDocCommentsAndTags(node).filter(ts.isJSDoc);
-  if (docs.length === 0) {
-    return null;
-  }
-  const { comment } = docs[0];
-  if (!comment) {
-    return null;
-  }
-  if (typeof comment === 'string') {
-    return comment.trim();
-  }
-  return comment
-    .map((part) => part.text)
-    .join('')
-    .trim();
-};
-
-/**
- * Extracts text from a JSDoc tag.
- *
- * @param tag - JSDoc tag to read.
- * @returns Tag text content.
- */
-export const getJSDocTagText = (tag: ts.JSDocTag): string => {
-  if (!tag.comment) {
-    return '';
-  }
-  if (typeof tag.comment === 'string') {
-    return tag.comment.trim();
-  }
-  return tag.comment
-    .map((part) => part.text)
-    .join('')
-    .trim();
-};
+import ts from "typescript";
 
 /**
  * Retrieves the options object for a decorator call expression.
@@ -73,7 +30,9 @@ export const getJSDocTagText = (tag: ts.JSDocTag): string => {
  * @param decorator - Decorator node to inspect.
  * @returns Object literal options or null when unavailable.
  */
-export const getDecoratorOptions = (decorator: ts.Decorator): ts.ObjectLiteralExpression | null => {
+export const getDecoratorOptions = (
+  decorator: Readonly<ts.Decorator>,
+): ts.ObjectLiteralExpression | null => {
   const { expression } = decorator;
   if (!ts.isCallExpression(expression)) {
     return null;
@@ -85,13 +44,65 @@ export const getDecoratorOptions = (decorator: ts.Decorator): ts.ObjectLiteralEx
   return options;
 };
 
+interface ITextPart {
+  readonly text: string;
+}
+
+/**
+ * Extracts plain text from a JSDoc display part.
+ * @param part - Display part to read.
+ * @returns Text content for the display part.
+ */
+function getDisplayPartText(part: Readonly<ITextPart>): string {
+  return part.text;
+}
+
+/**
+ * Extracts the first JSDoc summary for a node.
+ *
+ * @param node - AST node to inspect.
+ * @returns Summary text or null when missing.
+ */
+export const getJSDocSummary = (node: Readonly<ts.Node>): string | null => {
+  const docs = ts.getJSDocCommentsAndTags(node).filter(ts.isJSDoc);
+  if (docs.length === 0) {
+    return null;
+  }
+  const { comment } = docs[0];
+  if (!comment) {
+    return null;
+  }
+  if (typeof comment === "string") {
+    return comment.trim();
+  }
+  return comment.map(getDisplayPartText).join("").trim();
+};
+
+/**
+ * Extracts text from a JSDoc tag.
+ *
+ * @param tag - JSDoc tag to read.
+ * @returns Tag text content.
+ */
+export const getJSDocTagText = (tag: Readonly<ts.JSDocTag>): string => {
+  if (!tag.comment) {
+    return "";
+  }
+  if (typeof tag.comment === "string") {
+    return tag.comment.trim();
+  }
+  return tag.comment.map(getDisplayPartText).join("").trim();
+};
+
 /**
  * Extracts a literal value from an expression.
  *
  * @param node - Expression node to inspect.
  * @returns Literal value or null when not a supported literal.
  */
-export const getLiteralValue = (node: ts.Expression | undefined): string | number | boolean | null => {
+export const getLiteralValue = (
+  node: ts.Expression | undefined,
+): string | number | boolean | null => {
   if (!node) {
     return null;
   }

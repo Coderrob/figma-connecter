@@ -15,59 +15,55 @@
  */
 
 /**
- * CLI Types Module
+ * CLI Types
  *
- * Defines interfaces and types for CLI options and utilities.
+ * Shared CLI contracts for option handling, staged command execution,
+ * and progress reporting.
  *
  * @module cli/types
  */
 
-/**
- * Global CLI options available across all commands.
- */
-export interface GlobalCliOptions {
-  /** Enable verbose/debug logging. */
+import type { Logger } from "@/src/core/logger";
+
+export interface IGlobalCliOptions {
   readonly verbose?: boolean;
-  /** Suppress non-error output. */
   readonly quiet?: boolean;
-  /** Preview changes without writing files. */
   readonly dryRun?: boolean;
-  /** Path to a configuration file. */
   readonly config?: string;
 }
 
-/**
- * Interface for terminal progress indicators.
- */
-export interface ProgressIndicator {
-  /**
-   * Starts the progress indicator with a label.
-   * @param label - The label to display.
-   */
+export interface IProgressIndicator {
   start(label: string): void;
-
-  /**
-   * Updates the progress indicator label.
-   * @param label - The new label to display.
-   */
   update(label: string): void;
-
-  /**
-   * Stops the progress indicator.
-   * @param label - Optional final label to display.
-   * @param status - The completion status ('success' or 'error').
-   */
-  stop(label?: string, status?: 'success' | 'error'): void;
+  stop(label?: string, status?: ProgressStatus): void;
 }
 
-/**
- * Configuration options for creating a progress indicator.
- */
-export interface ProgressIndicatorOptions {
-  /** Whether the progress indicator is enabled. Defaults to TTY detection. */
+export enum ProgressStatus {
+  Success = "success",
+  Error = "error",
+}
+
+export interface IProgressIndicatorOptions {
   readonly enabled?: boolean;
-  /** Animation frame interval in milliseconds. Defaults to 100. */
   readonly intervalMs?: number;
-  /** Output stream for the progress indicator. Defaults to stdout. */
   readonly stream?: NodeJS.WriteStream;
 }
+
+export type CommandContext<Options, Resolved = Record<string, unknown>> = {
+  readonly options: Options;
+  readonly globalOptions: IGlobalCliOptions;
+  readonly logger: Logger;
+  readonly progress: IProgressIndicator;
+} & Resolved;
+
+export interface ICommandStages<Context, IResult> {
+  readonly validate: () => Context;
+  readonly execute: (context: Context) => Promise<IResult>;
+  readonly report: (context: Context, result: IResult) => void;
+  readonly onError?: (context: Context, error: unknown) => void;
+}
+
+export type GlobalCliOptions = IGlobalCliOptions;
+export type ProgressIndicator = IProgressIndicator;
+export type ProgressIndicatorOptions = IProgressIndicatorOptions;
+export type CommandStages<Context, IResult> = ICommandStages<Context, IResult>;

@@ -18,10 +18,10 @@ All registration happens at runtime without modifying core tool code.
 Register individual plugins:
 
 ```typescript
-import { registerEmitterPlugin } from '@momentum-design/figma-connecter/emitters/factory';
-import { registerParserPlugin } from '@momentum-design/figma-connecter/parsers/factory';
-import { EmitterTarget } from '@momentum-design/figma-connecter/core/types';
-import { ParserTarget } from '@momentum-design/figma-connecter/parsers/types';
+import { registerEmitterPlugin } from '@coderrob/figma-connecter/emitters/factory';
+import { registerParserPlugin } from '@coderrob/figma-connecter/parsers/factory';
+import { EmitterTarget } from '@coderrob/figma-connecter/core/types';
+import { ParserTarget } from '@coderrob/figma-connecter/parsers/types';
 
 // Register an emitter
 registerEmitterPlugin({
@@ -51,7 +51,7 @@ registerParserPlugin({
 Register multiple plugins at once:
 
 ```typescript
-import { registerPlugin } from '@momentum-design/figma-connecter/plugins';
+import { registerPlugin } from '@coderrob/figma-connecter/plugins';
 
 registerPlugin({
   emitters: [
@@ -86,8 +86,8 @@ registerPlugin({
 1. **Implement the Emitter Interface**
 
 ```typescript
-import type { Emitter, EmitterContext, EmitResult } from '@momentum-design/figma-connecter/emitters/types';
-import { EmitterTarget } from '@momentum-design/figma-connecter/core/types';
+import type { Emitter, EmitterContext, EmitResult } from '@coderrob/figma-connecter/emitters/types';
+import { EmitterTarget } from '@coderrob/figma-connecter/core/types';
 
 export class VueEmitter implements Emitter {
   readonly target = EmitterTarget.Vue;
@@ -114,7 +114,7 @@ export class VueEmitter implements Emitter {
 1. **Register the Plugin**
 
 ```typescript
-import { registerEmitterPlugin } from '@momentum-design/figma-connecter/emitters/factory';
+import { registerEmitterPlugin } from '@coderrob/figma-connecter/emitters/factory';
 
 registerEmitterPlugin({
   target: EmitterTarget.Vue,
@@ -132,10 +132,10 @@ registerEmitterPlugin({
 1. **Implement the Parser Interface**
 
 ```typescript
-import type { Parser, ParseContext } from '@momentum-design/figma-connecter/parsers/types';
-import { ParserTarget } from '@momentum-design/figma-connecter/parsers/types';
-import type { ComponentModel } from '@momentum-design/figma-connecter/core/types';
-import { createResult } from '@momentum-design/figma-connecter/utils/result';
+import type { Parser, ParseContext } from '@coderrob/figma-connecter/parsers/types';
+import { ParserTarget } from '@coderrob/figma-connecter/parsers/types';
+import type { ComponentModel } from '@coderrob/figma-connecter/core/types';
+import { createResult } from '@coderrob/figma-connecter/utils/result';
 
 export class VueSFCParser implements Parser {
   readonly target = ParserTarget.VueSFC;
@@ -166,7 +166,7 @@ export class VueSFCParser implements Parser {
 1. **Register the Plugin**
 
 ```typescript
-import { registerParserPlugin } from '@momentum-design/figma-connecter/parsers/factory';
+import { registerParserPlugin } from '@coderrob/figma-connecter/parsers/factory';
 
 registerParserPlugin({
   target: ParserTarget.VueSFC,
@@ -198,9 +198,9 @@ Create a package that exports a registration function:
 **src/index.ts**:
 
 ```typescript
-import { registerPlugin } from '@momentum-design/figma-connecter/plugins';
-import { EmitterTarget } from '@momentum-design/figma-connecter/core/types';
-import { ParserTarget } from '@momentum-design/figma-connecter/parsers/types';
+import { registerPlugin } from '@coderrob/figma-connecter/plugins';
+import { EmitterTarget } from '@coderrob/figma-connecter/core/types';
+import { ParserTarget } from '@coderrob/figma-connecter/parsers/types';
 import { VueEmitter } from './emitter';
 import { VueSFCParser } from './parser';
 
@@ -244,7 +244,7 @@ registerVuePlugin();
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "peerDependencies": {
-    "@momentum-design/figma-connecter": "^1.0.0"
+    "@coderrob/figma-connecter": "^1.0.0"
   }
 }
 ```
@@ -285,7 +285,7 @@ The registration API validates:
 ### Error Handling
 
 ```typescript
-import { registerEmitterPlugin, hasEmitterPlugin } from '@momentum-design/figma-connecter/emitters/factory';
+import { registerEmitterPlugin, hasEmitterPlugin } from '@coderrob/figma-connecter/emitters/factory';
 
 // Check before registering
 if (!hasEmitterPlugin(EmitterTarget.MyTarget)) {
@@ -310,7 +310,7 @@ Register plugins based on project detection:
 
 ```typescript
 import { existsSync } from 'fs';
-import { registerParserPlugin } from '@momentum-design/figma-connecter/parsers/factory';
+import { registerParserPlugin } from '@coderrob/figma-connecter/parsers/factory';
 
 // Only register if project uses Vue
 if (existsSync('./vite.config.ts') || existsSync('./vue.config.js')) {
@@ -381,9 +381,9 @@ Test registration:
 
 ```typescript
 import { registerVuePlugin } from './';
-import { hasEmitterPlugin, hasParserPlugin } from '@momentum-design/figma-connecter/plugins';
-import { EmitterTarget } from '@momentum-design/figma-connecter/core/types';
-import { ParserTarget } from '@momentum-design/figma-connecter/parsers/types';
+import { hasEmitterPlugin, hasParserPlugin } from '@coderrob/figma-connecter/plugins';
+import { EmitterTarget } from '@coderrob/figma-connecter/core/types';
+import { ParserTarget } from '@coderrob/figma-connecter/parsers/types';
 
 describe('Vue Plugin Registration', () => {
   it('registers emitter and parser', () => {
@@ -410,9 +410,9 @@ describe('Vue Plugin Registration', () => {
 ### Vue Plugin
 
 ```typescript
-import { registerPlugin } from '@momentum-design/figma-connecter/plugins';
-import { EmitterTarget } from '@momentum-design/figma-connecter/core/types';
-import { ParserTarget } from '@momentum-design/figma-connecter/parsers/types';
+import { registerPlugin } from '@coderrob/figma-connecter/plugins';
+import { EmitterTarget } from '@coderrob/figma-connecter/core/types';
+import { ParserTarget } from '@coderrob/figma-connecter/parsers/types';
 
 registerPlugin({
   emitters: [

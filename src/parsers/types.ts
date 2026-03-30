@@ -15,17 +15,17 @@
  */
 
 /**
- * Parser Types Module
+ * IParser Types Module
  *
  * Defines shared parser context and registry types.
  *
  * @module parsers/types
  */
 
-import ts from 'typescript';
+import type { IResult } from '@/src/core/result';
 
-import type { Result } from '../core/result';
-import type { ComponentModel } from '../core/types';
+import type { IComponentModel } from '@/src/core/types';
+import ts from 'typescript';
 
 /**
  * Supported parser targets.
@@ -38,7 +38,7 @@ export enum ParserTarget {
  * Shared parse context used by parser implementations.
  * Contains file-specific information plus TypeScript resolution context.
  */
-export interface ParseContext {
+export interface IParseContext {
   readonly sourceFile: ts.SourceFile;
   readonly filePath: string;
   readonly componentDir: string;
@@ -49,12 +49,12 @@ export interface ParseContext {
 /**
  * Base result type for parser output.
  */
-export type ParserResult = Result<ComponentModel | undefined>;
+export type ParserResult = IResult<IComponentModel | undefined>;
 
 /**
- * Parser interface for registry-based factories.
+ * IParser interface for registry-based factories.
  */
-export interface Parser {
+export interface IParser {
   readonly target: ParserTarget;
-  parse(parseContext: ParseContext): ParserResult;
+  parse(parseContext: IParseContext): ParserResult;
 }

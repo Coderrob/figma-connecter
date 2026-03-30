@@ -1,0 +1,20 @@
+{
+  "threshold": 1,
+  "minLines": 5,
+  "minTokens": 50,
+  "reporters": [
+    "console",
+    "json"
+  ],
+  "output": ".jscpd-report",
+  "path": [
+    "src",
+    "bin"
+  ],
+  "ignore": [
+    "**/__output__/**",
+    "coverage/**",
+    "dist/**",
+    "node_modules/**"
+  ]
+}

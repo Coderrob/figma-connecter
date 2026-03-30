@@ -20,8 +20,14 @@
  * @param value - The string to transform.
  * @returns The string with its first character capitalized, or the original value if empty/falsy.
  */
-export const upperCaseFirstCharacter = (value = ''): string =>
-  value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+export function kebabToTitleCase(value = ""): string {
+  return value
+    .trim()
+    .split("-")
+    .filter(Boolean)
+    .map(upperCaseFirstCharacter)
+    .join(" ");
+}
 
 /**
  * Converts a kebab-cased string to title case.
@@ -29,8 +35,10 @@ export const upperCaseFirstCharacter = (value = ''): string =>
  * @param value - The kebab-cased string to convert.
  * @returns The title-cased string with hyphens replaced by spaces.
  */
-export const kebabToTitleCase = (value = ''): string =>
-  value.trim().split('-').filter(Boolean).map(upperCaseFirstCharacter).join(' ');
+export function toCamelCase(value = ""): string {
+  const pascal = toPascalCase(value);
+  return pascal ? pascal.charAt(0).toLowerCase() + pascal.slice(1) : pascal;
+}
 
 /**
  * Converts a string to kebab-case.
@@ -38,14 +46,15 @@ export const kebabToTitleCase = (value = ''): string =>
  * @param value - The string to convert.
  * @returns The kebab-cased string.
  */
-export const toKebabCase = (value = ''): string =>
-  value
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .replace(/[_\s]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '')
+export function toKebabCase(value = ""): string {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replace(/[_\s]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+/, "")
+    .replace(/-+$/, "")
     .toLowerCase();
+}
 
 /**
  * Converts a string to PascalCase.
@@ -53,15 +62,16 @@ export const toKebabCase = (value = ''): string =>
  * @param value - The string to convert.
  * @returns The PascalCased string.
  */
-export const toPascalCase = (value = ''): string =>
-  value
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[^a-zA-Z0-9]+/g, ' ')
+export function toPascalCase(value = ""): string {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[^a-zA-Z0-9]+/g, " ")
     .trim()
-    .split(' ')
+    .split(" ")
     .filter(Boolean)
     .map(upperCaseFirstCharacter)
-    .join('');
+    .join("");
+}
 
 /**
  * Converts a string to camelCase.
@@ -69,7 +79,6 @@ export const toPascalCase = (value = ''): string =>
  * @param value - The string to convert.
  * @returns The camelCased string.
  */
-export const toCamelCase = (value = ''): string => {
-  const pascal = toPascalCase(value);
-  return pascal ? pascal.charAt(0).toLowerCase() + pascal.slice(1) : pascal;
-};
+export function upperCaseFirstCharacter(value = ""): string {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+}

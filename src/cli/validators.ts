@@ -22,44 +22,10 @@
  * @module cli/validators
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-
-import type { GlobalCliOptions } from './types';
-
-/**
- * Validates global options for incompatible combinations.
- *
- * @param options - The global CLI options to validate.
- * @throws Error if options contain incompatible combinations.
- */
-export function validateGlobalOptions(options: GlobalCliOptions): void {
-  if (options.verbose && options.quiet) {
-    throw new Error('Cannot use --verbose and --quiet together.');
-  }
-}
-
-/**
- * Validates and resolves the path option.
- *
- * @param value - The path value to validate.
- * @param optionName - The option name for error messages.
- * @returns The resolved absolute path.
- * @throws Error if the path is empty or does not exist.
- */
-export function validatePathOption(value: string, optionName = '--path'): string {
-  if (!value || value.trim().length === 0) {
-    throw new Error(`Missing required value for ${optionName}.`);
-  }
-
-  const resolved = path.resolve(process.cwd(), value);
-
-  if (!fs.existsSync(resolved)) {
-    throw new Error(`Path not found: ${value}`);
-  }
-
-  return resolved;
-}
+import assert from "node:assert/strict";
+import path from "node:path";
+import { nodeIoAdapter } from "@/src/io/adapter";
+import type { IGlobalCliOptions } from "@/src/cli/types";
 
 /**
  * Validates and resolves a config file path if provided.
@@ -75,16 +41,55 @@ export function validateConfigPath(value?: string): string | undefined {
 
   const resolved = path.resolve(process.cwd(), value);
 
-  if (!fs.existsSync(resolved)) {
-    throw new Error(`Config file not found: ${value}`);
-  }
+  assert(nodeIoAdapter.exists(resolved), `Config file not found: ${value}`);
 
-  const stats = fs.statSync(resolved);
-  if (!stats.isFile()) {
-    throw new Error(`Config path is not a file: ${value}`);
-  }
+  const stats = nodeIoAdapter.stat
+    ? nodeIoAdapter.stat(resolved)
+    : {
+        /**
+         * Fallback isFile check that returns true.
+         *
+         * @returns {boolean} Always true
+         */
+        isFile: () => true,
+      };
+  assert(stats.isFile(), `Config path is not a file: ${value}`);
 
   return resolved;
 }
 
-// Emit target parsing lives in core to avoid duplicate logic.
+/**
+ * Validates global options for incompatible combinations.
+ *
+ * @param options - The global CLI options to validate.
+ * @throws Error if options contain incompatible combinations.
+ */
+export function validateGlobalOptions(
+  options: Readonly<IGlobalCliOptions>,
+): void {
+  assert(
+    !(options.verbose && options.quiet),
+    "Cannot use --verbose and --quiet together.",
+  );
+}
+
+/**
+ * Validates and resolves the path option.
+ *
+ * @param value - The config path to validate.
+ * @param optionName - The option name for error messages.
+ * @returns The resolved absolute path.
+ * @throws Error if the path is empty or does not exist.
+ */
+export function validatePathOption(
+  value: string,
+  optionName = "--path",
+): string {
+  assert(value?.trim().length > 0, `Missing required value for ${optionName}.`);
+
+  const resolved = path.resolve(process.cwd(), value);
+
+  assert(nodeIoAdapter.exists(resolved), `Path not found: ${value}`);
+
+  return resolved;
+}

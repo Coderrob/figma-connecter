@@ -19,7 +19,7 @@ and emits Code Connect files for Web Components and React.
 ## Requirements
 
 - Node `>=20`.
-- Yarn `3.2.4` if building from this repo.
+- npm `>=8` if building from this repo.
 - TypeScript source files using the `*.component.ts` suffix.
 
 ## Install / Build (from this repo)
@@ -27,8 +27,8 @@ and emits Code Connect files for Web Components and React.
 ```bash
 # From the repo root
 
-yarn build
-node dist/bin/figma-connecter.js --help
+npm run build
+node dist/figma-connecter.cjs --help
 ```
 
 If this package is installed from a registry, the `figma-connecter` binary is available on your `PATH` after install.
@@ -143,19 +143,19 @@ The CLI loads a TypeScript program to resolve symbols and inheritance.
 ```bash
 # Build the CLI
 
-yarn build
+npm run build
 
 # Run unit tests
 
-yarn test
+npm test
 
 # Run linting
 
-yarn lint
+npm run lint
 
 # Run type checking
 
-yarn typecheck
+npm run tsc
 ```
 
 ## Contributing

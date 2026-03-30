@@ -22,51 +22,35 @@
  * @module io/file-discovery
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
+import type {
+  IDiscoveredFile,
+  IFileDiscoveryOptions,
+  IFileDiscoveryFileSystem,
+} from "@/src/io/types";
+import { POSIX_PATH_SEPARATOR } from "@/src/utils";
+
+export type {
+  DiscoveredFile,
+  FileDiscoveryFileSystem,
+  FileDiscoveryOptions,
+  IDiscoveredFile,
+  IFileDiscoveryFileSystem,
+  IFileDiscoveryOptions,
+} from "@/src/io/types";
 
 /** File suffix for component source files. */
-export const COMPONENT_SUFFIX = '.component.ts';
+export const COMPONENT_SUFFIX = ".component.ts";
 
 /** Glob pattern for component discovery. */
 export const COMPONENT_GLOB = `**/*${COMPONENT_SUFFIX}`;
 
 /** Default directory names to exclude from traversal. */
-export const DEFAULT_EXCLUDE_DIRS = ['node_modules', 'dist'] as const;
-
-/** Metadata for a discovered component file. */
-export interface DiscoveredFile {
-  /** Absolute path to the component file. */
-  readonly filePath: string;
-  /** Path relative to the discovery root. */
-  readonly relativePath: string;
-  /** File name including extension. */
-  readonly fileName: string;
-  /** Component name inferred from the file name. */
-  readonly componentName: string;
-  /** Directory containing the file. */
-  readonly dirPath: string;
-}
-
-/** Options for component discovery. */
-export interface FileDiscoveryOptions {
-  /** Whether to traverse subdirectories. */
-  readonly recursive?: boolean;
-  /** Directory names to exclude. */
-  readonly excludeDirs?: readonly string[];
-  /** Optional file system provider for testing. */
-  readonly fileSystem?: FileDiscoveryFileSystem;
-}
-
-/** File system provider interface for discovery. */
-export interface FileDiscoveryFileSystem {
-  readonly existsSync: (targetPath: string) => boolean;
-  readonly statSync: (targetPath: string) => fs.Stats;
-  readonly readdirSync: (targetPath: string) => fs.Dirent[];
-}
+export const DEFAULT_EXCLUDE_DIRS: readonly string[] = ["node_modules", "dist"];
 
 /** Default file system provider using Node.js fs. */
-const defaultFileSystem: FileDiscoveryFileSystem = {
+const defaultFileSystem: IFileDiscoveryFileSystem = {
   existsSync: fs.existsSync,
   statSync: fs.statSync,
   /**
@@ -75,42 +59,57 @@ const defaultFileSystem: FileDiscoveryFileSystem = {
    * @param targetPath - Directory path to read.
    * @returns Directory entries for the path.
    */
-  readdirSync: (targetPath: string) => fs.readdirSync(targetPath, { withFileTypes: true }),
+  readdirSync: (targetPath: string) =>
+    fs.readdirSync(targetPath, { withFileTypes: true }),
 };
 
 /**
- * Determines if a file path matches the component pattern.
- *
- * @param filePath - File path to check.
- * @returns True when the path ends with the component suffix.
+ * Sorts discovered files by file path for deterministic output.
+ * @param left - Left discovered file.
+ * @param right - Right discovered file.
+ * @returns Comparison result.
  */
-export const isComponentFile = (filePath: string): boolean => filePath.toLowerCase().endsWith(COMPONENT_SUFFIX);
+function compareDiscoveredFiles(
+  left: Readonly<IDiscoveredFile>,
+  right: Readonly<IDiscoveredFile>,
+): number {
+  return left.filePath.localeCompare(right.filePath);
+}
 
 /**
- * Discovers component files from a file or directory path.
+ * Discovers component source files from a file path or directory path.
  *
- * @param inputPath - File or directory path to scan.
- * @param options - Discovery options.
- * @returns Array of discovered component metadata.
+ * When the input is a file, the file is returned only when it matches
+ * the component naming convention. When the input is a directory, the
+ * directory is scanned and optionally traversed recursively.
+ *
+ * @param inputPath - File or directory path to inspect.
+ * @param options - Discovery options controlling recursion, exclusions, and filesystem access.
+ * @returns Sorted list of discovered component files.
  */
-export function discoverComponentFiles(inputPath: string, options: FileDiscoveryOptions = {}): DiscoveredFile[] {
+export function discoverComponentFiles(
+  inputPath: string,
+  options: Readonly<IFileDiscoveryOptions> = {},
+): IDiscoveredFile[] {
   if (!inputPath) {
     return [];
   }
 
   const fileSystem = options.fileSystem ?? defaultFileSystem;
-  const resolvedPath = path.resolve(inputPath);
+  const targetPath = inputPath;
 
-  if (!fileSystem.existsSync(resolvedPath)) {
+  if (!fileSystem.existsSync(targetPath)) {
     return [];
   }
 
-  const excludeDirs = new Set((options.excludeDirs ?? DEFAULT_EXCLUDE_DIRS).map((dir) => dir.toLowerCase()));
+  const excludeDirs = new Set(
+    (options.excludeDirs ?? DEFAULT_EXCLUDE_DIRS).map(normalizeDirectoryName),
+  );
   const recursive = options.recursive ?? false;
-  const results: DiscoveredFile[] = [];
+  let results: IDiscoveredFile[] = [];
 
-  const stats = fileSystem.statSync(resolvedPath);
-  const rootDir = stats.isDirectory() ? resolvedPath : path.dirname(resolvedPath);
+  const stats = fileSystem.statSync(targetPath);
+  const rootDir = stats.isDirectory() ? targetPath : path.dirname(targetPath);
 
   /**
    * Adds a matching component file to the results list.
@@ -128,13 +127,16 @@ export function discoverComponentFiles(inputPath: string, options: FileDiscovery
     const dirPath = path.dirname(filePath);
     const relativePath = path.relative(rootDir, filePath) || fileName;
 
-    results.push({
-      filePath,
-      relativePath,
-      fileName,
-      componentName,
-      dirPath,
-    });
+    results = [
+      ...results,
+      {
+        filePath,
+        relativePath,
+        fileName,
+        componentName,
+        dirPath,
+      },
+    ];
   };
 
   /**
@@ -145,7 +147,9 @@ export function discoverComponentFiles(inputPath: string, options: FileDiscovery
    */
   const traverse = (dirPath: string): void => {
     for (const entry of fileSystem.readdirSync(dirPath)) {
-      const entryPath = path.join(dirPath, entry.name);
+      const entryPath = dirPath.includes(POSIX_PATH_SEPARATOR)
+        ? path.posix.join(dirPath, entry.name)
+        : path.join(dirPath, entry.name);
 
       if (entry.isDirectory()) {
         if (excludeDirs.has(entry.name.toLowerCase())) {
@@ -164,10 +168,29 @@ export function discoverComponentFiles(inputPath: string, options: FileDiscovery
   };
 
   if (stats.isFile()) {
-    addFile(resolvedPath);
+    addFile(targetPath);
   } else if (stats.isDirectory()) {
-    traverse(resolvedPath);
+    traverse(targetPath);
   }
 
-  return results.sort((a, b) => a.filePath.localeCompare(b.filePath));
+  return results.toSorted(compareDiscoveredFiles);
+}
+
+/**
+ * Checks whether the provided file path matches the component suffix.
+ *
+ * @param filePath - File path to evaluate.
+ * @returns True when the file path ends with the component suffix.
+ */
+export function isComponentFile(filePath: string): boolean {
+  return filePath.toLowerCase().endsWith(COMPONENT_SUFFIX);
+}
+
+/**
+ * Normalizes directory names for exclusion checks.
+ * @param directoryName - Directory name to normalize.
+ * @returns Normalized lowercase directory name.
+ */
+function normalizeDirectoryName(directoryName: string): string {
+  return directoryName.toLowerCase();
 }

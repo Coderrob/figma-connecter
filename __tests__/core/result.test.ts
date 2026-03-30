@@ -15,7 +15,7 @@
  */
 
 /**
- * @fileoverview Tests for Result helpers.
+ * @fileoverview Tests for IResult helpers.
  */
 
 import {
@@ -31,13 +31,13 @@ import {
   hasDiagnostics,
   hasErrors,
   hasWarnings,
-  mapResult,
+  map,
   mergeDiagnostics,
   mergeErrors,
   mergeWarnings,
 } from '../../src/core';
 
-describe('Result helpers', () => {
+describe('IResult helpers', () => {
   it('should create a result with default diagnostics', () => {
     const result = createResult('value');
     expect(result.value).toBe('value');
@@ -86,7 +86,7 @@ describe('Result helpers', () => {
 
   it('should map values while preserving diagnostics', () => {
     const base = createResult(2, ['warn'], ['err']);
-    const mapped = mapResult(base, (value) => value * 2);
+    const mapped = map(base, (value) => value * 2);
 
     expect(mapped.value).toBe(4);
     expect(mapped.warnings).toEqual(['warn']);

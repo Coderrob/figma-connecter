@@ -20,11 +20,11 @@
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 
-import type { Emitter, EmitterContext } from '../src/emitters/types';
-import type { Parser, ParseContext } from '../src/parsers/types';
+import type { IEmitter, IEmitterContext } from '../src/emitters/types';
+import type { IParser, IParseContext } from '../src/parsers/types';
 import { EmitterTarget, ParserTarget, FileChangeStatus } from '../src/core/types';
-import type { EmitResult } from '../src/core/types';
-import type { WebComponentParseResult } from '../src/parsers/webcomponent';
+import type { IEmitResult } from '../src/core/types';
+import type { IWebComponentParseResult } from '../src/parsers/webcomponent';
 
 /**
  * Creates a minimal test emitter for plugin registration.
@@ -32,9 +32,9 @@ import type { WebComponentParseResult } from '../src/parsers/webcomponent';
  * @param target - Target identifier for the emitter.
  * @returns Test emitter instance.
  */
-const createTestEmitter = (target: EmitterTarget): Emitter => ({
+const createTestEmitter = (target: EmitterTarget): IEmitter => ({
   target,
-  emit: (_context: EmitterContext): EmitResult => ({
+  emit: (_context: IEmitterContext): IEmitResult => ({
     filePath: `/${target}.figma.ts`,
     content: '',
     action: FileChangeStatus.Created,
@@ -47,9 +47,9 @@ const createTestEmitter = (target: EmitterTarget): Emitter => ({
  * @param target - Target identifier for the parser.
  * @returns Test parser instance.
  */
-const createTestParser = (target: ParserTarget): Parser => ({
+const createTestParser = (target: ParserTarget): IParser => ({
   target,
-  parse: (_context: ParseContext): WebComponentParseResult => ({
+  parse: (_context: IParseContext): IWebComponentParseResult => ({
     value: undefined,
     warnings: [],
     errors: [],
@@ -70,7 +70,7 @@ describe('plugins', () => {
               factory: () => createTestEmitter(customTarget),
               metadata: {
                 fileExtension: '.custom.figma.ts',
-                displayName: 'Custom Emitter',
+                displayName: 'Custom IEmitter',
                 description: 'Custom emitter for tests',
               },
             },
@@ -92,7 +92,7 @@ describe('plugins', () => {
               target: customTarget,
               factory: () => createTestParser(customTarget),
               metadata: {
-                displayName: 'Custom Parser',
+                displayName: 'Custom IParser',
                 description: 'Custom parser for tests',
               },
             },
@@ -117,7 +117,7 @@ describe('plugins', () => {
               factory: () => createTestEmitter(emitterTarget),
               metadata: {
                 fileExtension: '.custom2.figma.ts',
-                displayName: 'Custom Emitter 2',
+                displayName: 'Custom IEmitter 2',
                 description: 'Custom emitter 2 for tests',
               },
             },
@@ -127,7 +127,7 @@ describe('plugins', () => {
               target: parserTarget,
               factory: () => createTestParser(parserTarget),
               metadata: {
-                displayName: 'Custom Parser 2',
+                displayName: 'Custom IParser 2',
                 description: 'Custom parser 2 for tests',
               },
             },
@@ -176,7 +176,7 @@ describe('plugins', () => {
               factory: () => createTestEmitter(target1),
               metadata: {
                 fileExtension: '.multi1.figma.ts',
-                displayName: 'Multi Emitter 1',
+                displayName: 'Multi IEmitter 1',
                 description: 'Multi emitter 1 for tests',
               },
             },
@@ -185,7 +185,7 @@ describe('plugins', () => {
               factory: () => createTestEmitter(target2),
               metadata: {
                 fileExtension: '.multi2.figma.ts',
-                displayName: 'Multi Emitter 2',
+                displayName: 'Multi IEmitter 2',
                 description: 'Multi emitter 2 for tests',
               },
             },
@@ -210,7 +210,7 @@ describe('plugins', () => {
               target: target1,
               factory: () => createTestParser(target1),
               metadata: {
-                displayName: 'Multi Parser 1',
+                displayName: 'Multi IParser 1',
                 description: 'Multi parser 1 for tests',
               },
             },
@@ -218,7 +218,7 @@ describe('plugins', () => {
               target: target2,
               factory: () => createTestParser(target2),
               metadata: {
-                displayName: 'Multi Parser 2',
+                displayName: 'Multi IParser 2',
                 description: 'Multi parser 2 for tests',
               },
             },
@@ -246,7 +246,7 @@ describe('plugins', () => {
               factory: () => createTestEmitter(emitterTarget),
               metadata: {
                 fileExtension: '.info.figma.ts',
-                displayName: 'Info Emitter',
+                displayName: 'Info IEmitter',
                 description: 'Info emitter description',
               },
             },
@@ -256,7 +256,7 @@ describe('plugins', () => {
               target: parserTarget,
               factory: () => createTestParser(parserTarget),
               metadata: {
-                displayName: 'Info Parser',
+                displayName: 'Info IParser',
                 description: 'Info parser description',
               },
             },
@@ -270,13 +270,13 @@ describe('plugins', () => {
 
         const emitterInfo = info.emitters.get(emitterTarget);
         expect(emitterInfo).toEqual({
-          displayName: 'Info Emitter',
+          displayName: 'Info IEmitter',
           description: 'Info emitter description',
         });
 
         const parserInfo = info.parsers.get(parserTarget);
         expect(parserInfo).toEqual({
-          displayName: 'Info Parser',
+          displayName: 'Info IParser',
           description: 'Info parser description',
         });
       });

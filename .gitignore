@@ -3,6 +3,7 @@ node_modules/
 .yarn/cache/
 .yarn/install-state.gz
 .pnp.*
+package-lock.json
 
 # Build outputs
 dist/
@@ -28,8 +29,14 @@ yarn-error.log*
 
 # Test
 .nyc_output/
+__tests__/__output__/
+.lint-report.json
+.jscpd-report/
+.jscpd-repo/
+.jscpd-tmp/
 
 # Temporary files
 tmp/
 temp/
 *.tmp
+.npm-cache/

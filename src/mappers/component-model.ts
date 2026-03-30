@@ -17,28 +17,30 @@
 /**
  * Component Model Mapper
  *
- * Normalizes parser output into a ComponentModel for downstream emitters.
+ * Normalizes parser output into a IComponentModel for downstream emitters.
  *
  * @module mappers/component-model
  */
 
-import path from 'node:path';
+import type {
+  IComponentModel,
+  IEventDescriptor,
+  IPropertyDescriptor,
+} from "@/src/core/types";
+import { normalizedBasename, normalizePath } from "@/src/utils/paths";
 
-import type { ComponentModel, EventDescriptor, PropertyDescriptor } from '../core/types';
-import { normalizePath } from '../utils/paths';
-
-import { mapPropertiesToAttributes } from './attribute-mapper';
+import { mapPropertiesToAttributes } from "./attribute-mapper";
 
 /**
  * Input payload for normalizing a component model.
  */
-export interface ComponentModelInput {
+export interface IComponentModelInput {
   readonly className?: string;
   readonly tagName: string;
   readonly filePath: string;
   readonly componentDir: string;
-  readonly props: readonly PropertyDescriptor[];
-  readonly events: readonly EventDescriptor[];
+  readonly props: readonly IPropertyDescriptor[];
+  readonly events: readonly IEventDescriptor[];
 }
 
 /**
@@ -47,24 +49,24 @@ export interface ComponentModelInput {
  * @param componentDir - Component directory path.
  * @returns Normalized import path fragment.
  */
-export const deriveImportPath = (componentDir: string): string => {
-  const marker = '/packages/components/src/';
+export function deriveImportPath(componentDir: string): string {
+  const marker = "/packages/components/src/";
   const normalized = normalizePath(componentDir);
   const index = normalized.lastIndexOf(marker);
   if (index >= 0) {
     return normalized.slice(index + marker.length);
   }
-  return path.posix.basename(normalized);
-};
+  return normalizedBasename(componentDir);
+}
 
 /**
  * Normalizes a component model for downstream emitters.
  *
  * @param input - Raw parser output to normalize.
- * @returns Normalized ComponentModel.
+ * @returns Normalized IComponentModel.
  */
-export const mapComponentModel = (input: ComponentModelInput): ComponentModel => {
-  const className = input.className?.trim() || 'UnknownComponent';
+export function mapComponentModel(input: Readonly<IComponentModelInput>): IComponentModel {
+  const className = input.className?.trim() || "UnknownComponent";
   const props = input.props ?? [];
   const events = input.events ?? [];
 
@@ -78,4 +80,4 @@ export const mapComponentModel = (input: ComponentModelInput): ComponentModel =>
     events,
     importPath: deriveImportPath(input.componentDir),
   };
-};
+}

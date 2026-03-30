@@ -22,38 +22,47 @@
  * @module core/constants
  */
 
-import type { GeneratedSectionMarkers, GeneratedSectionName } from './types';
+import type { IGeneratedSectionMarkers, GeneratedSectionName } from "./types";
 
 /**
  * Canonical marker pair for generated sections.
  */
-export const GENERATED_SECTION_MARKERS: GeneratedSectionMarkers = {
-  start: '// BEGIN GENERATED',
-  end: '// END GENERATED',
+export const GENERATED_SECTION_MARKERS: IGeneratedSectionMarkers = {
+  start: "// BEGIN GENERATED",
+  end: "// END GENERATED",
 };
+
+interface IDefaultConnectOptions {
+  readonly recursive: boolean;
+  readonly dryRun: boolean;
+  readonly emit: string;
+  readonly strict: boolean;
+  readonly continueOnError: boolean;
+  readonly force: boolean;
+}
 
 /**
  * Default configuration values for the connect command.
  */
-export const DEFAULT_CONNECT_OPTIONS = {
+export const DEFAULT_CONNECT_OPTIONS: IDefaultConnectOptions = {
   recursive: false,
   dryRun: false,
-  emit: 'all',
+  emit: "all",
   strict: true,
   continueOnError: true,
   force: false,
-} as const;
+};
 
 /**
  * Default base import path for generated component imports.
  */
-export const DEFAULT_IMPORT_BASE = '@momentum-design/components';
+export const DEFAULT_IMPORT_BASE = "@momentum-design/components";
 
 /**
  * Figma Code Connect package imports.
  */
-export const FIGMA_PACKAGE_REACT = '@figma/code-connect';
-export const FIGMA_PACKAGE_HTML = '@figma/code-connect/html';
+export const FIGMA_PACKAGE_REACT = "@figma/code-connect";
+export const FIGMA_PACKAGE_HTML = "@figma/code-connect/html";
 
 /**
  * Builds named markers for a specific generated section.
@@ -61,7 +70,11 @@ export const FIGMA_PACKAGE_HTML = '@figma/code-connect/html';
  * @param name - The generated section name to embed in markers.
  * @returns The named start/end marker pair.
  */
-export const buildGeneratedSectionMarkers = (name: GeneratedSectionName): GeneratedSectionMarkers => ({
-  start: `${GENERATED_SECTION_MARKERS.start}: ${name}`,
-  end: `${GENERATED_SECTION_MARKERS.end}: ${name}`,
-});
+export function buildGeneratedSectionMarkers(
+  name: Readonly<GeneratedSectionName>,
+): IGeneratedSectionMarkers {
+  return {
+    start: `${GENERATED_SECTION_MARKERS.start}: ${name}`,
+    end: `${GENERATED_SECTION_MARKERS.end}: ${name}`,
+  };
+}
