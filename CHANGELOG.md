@@ -26,3 +26,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Remove the deprecated `mapResult` alias and use the canonical `map` helper in pipeline result mapping (`unreleased`)
 - Remove the lowercase `changelog.md` duplicate and keep `CHANGELOG.md` as the only canonical changelog path (`unreleased`)
+- Remove `.yarn/install-state.gz` from git tracking; file is already covered by `.gitignore` and project uses npm (`pending`)
